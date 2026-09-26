@@ -26,15 +26,23 @@ log() { echo "[alth] $*" | tee -a "$LOG"; }
 ready() { "$PREFIX/bin/python" -c "import bpy" >/dev/null 2>&1; }
 
 link() {
-  ln -sf "$PREFIX/bin/python" "$BIN_DIR/alth-python" 2>/dev/null
-  log "Listo: $("$PREFIX/bin/python" -c 'import bpy; print("Blender", bpy.app.version_string)' 2>/dev/null) · comando: $BIN_DIR/alth-python"
+  # Wrapper, no symlink: Python llamado por un symlink no encuentra el pyvenv.cfg
+  # del entorno y arranca como el Python del sistema, sin bpy.
+  rm -f "$BIN_DIR/alth-python"
+  printf '#!/bin/sh\nexec "%s/bin/python" "$@"\n' "$PREFIX" > "$BIN_DIR/alth-python"
+  chmod +x "$BIN_DIR/alth-python"
+  local v
+  if v=$("$BIN_DIR/alth-python" -c 'import bpy, bmesh; print("Blender", bpy.app.version_string)' 2>>"$LOG"); then
+    log "Listo: $v · comando: $BIN_DIR/alth-python"; return 0
+  fi
+  log "alth-python existe pero no importa bpy; revisa $LOG"; return 1
 }
 
 # Una sola instalación a la vez (el hook y Claude pueden llamarlo casi juntos).
 exec 9>/tmp/alth-install.lock
 if command -v flock >/dev/null 2>&1; then flock 9; fi
 
-if ready; then link; exit 0; fi
+if ready && link; then exit 0; fi
 
 # Librerías del sistema que carga Blender. La imagen de Claude Code ya las trae.
 LIBS="libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1"
@@ -63,7 +71,7 @@ install_with() {  # $1 = versión de Python, $2 = paquete bpy
 START=$(date +%s)
 if install_with "$PRIMARY_PY" "$PRIMARY" || install_with "$FALLBACK_PY" "$FALLBACK"; then
   log "Instalación terminada en $(( $(date +%s) - START )) s"
-  link; exit 0
+  link && exit 0
 fi
 
 log "No se pudo instalar Blender. Revisa $LOG (últimas líneas abajo)."

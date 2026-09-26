@@ -15,13 +15,12 @@ from __future__ import annotations
 
 import json
 import math
-import os
 import time
 from pathlib import Path
 
-import bmesh
-import bpy
-from mathutils import Vector
+import bpy  # isort: skip  (bpy debe cargarse antes que bmesh y mathutils)
+import bmesh  # isort: skip
+from mathutils import Vector  # isort: skip
 
 RAIZ = Path(__file__).resolve().parent.parent
 SPEC = json.loads((RAIZ / "spec" / "alth_spec.json").read_text(encoding="utf-8"))
@@ -152,13 +151,13 @@ def caja(nombre, tam, pos=(0, 0, 0), color="#A8453B", biselar=True, apoyada=True
 
 
 # ---------------------------------------------------------------- luz y cámaras
-def estudio(fuerza_sol=3.0, fuerza_relleno=0.45):
+def estudio(fuerza_sol=3.0, fuerza_relleno=0.7):
     """Luz ALTH: sol cálido arriba-izquierda-frente, relleno frío del mundo, piso con sombra."""
     esc = bpy.context.scene
     luz = SPEC["luz"]["principal"]
     sol = bpy.data.lights.new("Sol_ALTH", type="SUN")
     sol.energy = fuerza_sol
-    sol.angle = math.radians(12)  # sombras suaves
+    sol.angle = math.radians(20)  # sombras suaves, como en las referencias
     sol.color = kelvin_a_rgb(luz["kelvin"])
     ob = bpy.data.objects.new("Sol_ALTH", sol)
     ob.rotation_euler = (math.radians(50), math.radians(-28), math.radians(-35))
@@ -184,6 +183,9 @@ def estudio(fuerza_sol=3.0, fuerza_relleno=0.45):
 
 
 def _limites(objs):
+    # Sin esto, matrix_world queda viejo tras mover objetos y el primer
+    # encuadre sale corrido (el cubo de la fase 0 salía 10 mm arriba en "frente").
+    bpy.context.view_layer.update()
     pts = [o.matrix_world @ Vector(c) for o in objs if o.type == "MESH" for c in o.bound_box]
     mn = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
     mx = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
