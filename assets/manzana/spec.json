@@ -1,0 +1,16 @@
+{
+  "nombre": "manzana",
+  "categoria": "de_mano",
+  "tipo_presupuesto": "objeto_simple",
+  "k": 2.0,
+  "medidas_reales_mm": {"diametro": 80, "alto_cuerpo": 72},
+  "medidas_alth_mm": {"diametro": 8.94, "alto_cuerpo": 8.05, "formula": "mm_real * 0.0559 * 2.0"},
+  "colores": {
+    "cuerpo": {"paleta": "rojo_calido", "hex": "#A8453B"},
+    "tallo": {"paleta": "marron_calido", "hex": "#69472D"},
+    "hoja": {"paleta": "verde_salvia", "hex": "#7E9B7A"}
+  },
+  "modulos": ["cuerpo (torno low-poly facetado, hundido del tallo, base achatada)", "tallo (prisma cónico)", "hoja (rombo con nervio)"],
+  "tris_objetivo": [150, 300],
+  "referencia": "refs/infografias/objeto-01-manzana.png (forma, facetado y color; no tamaño)"
+}
