@@ -193,7 +193,7 @@ def _asignar(obj, color, nombre_mat=None, **kw_mat):
 # ---------------------------------------------------------------- formas
 def torno(nombre, perfil, segmentos=10, color="#A8453B", alternar=True,
           ruido_r=0.06, ruido_z=0.1, centro_abajo=None, centro_arriba=None,
-          ovalo=(1.0, 1.0), semilla=7, pos=(0, 0, 0)):
+          ovalo=(1.0, 1.0), semilla=7, pos=(0, 0, 0), giro=0, bandas=None):
     """Sólido de revolución facetado: frutas, latas, vasos, tazas, jarrones, cabezas de bastón…
 
     perfil: lista de (radio_mm, z_mm) de abajo hacia arriba.
@@ -202,8 +202,15 @@ def torno(nombre, perfil, segmentos=10, color="#A8453B", alternar=True,
     centro_abajo / centro_arriba: z del vértice que cierra cada tapa. Por debajo del último
       anillo hace una cuenca (hundido del tallo); None cierra al nivel del anillo.
     ovalo: escala (x, y) para secciones no circulares.
+    giro: grados que se rota la sección (0 por defecto, para no alterar assets aprobados).
+      "frente" deja una CARA (no una arista) mirando a −Y: úsalo con etiquetas y calcomanías.
+    bandas: colores por altura, en vez de `color`: lista de (z_max_mm, color) o
+      (z_max_mm, color, "metal"), de abajo hacia arriba; cada cara toma la banda de su centro.
     """
+    if giro == "frente":
+        giro = 270 - 180 / segmentos  # la cara 0 queda centrada en 270° (−Y), con N par o impar
     rnd = random.Random(semilla)
+    caras = []
     bm = bmesh.new()
     anillos = []
     n = len(perfil)
@@ -212,42 +219,86 @@ def torno(nombre, perfil, segmentos=10, color="#A8453B", alternar=True,
         medio = 0 < i < n - 1
         anillo = []
         for s in range(segmentos):
-            a = 2 * math.pi * s / segmentos + des
+            a = 2 * math.pi * s / segmentos + des + math.radians(giro)
             j = 1 + (rnd.uniform(-ruido_r, ruido_r) if medio else 0)
             zz = z + (rnd.uniform(-ruido_z, ruido_z) if medio else 0)
             anillo.append(bm.verts.new((r * j * math.cos(a) * ovalo[0], r * j * math.sin(a) * ovalo[1], zz)))
         anillos.append(anillo)
     abajo = bm.verts.new((0, 0, perfil[0][1] if centro_abajo is None else centro_abajo))
     arriba = bm.verts.new((0, 0, perfil[-1][1] if centro_arriba is None else centro_arriba))
+    def cara(*vs):
+        caras.append((bm.faces.new(vs), sum(v.co.z for v in vs) / len(vs)))
+
     for s in range(segmentos):
         k = (s + 1) % segmentos
-        bm.faces.new((abajo, anillos[0][k], anillos[0][s]))
-        bm.faces.new((arriba, anillos[-1][s], anillos[-1][k]))
+        cara(abajo, anillos[0][k], anillos[0][s])
+        cara(arriba, anillos[-1][s], anillos[-1][k])
     for i in range(n - 1):
         a, b = anillos[i], anillos[i + 1]
         for s in range(segmentos):
             k = (s + 1) % segmentos
             if not alternar:
-                bm.faces.new((a[s], a[k], b[k], b[s]))
+                cara(a[s], a[k], b[k], b[s])
             elif i % 2 == 0:
-                bm.faces.new((a[s], a[k], b[s]))
-                bm.faces.new((a[k], b[k], b[s]))
+                cara(a[s], a[k], b[s])
+                cara(a[k], b[k], b[s])
             else:
-                bm.faces.new((a[s], b[k], b[s]))
-                bm.faces.new((a[s], a[k], b[k]))
+                cara(a[s], b[k], b[s])
+                cara(a[s], a[k], b[k])
+    if bandas:
+        for f, zc in caras:
+            f.material_index = next((i for i, bd in enumerate(bandas) if zc <= bd[0] + 1e-6), len(bandas) - 1)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     obj = _objeto(nombre, bm, semilla=semilla)
     obj.location = pos
-    return _asignar(obj, color)
+    if not bandas:
+        return _asignar(obj, color)
+    for i, bd in enumerate(bandas):
+        kw = {"metalico": SPEC["material"]["metal_suave"]["metalico"],
+              "rugosidad": SPEC["material"]["metal_suave"]["rugosidad"]} if len(bd) > 2 and bd[2] == "metal" else {}
+        _asignar(obj, bd[1], nombre_mat=f"M_{nombre}_{i}", **kw)
+    return obj
 
 
 def prisma(nombre, radio_base, radio_punta, largo, lados=5, color="#69472D", pos=(0, 0, 0), rot=(0, 0, 0)):
     """Prisma cónico a lo largo de +Z: tallos, patas, mangos, velas, dedos simples."""
     perfil = [(radio_base, 0.0), (radio_punta, largo)]
-    obj = torno(nombre, perfil, segmentos=lados, color=color, alternar=False, ruido_r=0, ruido_z=0)
+    obj = torno(nombre, perfil, segmentos=lados, color=color, alternar=False, ruido_r=0, ruido_z=0, giro=0)
     obj.location = pos
     obj.rotation_euler = tuple(math.radians(v) for v in rot)
     return obj
+
+
+def anillo(nombre, radio, grosor, segmentos=8, lados=3, color="#B7BABE", metal=False,
+           escala=(1.0, 1.0, 1.0), pos=(0, 0, 0), rot=(0, 0, 0)):
+    """Toroide low-poly acostado en el plano XY: argollas, lengüetas de lata, asas, pulseras, llaveros.
+
+    radio: al centro del tubo (mm). grosor: diámetro del tubo. lados: 3 = sección triangular.
+    """
+    bm = bmesh.new()
+    t = grosor / 2
+    vs = []
+    for s in range(segmentos):
+        a = 2 * math.pi * s / segmentos
+        fila = []
+        for l in range(lados):
+            b = 2 * math.pi * l / lados + math.pi / 2
+            rr = radio + t * math.cos(b)
+            fila.append(bm.verts.new((rr * math.cos(a), rr * math.sin(a), t * math.sin(b))))
+        vs.append(fila)
+    for s in range(segmentos):
+        k = (s + 1) % segmentos
+        for l in range(lados):
+            m = (l + 1) % lados
+            bm.faces.new((vs[s][l], vs[k][l], vs[k][m], vs[s][m]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    obj = _objeto(nombre, bm)
+    obj.location = pos
+    obj.rotation_euler = tuple(math.radians(v) for v in rot)
+    obj.scale = escala
+    kw = {"metalico": SPEC["material"]["metal_suave"]["metalico"],
+          "rugosidad": SPEC["material"]["metal_suave"]["rugosidad"]} if metal else {}
+    return _asignar(obj, color, **kw)
 
 
 def hoja(nombre, largo=4.0, ancho=1.9, grosor=0.18, nervio=0.25, curva=0.5,

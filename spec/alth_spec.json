@@ -1,5 +1,5 @@
 {
-  "version": "1.2",
+  "version": "1.3",
   "fecha": "2026-09-26",
   "unidades": {
     "blender_unit": "1 BU = 1 mm de maqueta",
@@ -206,6 +206,20 @@
       "#C9B89F",
       "#9C8A72"
     ],
+    "metal": [
+      "#E6E7E9",
+      "#D0D2D5",
+      "#B7BABE",
+      "#8A8F96",
+      "#62666C"
+    ],
+    "verde_oliva": [
+      "#D4D9C2",
+      "#A9B288",
+      "#7E8B5A",
+      "#5F6944",
+      "#495432"
+    ],
     "medidos": {
       "piel_clara": "#FBC39C",
       "piel_clara_sombra": "#D99A76",
@@ -303,5 +317,9 @@
     "objeto": 4,
     "mueble": 5,
     "personaje": 8
+  },
+  "paleta_notas": {
+    "metal": "de la referencia objeto-02 (metal claro #B7BABE, metal sombra #8A8F96); usar con material metal_suave",
+    "verde_oliva": "de la referencia objeto-02 (verde etiqueta #7E8B5A, oliva oscura #495432)"
   }
 }

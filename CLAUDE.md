@@ -16,6 +16,9 @@ Responde en español, en tono cercano.
 - 1 unidad de Blender = 1 mm. Pies en Z=0, frente hacia −Y, centrado en X=0.
 - Usa la librería `alth/` antes de construir geometría a mano:
   - `torno(perfil)`: sólidos de revolución facetados (frutas, latas, vasos, tazas, cabezas de bastón).
+    `bandas=[(z_max, color[, "metal"]), …]` pinta franjas por altura en una sola malla;
+    `giro="frente"` deja una cara plana hacia −Y (etiquetas), `giro=0` deja una arista.
+  - `anillo(...)`: toroide low-poly (lengüetas, argollas, asas, pulseras, llaves).
   - `prisma(...)`: piezas cónicas delgadas (tallos, patas, mangos). `hoja(...)`: hojas en gota con nervio.
   - `caja(...)`, `material`, `chaflan` (proporcional al tamaño), `estudio`, `revisar`, `exportar_glb`.
   - Si un asset necesita una forma que se repetirá (asa, rueda, pliegue), agrégala a `alth/` en vez de dejarla en el `build.py`.
