@@ -3,24 +3,60 @@
   "categoria": "de_mano",
   "tipo_presupuesto": "objeto_simple",
   "k": 2.0,
-  "medidas_reales_mm": {"diametro": 73, "alto": 105},
-  "medidas_alth_mm": {"diametro": 8.16, "alto": 11.74, "formula": "mm_real * 0.0559 * 2.0"},
+  "medidas_reales_mm": {
+    "diametro": 73,
+    "alto": 105
+  },
+  "medidas_alth_mm": {
+    "diametro": 8.16,
+    "alto": 11.74,
+    "formula": "mm_real * 0.0559 * 2.0"
+  },
   "colores": {
-    "metal": {"paleta": "metal", "hex": "#B7BABE", "material": "metal_suave"},
-    "etiqueta_verde": {"paleta": "verde_oliva", "hex": "#7E8B5A"},
-    "etiqueta_crema": {"paleta": "crema_suave", "hex": "#F1E6D7"},
-    "aceitunas": {"paleta": "verde_oliva", "hex": "#495432"},
-    "tallos": {"paleta": "marron_calido", "hex": "#69472D"},
-    "hoja": {"paleta": "verde_salvia", "hex": "#5E7759"}
+    "metal": {
+      "paleta": "metal",
+      "hex": "#B7BABE",
+      "material": "metal_suave"
+    },
+    "etiqueta_verde": {
+      "paleta": "verde_oliva",
+      "hex": "#7E8B5A"
+    },
+    "etiqueta_crema": {
+      "paleta": "paleta_notas.crema_etiqueta",
+      "hex": "#EADCC4"
+    },
+    "aceitunas": {
+      "paleta": "verde_oliva",
+      "hex": "#495432"
+    },
+    "tallos": {
+      "paleta": "marron_calido",
+      "hex": "#69472D"
+    },
+    "hoja": {
+      "paleta": "verde_salvia",
+      "hex": "#5E7759"
+    }
   },
   "modulos": [
-    "cuerpo: alth.torno de 12 lados con bandas (metal, verde, crema, verde, metal), bordes más anchos y tapa hundida",
-    "lengüeta: dos alth.anillo planos sobre la tapa",
-    "dibujo: 2 aceitunas (discos de torno), 2 tallos (prisma) y 1 hoja, cada pieza pegada a su cara"
+    "cuerpo: alth.torno de 12 lados, giro frente, bandas (metal, verde, crema, verde, metal), rebordes de 0.8 mm y tapa hundida con labio",
+    "lengüeta: argolla doble en 8 (dos alth.anillo) y remache de 4 lados",
+    "dibujo: 2 aceitunas ovaladas de 9 lados, rama de 2 tramos + ramita (prisma) y 1 hoja, cada pieza pegada a su cara"
   ],
-  "tris_objetivo": [250, 400],
+  "tris_objetivo": [
+    250,
+    500
+  ],
   "referencia": "refs/infografias/objeto-02-lata-aceitunas.png (forma, bandas, dibujo y colores; no tamaño)",
   "historial": [
-    {"vuelta": 1, "nota": "escrita con torno por bandas, anillo y dibujo por caras; pendiente de render"}
+    {
+      "vuelta": 1,
+      "nota": "388 tris; dibujo chico que parecía de cerezas, arista al frente, bordes delgados, lengüeta chica"
+    },
+    {
+      "vuelta": 2,
+      "nota": "giro frente, aceitunas ovaladas grandes con una rama, rebordes 0.8 mm y tapa hundida, lengüeta en 8, crema #EADCC4"
+    }
   ]
 }

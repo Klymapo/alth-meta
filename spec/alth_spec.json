@@ -320,6 +320,7 @@
   },
   "paleta_notas": {
     "metal": "de la referencia objeto-02 (metal claro #B7BABE, metal sombra #8A8F96); usar con material metal_suave",
-    "verde_oliva": "de la referencia objeto-02 (verde etiqueta #7E8B5A, oliva oscura #495432)"
+    "verde_oliva": "de la referencia objeto-02 (verde etiqueta #7E8B5A, oliva oscura #495432)",
+    "crema_etiqueta": "#EADCC4 · de la referencia objeto-02 (crema etiqueta); banda crema de la lata de aceitunas"
   }
 }
