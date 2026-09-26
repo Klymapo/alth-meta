@@ -1,0 +1,61 @@
+{
+  "nombre": "taza",
+  "categoria": "de_mano",
+  "tipo_presupuesto": "objeto_simple",
+  "k": 2.0,
+  "medidas_reales_mm": {
+    "diametro": 80,
+    "alto": 95
+  },
+  "medidas_alth_mm": {
+    "diametro": 8.94,
+    "alto": 10.62,
+    "formula": "mm_real * 0.0559 * 2.0"
+  },
+  "colores": {
+    "ceramica": {
+      "paleta": "crema_suave",
+      "hex": "#F1E6D7"
+    },
+    "franja": {
+      "paleta": "medidos.taza_cafe",
+      "hex": "#CD8959"
+    },
+    "cafe": {
+      "paleta": "marron_calido",
+      "hex": "#4A3220"
+    }
+  },
+  "modulos": [
+    "cuerpo: alth.torno de 12 lados, pared un poco cónica, pie con bisel, borde con grosor y hueco interior; bandas crema / franja / crema",
+    "café: alth.torno delgado (disco) dentro del hueco, 1 mm bajo el borde",
+    "asa: alth.anillo vertical de sección cuadrada, estirado en Z, medio hundido en el cuerpo del lado +X"
+  ],
+  "tris_objetivo": [
+    150,
+    300
+  ],
+  "referencia": "sin imagen: taza de café clásica de cerámica, cuerpo casi cilíndrico que se abre un poco hacia arriba, asa en C a un costado, color crema con una sola franja de color en el tercio superior; café visible desde arriba",
+  "cotas": [
+    {
+      "pieza": "Taza_cuerpo",
+      "eje": "W",
+      "mm": 8.94
+    },
+    {
+      "pieza": "Taza_cuerpo",
+      "eje": "H",
+      "mm": 10.62
+    }
+  ],
+  "historial": [
+    {
+      "vuelta": 1,
+      "nota": "296 tris, verificación OK; silueta, franja y café legibles; asa delgada tipo alambre"
+    },
+    {
+      "vuelta": 2,
+      "nota": "asa más gruesa (tubo 1.1 mm) y más pegada; 296 tris, verificación OK"
+    }
+  ]
+}
