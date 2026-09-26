@@ -65,6 +65,7 @@ def kelvin_a_rgb(k: float):
 def nueva_escena():
     """Escena vacía en milímetros con Cycles en CPU."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    _capas["n"] = 0
     esc = bpy.context.scene
     us = esc.unit_settings
     us.system = "METRIC"
@@ -310,7 +311,9 @@ def anillo(nombre, radio, grosor, segmentos=8, lados=3, color="#B7BABE", metal=F
 # Todas salen con el MISMO grosor hacia afuera (0.02 mm) y un poco hundidas, así que no
 # asoman de canto en las vistas laterales ni se pierden dentro del cuerpo.
 # Coordenadas de cara: u = horizontal sobre la cara (+u hacia la derecha vista de frente), z = altura.
-CALCO_GROSOR, CALCO_HUNDIDO = 0.02, 0.01
+CALCO_GROSOR = 0.02    # separación de la primera calcomanía respecto a la cara (mm)
+CALCO_CAPA = 0.006     # cada calcomanía siguiente queda esto más afuera: la última dibujada queda encima
+_capas = {"n": 0}
 
 
 def marco_cara(radio, lados, indice=0, giro="frente"):
@@ -358,34 +361,6 @@ def contorno_tira(puntos, ancho):
     return izq + der[::-1]
 
 
-def placa(nombre, contorno, marco, color="#495432", grosor=CALCO_GROSOR, hundido=CALCO_HUNDIDO):
-    """Calcomanía plana con forma de `contorno` [(u, z), …] sobre la cara `marco` (ver marco_cara).
-
-    Avisa si algún punto se sale de la cara: una calcomanía que cruza una arista debe partirse
-    en dos (una placa por cara), como una rama que pasa de una cara a la vecina.
-    """
-    cx, cy = marco["centro"]
-    (nx, ny), (tx, ty) = marco["n"], marco["t"]
-    fuera = max(abs(u) for u, _ in contorno) - marco["semiancho"]
-    if fuera > 1e-3:
-        print(f"[alth] aviso: {nombre} se sale {fuera:.2f} mm de su cara; pártela en dos caras")
-    bm = bmesh.new()
-
-    def capa(d):
-        return [bm.verts.new((cx + tx * u + nx * d, cy + ty * u + ny * d, z)) for u, z in contorno]
-
-    arriba, abajo = capa(grosor), capa(-hundido)
-    bm.faces.new(arriba)
-    bm.faces.new(abajo[::-1])
-    k = len(contorno)
-    for i in range(k):
-        j = (i + 1) % k
-        bm.faces.new((arriba[i], abajo[i], abajo[j], arriba[j]))
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    obj = _objeto(nombre, bm)
-    return _asignar(obj, color)
-
-
 def _recortar_franja(poli, umin, umax):
     """Recorta un polígono [(u, z)] a la franja umin ≤ u ≤ umax (Sutherland–Hodgman)."""
     def corte(pts, dentro, cruce):
@@ -415,15 +390,28 @@ def _recortar_franja(poli, umin, umax):
     return limpio if len(limpio) >= 3 else []
 
 
-def calcomania(nombre, contorno, radio, lados, indice=0, giro="frente", color="#495432",
-               grosor=CALCO_GROSOR, hundido=CALCO_HUNDIDO):
+def _area(poli):
+    return sum(poli[i][0] * poli[(i + 1) % len(poli)][1] - poli[(i + 1) % len(poli)][0] * poli[i][1]
+               for i in range(len(poli))) / 2
+
+
+def calcomania(nombre, contorno, radio, lados, indice=0, giro="frente", color="#495432", capa=None):
     """Calcomanía que ENVUELVE un torno facetado, como una etiqueta impresa.
 
     Dibuja `contorno` [(u, z), …] en la etiqueta desenrollada: u = 0 es el centro de la cara
-    `indice`, y cada cara mide 2·semiancho de ancho. La pieza se corta en cada arista y cada
-    pedazo se pega plano a su cara, con el mismo grosor hacia afuera. No hay que partir nada a mano.
+    `indice` y cada cara mide 2·semiancho. Se corta sola en las aristas y cada pedazo se pega plano
+    a su cara. Es una superficie de una sola cara (sin grosor): de canto no se ve.
+    En las aristas los pedazos comparten el punto donde se cruzan sus planos, así no queda rendija.
+    capa: None = automática por orden de llamada (la última queda encima); o un entero.
     """
+    if capa is None:
+        capa = _capas["n"]
+        _capas["n"] += 1
+    g = CALCO_GROSOR + CALCO_CAPA * capa
+    if _area(contorno) < 0:
+        contorno = contorno[::-1]          # antihorario en (u, z) → la cara mira hacia afuera
     s = radio * math.sin(math.pi / lados)
+    cos_mitad = math.cos(math.pi / lados)
     us = [u for u, _ in contorno]
     k0, k1 = math.floor((min(us) + s) / (2 * s)), math.floor((max(us) + s) / (2 * s))
     bm = bmesh.new()
@@ -434,15 +422,37 @@ def calcomania(nombre, contorno, radio, lados, indice=0, giro="frente", color="#
         m = marco_cara(radio, lados, indice + k, giro)
         cx, cy = m["centro"]
         (nx, ny), (tx, ty) = m["n"], m["t"]
-        local = [(u - 2 * k * s, z) for u, z in pedazo]
-        arriba = [bm.verts.new((cx + tx * u + nx * grosor, cy + ty * u + ny * grosor, z)) for u, z in local]
-        abajo = [bm.verts.new((cx + tx * u - nx * hundido, cy + ty * u - ny * hundido, z)) for u, z in local]
-        bm.faces.new(arriba)
-        bm.faces.new(abajo[::-1])
-        for i in range(len(local)):
-            j = (i + 1) % len(local)
-            bm.faces.new((arriba[i], abajo[i], abajo[j], arriba[j]))
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        vs = []
+        for u, z in pedazo:
+            ul = u - 2 * k * s
+            if abs(abs(ul) - s) < 1e-6:
+                # sobre la arista: punto común de los dos planos desplazados (inglete)
+                ex, ey = cx + tx * ul, cy + ty * ul
+                r = math.hypot(ex, ey)
+                f = (r + g / cos_mitad) / r
+                vs.append(bm.verts.new((ex * f, ey * f, z)))
+            else:
+                vs.append(bm.verts.new((cx + tx * ul + nx * g, cy + ty * ul + ny * g, z)))
+        bm.faces.new(vs)
+    obj = _objeto(nombre, bm)
+    return _asignar(obj, color)
+
+
+def placa(nombre, contorno, marco, color="#495432", capa=None):
+    """Calcomanía sobre UNA cara (`marco_cara`). Para dibujos que cruzan aristas usa `calcomania`."""
+    if capa is None:
+        capa = _capas["n"]
+        _capas["n"] += 1
+    g = CALCO_GROSOR + CALCO_CAPA * capa
+    if _area(contorno) < 0:
+        contorno = contorno[::-1]
+    fuera = max(abs(u) for u, _ in contorno) - marco["semiancho"]
+    if fuera > 1e-3:
+        print(f"[alth] aviso: {nombre} se sale {fuera:.2f} mm de su cara; usa calcomania()")
+    cx, cy = marco["centro"]
+    (nx, ny), (tx, ty) = marco["n"], marco["t"]
+    bm = bmesh.new()
+    bm.faces.new([bm.verts.new((cx + tx * u + nx * g, cy + ty * u + ny * g, z)) for u, z in contorno])
     obj = _objeto(nombre, bm)
     return _asignar(obj, color)
 
