@@ -311,7 +311,7 @@ def caja(nombre, tam, pos=(0, 0, 0), color="#A8453B", biselar=True, apoyada=True
 
 
 # ---------------------------------------------------------------- luz y cámaras
-def estudio(fuerza_sol=3.0, fuerza_relleno=0.7, direccion=None):
+def estudio(fuerza_sol=3.5, fuerza_relleno=0.85, direccion=None):
     """Luz ALTH: sol cálido arriba-izquierda-frente, relleno frío del mundo, piso con sombra."""
     esc = bpy.context.scene
     luz = SPEC["luz"]["principal"]
@@ -342,6 +342,13 @@ def estudio(fuerza_sol=3.0, fuerza_relleno=0.7, direccion=None):
     bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=2000)
     piso = _objeto("Piso_ALTH", bm, variacion=0)
     piso.is_shadow_catcher = True  # solo deja la sombra de contacto
+    # Sin material, Blender pone un gris claro que rebota demasiado sol hacia el frente y los
+    # costados: la tapa y el frente salían iguales. Un gris medio deja un rebote suave.
+    _asignar(piso, "#A0A0A0", faceta=False)
+    try:
+        piso.visible_glossy = False
+    except AttributeError:
+        pass
     return sol
 
 
