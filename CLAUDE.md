@@ -26,6 +26,10 @@ Responde en español, en tono cercano.
     la que llamas después queda encima. No uses prismas/tornos sueltos para dibujos.
   - `prisma(...)`: piezas cónicas delgadas (tallos, patas, mangos). `hoja(...)`: hojas en gota con nervio.
   - `caja(...)`, `material`, `chaflan` (proporcional al tamaño), `estudio`, `revisar`, `exportar_glb`.
+  - `maniqui(arquetipo)` / `junto_a_maniqui(objs)`: maniquí de bloques con las cotas del cuerpo base
+    (`alth/cuerpo.py`). Pásalo como `revisar(..., extras=…)`: sale en el render pero no en medidas ni verificación.
+    Alturas de anclaje en `spec` → `cuerpo_base_95mm.alturas_ancla` (rodilla 21, cadera 33, cintura 38.8,
+    muñeca 35.5, hombro 56, cuello 60.5).
   - Si un asset necesita una forma que se repetirá (asa, rueda, pliegue), agrégala a `alth/` en vez de dejarla en el `build.py`.
 - Colores solo de `spec/alth_spec.json` → `paleta`. Un color nuevo se propone al usuario antes de usarlo.
 - Medidas de objetos: `mm_alth = mm_real × 0.0559 × k` con el `k` de su categoría en `conversion_k`.
@@ -42,6 +46,8 @@ Responde en español, en tono cercano.
 cotas (±2 % contra `"cotas"` del spec del asset), triángulos contra su tope, colores dentro de la paleta,
 piezas flotantes y apoyo en Z=0. Es necesaria para cerrar un asset, pero no suficiente: la hoja de contacto
 se sigue revisando contra la referencia. Lógica en `alth/verificacion.py`, pruebas en `tests/` (sin Blender).
+
+`alth-python tools/escala.py` renderiza todos los assets aprobados junto al maniquí (foto de familia de escala).
 
 ## Ciclo por asset
 

@@ -40,6 +40,9 @@ Mismos campos que `assets/manzana/spec.json`, más:
 - Mismo esqueleto que los ya aprobados (modo `iteracion`/`final`, `estudio()`, exportar solo en `final`).
 - Llama `alth.revisar(objs, …, asset=alth.RAIZ / "assets" / "<nombre>" / "spec.json")` para que corra la verificación.
 - Nombres de pieza `<Nombre>_<parte>` (coinciden con `cotas`).
+- Muebles, objetos anclados al cuerpo o cuando la escala sea dudosa: renderiza junto al maniquí con
+  `extras=alth.junto_a_maniqui(objs)` y revisa las alturas contra `alturas_ancla` de la spec
+  (asiento = rodilla 21, escritorio = cadera 33, barra = cintura 38.8).
 
 ## 5. Ciclo de vueltas (tope según tipo)
 En cada vuelta:

@@ -584,6 +584,43 @@ def camara_orto(nombre, objs, direccion, margen=1.3):
     return ob
 
 
+# ---------------------------------------------------------------- maniquí de escala
+def maniqui(arquetipo="estandar", pos=(0, 0, 0), color="#B7BABE"):
+    """Maniquí de bloques con las cotas del cuerpo base (alth/cuerpo.py). Devuelve sus objetos.
+
+    Úsalo como `extras` en `revisar` para ver un asset junto a un personaje y juzgar su escala.
+    """
+    from . import cuerpo as mq
+    pl = mq.plan(arquetipo)
+    ox, oy, oz = pos
+    objs = []
+    for p in pl["piezas"]:
+        nombre = f"Maniqui_{arquetipo}_{p['nombre']}"
+        x, y, z = p["pos"]
+        x, y, z = x + ox, y + oy, z + oz
+        col = "#3A2F2A" if p.get("oscuro") else color
+        if p["tipo"] == "caja":
+            o = caja(nombre, p["tam"], pos=(x, y, z), color=col, biselar=False)
+            if p.get("chaflan"):
+                chaflan(o, ancho=p["chaflan"], segmentos=2)
+        elif p["tipo"] == "torno":
+            o = torno(nombre, p["perfil"], segmentos=10, color=col, alternar=False, ruido_r=0, ruido_z=0,
+                      ovalo=p["ovalo"], pos=(x, y, z))
+        else:
+            o = prisma(nombre, p["r0"], p["r1"], p["largo"], lados=p.get("lados", 6), color=col,
+                       pos=(x, y, z), rot=p["rot"])
+        objs.append(o)
+    return objs
+
+
+def junto_a_maniqui(objs, arquetipo="estandar", separacion=6.0, lado="izq"):
+    """Coloca un maniquí al lado de `objs` (sin moverlos), con `separacion` mm entre ambos."""
+    mn, mx = _limites(objs)
+    ancho_maniqui = 50.0  # hombros (±15.5) + brazos en pose A + medio brazo: ±25 mm
+    x = (mn.x - separacion - ancho_maniqui / 2) if lado == "izq" else (mx.x + separacion + ancho_maniqui / 2)
+    return maniqui(arquetipo, pos=(x, (mn.y + mx.y) / 2, 0))
+
+
 # ---------------------------------------------------------------- render y revisión
 def _componer(png, destino_fondo=FONDO):
     """Pone el render transparente sobre el color de fondo exacto."""
@@ -631,12 +668,13 @@ def verificar(objs, asset):
     return v.evaluar(datos, SPEC, v.cargar_asset(asset))
 
 
-def revisar(objs, carpeta, modo="iteracion", vistas=None, titulo="", asset=None):
+def revisar(objs, carpeta, modo="iteracion", vistas=None, titulo="", asset=None, extras=()):
     """Renderiza las vistas, compone el fondo y arma la hoja de contacto.
 
     Con `asset` (ruta a assets/<nombre>/spec.json) también corre la verificación automática
-    y la imprime. Devuelve un dict con rutas, tiempos, medidas y verificación; también lo
-    guarda como reporte.json.
+    y la imprime. `extras` (p. ej. un maniquí de escala) entran en el encuadre y el render, pero no en
+    las medidas ni en la verificación. Devuelve un dict con rutas, tiempos, medidas y verificación;
+    también lo guarda como reporte.json.
     """
     esc = bpy.context.scene
     cfg = MODOS[modo]
@@ -646,7 +684,7 @@ def revisar(objs, carpeta, modo="iteracion", vistas=None, titulo="", asset=None)
     carpeta.mkdir(parents=True, exist_ok=True)
     pngs, tiempos = {}, {}
     for nombre in (vistas or list(VISTAS)):
-        cam = camara_orto(f"Cam_{nombre}", objs, VISTAS[nombre])
+        cam = camara_orto(f"Cam_{nombre}", list(objs) + list(extras), VISTAS[nombre])
         esc.camera = cam
         ruta = carpeta / f"{nombre}.png"
         esc.render.filepath = str(ruta)

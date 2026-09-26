@@ -114,12 +114,16 @@
       78.5
     ],
     "alturas_ancla": {
-      "rodilla": 21,
-      "cadera": 33,
-      "muneca": 37,
-      "cintura": 38,
-      "cuello": 60.5
-    }
+      "rodilla": 21.0,
+      "cadera": 33.0,
+      "muneca": 35.5,
+      "cintura": 38.8,
+      "cuello": 60.5,
+      "tobillo": 9.0,
+      "hombro": 56.0,
+      "punta_mano": 28.1
+    },
+    "alturas_ancla_nota": "Calculadas por alth/cuerpo.py con las cotas del PDF (zapato 9, pierna 24, pelvis 5.8, cabeza 34.5, brazo 11+10, palma 7.5). Antes: muñeca ≈37 y cintura ≈38 eran estimadas."
   },
   "conversion_k": {
     "de_mano": {
