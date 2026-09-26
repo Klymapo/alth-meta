@@ -14,10 +14,14 @@ Responde en español, en tono cercano.
 ## Convenciones
 
 - 1 unidad de Blender = 1 mm. Pies en Z=0, frente hacia −Y, centrado en X=0.
-- Usa la librería `alth/` (`nueva_escena`, `caja`, `material`, `chaflan`, `estudio`, `revisar`, `exportar_glb`).
+- Usa la librería `alth/` antes de construir geometría a mano:
+  - `torno(perfil)`: sólidos de revolución facetados (frutas, latas, vasos, tazas, cabezas de bastón).
+  - `prisma(...)`: piezas cónicas delgadas (tallos, patas, mangos). `hoja(...)`: hojas en gota con nervio.
+  - `caja(...)`, `material`, `chaflan` (proporcional al tamaño), `estudio`, `revisar`, `exportar_glb`.
+  - Si un asset necesita una forma que se repetirá (asa, rueda, pliegue), agrégala a `alth/` en vez de dejarla en el `build.py`.
 - Colores solo de `spec/alth_spec.json` → `paleta`. Un color nuevo se propone al usuario antes de usarlo.
 - Medidas de objetos: `mm_alth = mm_real × 0.0559 × k` con el `k` de su categoría en `conversion_k`.
-- Sombreado plano, chaflán 0.4 mm, rugosidad 0.85. Ojos, cejas y boca van como placas con textura, no geometría.
+- Sombreado plano con variación de ±3 % por cara, chaflán según tamaño (0.4 / 0.15 / ninguno), rugosidad 0.85. Ojos, cejas y boca van como placas con textura, no geometría.
 
 ## Ciclo por asset
 

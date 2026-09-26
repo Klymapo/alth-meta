@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import math
+import random
 import time
 from pathlib import Path
 
@@ -95,7 +96,7 @@ def _nodos(idb):
     return idb.node_tree
 
 
-def material(nombre: str, color: str, rugosidad=None, metalico=0.0):
+def material(nombre: str, color: str, rugosidad=None, metalico=0.0, faceta=False):
     m = SPEC["material"]
     mat = bpy.data.materials.get(nombre) or bpy.data.materials.new(nombre)
     arbol = _nodos(mat)
@@ -106,6 +107,8 @@ def material(nombre: str, color: str, rugosidad=None, metalico=0.0):
             or arbol.nodes.new("ShaderNodeOutputMaterial")
         arbol.links.new(bsdf.outputs["BSDF"], salida.inputs["Surface"])
     bsdf.inputs["Base Color"].default_value = hex_a_lineal(color)
+    if faceta:
+        _conectar_faceta(arbol, bsdf, color)
     bsdf.inputs["Roughness"].default_value = m["rugosidad"] if rugosidad is None else rugosidad
     bsdf.inputs["Metallic"].default_value = metalico
     for clave in ("Specular IOR Level", "Specular"):
@@ -116,24 +119,181 @@ def material(nombre: str, color: str, rugosidad=None, metalico=0.0):
     return mat
 
 
-def _objeto(nombre, bm):
+FACETA_ATTR = "alth_faceta"
+
+
+def _objeto(nombre, bm, variacion=None, semilla=None):
+    """Malla con sombreado plano y una variación de valor por cara (spec: ±3 %)."""
     me = bpy.data.meshes.new(nombre)
     bm.to_mesh(me)
     bm.free()
     for p in me.polygons:
         p.use_smooth = False  # sombreado plano: las facetas se ven
+    var = SPEC["geometria"].get("variacion_cara", 0.03) if variacion is None else variacion
+    if var > 0:
+        rnd = random.Random(semilla if semilla is not None else nombre)
+        attr = me.color_attributes.new(FACETA_ATTR, "FLOAT_COLOR", "CORNER")
+        for p in me.polygons:
+            v = 1 + rnd.uniform(-var, var)
+            for li in p.loop_indices:
+                attr.data[li].color = (v, v, v, 1.0)
     obj = bpy.data.objects.new(nombre, me)
     bpy.context.scene.collection.objects.link(obj)
     return obj
 
 
-def chaflan(obj, ancho=None, segmentos=None):
+def chaflan(obj, ancho=None, segmentos=None, angulo=40):
+    """Chaflán proporcional al tamaño (spec → geometria.chaflan_por_tamano).
+
+    Sin `ancho`, lo decide la dimensión mayor del objeto; devuelve None si no aplica.
+    `angulo`: solo bisela aristas más agudas que eso, para no llenar de triángulos las formas curvas.
+    """
     g = SPEC["geometria"]
+    if ancho is None:
+        bpy.context.view_layer.update()
+        mayor = max(obj.dimensions)
+        ancho = next((r["mm"] for r in g["chaflan_por_tamano"] if mayor >= r["desde_mm"]), 0)
+    if ancho <= 0:
+        return None
     mod = obj.modifiers.new("Chaflan", "BEVEL")
-    mod.width = g["chaflan_mm"] if ancho is None else ancho
+    mod.width = ancho
     mod.segments = g["chaflan_segmentos"] if segmentos is None else segmentos
     mod.limit_method = "ANGLE"
+    mod.angle_limit = math.radians(angulo)
     return mod
+
+
+def _conectar_faceta(arbol, bsdf, color):
+    """Color base × atributo por cara. Solo se usa en mallas que tienen el atributo:
+    si falta, el nodo Attribute devuelve negro."""
+    try:
+        attr = arbol.nodes.new("ShaderNodeAttribute")
+        attr.attribute_name = FACETA_ATTR
+        mix = arbol.nodes.new("ShaderNodeMix")
+        mix.data_type = "RGBA"
+        mix.blend_type = "MULTIPLY"
+        fac = next(i for i in mix.inputs if i.type == "VALUE")
+        a = next(i for i in mix.inputs if i.name == "A" and i.type == "RGBA")
+        b = next(i for i in mix.inputs if i.name == "B" and i.type == "RGBA")
+        out = next(o for o in mix.outputs if o.type == "RGBA")
+        fac.default_value = 1.0
+        a.default_value = hex_a_lineal(color)
+        arbol.links.new(attr.outputs["Color"], b)
+        arbol.links.new(out, bsdf.inputs["Base Color"])
+    except Exception as e:  # noqa: BLE001 — la variación es cosmética; no debe tumbar el render
+        print(f"[alth] aviso: sin variación por cara ({e})")
+
+
+def _asignar(obj, color, nombre_mat=None, **kw_mat):
+    kw_mat.setdefault("faceta", FACETA_ATTR in obj.data.color_attributes)
+    obj.data.materials.append(material(nombre_mat or f"M_{obj.name}", color, **kw_mat))
+    return obj
+
+
+# ---------------------------------------------------------------- formas
+def torno(nombre, perfil, segmentos=10, color="#A8453B", alternar=True,
+          ruido_r=0.06, ruido_z=0.1, centro_abajo=None, centro_arriba=None,
+          ovalo=(1.0, 1.0), semilla=7, pos=(0, 0, 0)):
+    """Sólido de revolución facetado: frutas, latas, vasos, tazas, jarrones, cabezas de bastón…
+
+    perfil: lista de (radio_mm, z_mm) de abajo hacia arriba.
+    alternar: gira medio segmento cada anillo → facetas triangulares (look low-poly).
+    ruido_r / ruido_z: irregularidad (fracción del radio / mm) en los anillos intermedios.
+    centro_abajo / centro_arriba: z del vértice que cierra cada tapa. Por debajo del último
+      anillo hace una cuenca (hundido del tallo); None cierra al nivel del anillo.
+    ovalo: escala (x, y) para secciones no circulares.
+    """
+    rnd = random.Random(semilla)
+    bm = bmesh.new()
+    anillos = []
+    n = len(perfil)
+    for i, (r, z) in enumerate(perfil):
+        des = (i % 2) * math.pi / segmentos if alternar else 0
+        medio = 0 < i < n - 1
+        anillo = []
+        for s in range(segmentos):
+            a = 2 * math.pi * s / segmentos + des
+            j = 1 + (rnd.uniform(-ruido_r, ruido_r) if medio else 0)
+            zz = z + (rnd.uniform(-ruido_z, ruido_z) if medio else 0)
+            anillo.append(bm.verts.new((r * j * math.cos(a) * ovalo[0], r * j * math.sin(a) * ovalo[1], zz)))
+        anillos.append(anillo)
+    abajo = bm.verts.new((0, 0, perfil[0][1] if centro_abajo is None else centro_abajo))
+    arriba = bm.verts.new((0, 0, perfil[-1][1] if centro_arriba is None else centro_arriba))
+    for s in range(segmentos):
+        k = (s + 1) % segmentos
+        bm.faces.new((abajo, anillos[0][k], anillos[0][s]))
+        bm.faces.new((arriba, anillos[-1][s], anillos[-1][k]))
+    for i in range(n - 1):
+        a, b = anillos[i], anillos[i + 1]
+        for s in range(segmentos):
+            k = (s + 1) % segmentos
+            if not alternar:
+                bm.faces.new((a[s], a[k], b[k], b[s]))
+            elif i % 2 == 0:
+                bm.faces.new((a[s], a[k], b[s]))
+                bm.faces.new((a[k], b[k], b[s]))
+            else:
+                bm.faces.new((a[s], b[k], b[s]))
+                bm.faces.new((a[s], a[k], b[k]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    obj = _objeto(nombre, bm, semilla=semilla)
+    obj.location = pos
+    return _asignar(obj, color)
+
+
+def prisma(nombre, radio_base, radio_punta, largo, lados=5, color="#69472D", pos=(0, 0, 0), rot=(0, 0, 0)):
+    """Prisma cónico a lo largo de +Z: tallos, patas, mangos, velas, dedos simples."""
+    perfil = [(radio_base, 0.0), (radio_punta, largo)]
+    obj = torno(nombre, perfil, segmentos=lados, color=color, alternar=False, ruido_r=0, ruido_z=0)
+    obj.location = pos
+    obj.rotation_euler = tuple(math.radians(v) for v in rot)
+    return obj
+
+
+def hoja(nombre, largo=4.0, ancho=1.9, grosor=0.18, nervio=0.25, curva=0.5,
+         estaciones=4, color="#7E9B7A", pos=(0, 0, 0), rot=(0, 0, 0)):
+    """Hoja en forma de gota a lo largo de +X: base angosta, lo más ancho al 35 %, punta afilada.
+
+    nervio: cuánto sube el nervio central (mm). curva: cuánto se arquea hacia abajo la punta (mm).
+    rot: grados (x, y, z). La base de la hoja queda en `pos`.
+    """
+    bm = bmesh.new()
+    ts = [i / (estaciones + 1) for i in range(1, estaciones + 1)]
+
+    def ancho_en(t):  # perfil de gota: 0 en la base y la punta, máximo cerca del 35 %
+        return ancho / 2 * math.sin(math.pi * t ** 0.62)
+
+    def z_en(t):
+        return -curva * t * t
+
+    base = bm.verts.new((0, 0, 0))
+    punta = bm.verts.new((largo, 0, z_en(1)))
+    izq = [bm.verts.new((t * largo, ancho_en(t), z_en(t))) for t in ts]
+    der = [bm.verts.new((t * largo, -ancho_en(t), z_en(t))) for t in ts]
+    eje = [bm.verts.new((t * largo, 0, z_en(t) + nervio * (1 - t))) for t in ts]
+    izq_b = [bm.verts.new((v.co.x, v.co.y, v.co.z - grosor)) for v in izq]
+    der_b = [bm.verts.new((v.co.x, v.co.y, v.co.z - grosor)) for v in der]
+    eje_b = [bm.verts.new((v.co.x, 0, z_en(t) - grosor)) for v, t in zip(eje, ts)]
+    def cara(*vs):
+        bm.faces.new(vs)
+
+    # cara superior (con nervio) e inferior
+    for lados, ejes in ((izq, eje), (der, eje), (izq_b, eje_b), (der_b, eje_b)):
+        cara(base, lados[0], ejes[0])
+        for i in range(estaciones - 1):
+            cara(lados[i], lados[i + 1], ejes[i + 1], ejes[i])
+        cara(lados[-1], punta, ejes[-1])
+    # borde
+    for lados, lados_b in ((izq, izq_b), (der, der_b)):
+        cara(base, lados_b[0], lados[0])
+        for i in range(estaciones - 1):
+            cara(lados[i], lados_b[i], lados_b[i + 1], lados[i + 1])
+        cara(lados[-1], lados_b[-1], punta)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    obj = _objeto(nombre, bm)
+    obj.location = pos
+    obj.rotation_euler = tuple(math.radians(v) for v in rot)
+    return _asignar(obj, color)
 
 
 def caja(nombre, tam, pos=(0, 0, 0), color="#A8453B", biselar=True, apoyada=True):
@@ -144,14 +304,14 @@ def caja(nombre, tam, pos=(0, 0, 0), color="#A8453B", biselar=True, apoyada=True
     bmesh.ops.scale(bm, vec=(w, d, h), verts=bm.verts)
     obj = _objeto(nombre, bm)
     obj.location = (pos[0], pos[1], pos[2] + (h / 2 if apoyada else 0))
-    obj.data.materials.append(material(f"M_{nombre}", color))
+    _asignar(obj, color)
     if biselar:
         chaflan(obj)
     return obj
 
 
 # ---------------------------------------------------------------- luz y cámaras
-def estudio(fuerza_sol=3.0, fuerza_relleno=0.7):
+def estudio(fuerza_sol=3.0, fuerza_relleno=0.7, direccion=None):
     """Luz ALTH: sol cálido arriba-izquierda-frente, relleno frío del mundo, piso con sombra."""
     esc = bpy.context.scene
     luz = SPEC["luz"]["principal"]
@@ -160,7 +320,10 @@ def estudio(fuerza_sol=3.0, fuerza_relleno=0.7):
     sol.angle = math.radians(20)  # sombras suaves, como en las referencias
     sol.color = kelvin_a_rgb(luz["kelvin"])
     ob = bpy.data.objects.new("Sol_ALTH", sol)
-    ob.rotation_euler = (math.radians(50), math.radians(-28), math.radians(-35))
+    # Hacia dónde viaja la luz: desde arriba-izquierda-frente. Arriba pesa más que el frente,
+    # para que lo que mira hacia arriba (coronas, cabello, hombros) quede un poco más claro.
+    d = Vector(direccion or luz.get("direccion", (0.40, 0.50, -0.77))).normalized()
+    ob.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
     esc.collection.objects.link(ob)
 
     mundo = bpy.data.worlds.new("Mundo_ALTH")
@@ -177,7 +340,7 @@ def estudio(fuerza_sol=3.0, fuerza_relleno=0.7):
 
     bm = bmesh.new()
     bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=2000)
-    piso = _objeto("Piso_ALTH", bm)
+    piso = _objeto("Piso_ALTH", bm, variacion=0)
     piso.is_shadow_catcher = True  # solo deja la sombra de contacto
     return sol
 

@@ -1,0 +1,58 @@
+{
+  "nombre": "manzana",
+  "categoria": "de_mano",
+  "tipo_presupuesto": "objeto_simple",
+  "k": 2.0,
+  "medidas_reales_mm": {
+    "diametro": 80,
+    "alto_cuerpo": 72
+  },
+  "medidas_alth_mm": {
+    "diametro": 8.94,
+    "alto_cuerpo": 8.05,
+    "formula": "mm_real * 0.0559 * 2.0"
+  },
+  "colores": {
+    "cuerpo": {
+      "paleta": "rojo_calido",
+      "hex": "#A8453B"
+    },
+    "tallo": {
+      "paleta": "marron_calido",
+      "hex": "#69472D"
+    },
+    "hoja": {
+      "paleta": "verde_salvia",
+      "hex": "#7E9B7A"
+    }
+  },
+  "modulos": [
+    "cuerpo: alth.torno, 10 segmentos alternados, cuenca del tallo",
+    "tallo: alth.prisma de 5 lados",
+    "hoja: alth.hoja en forma de gota con nervio"
+  ],
+  "tris_objetivo": [
+    150,
+    300
+  ],
+  "referencia": "refs/infografias/objeto-01-manzana.png (forma, facetado y color; no tamaño)",
+  "chaflan": "ninguno (torno y piezas < 5 mm, spec geometria.chaflan_por_tamano)",
+  "historial": [
+    {
+      "vuelta": 1,
+      "nota": "hombros de cubo redondeado, tallo corto, hoja de canto"
+    },
+    {
+      "vuelta": 2,
+      "nota": "perfil más redondo, tallo 3.1 mm; hoja casi horizontal, costados rectos"
+    },
+    {
+      "vuelta": 3,
+      "nota": "196 tris, 8.97×8.75×7.81 mm; corona en meseta, hoja rectangular, facetado tímido"
+    },
+    {
+      "vuelta": 4,
+      "nota": "reescrita con torno/prisma/hoja: corona que cae a la cuenca, hoja en gota, facetas más grandes, sol más alto"
+    }
+  ]
+}
