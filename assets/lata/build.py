@@ -47,66 +47,23 @@ lengueta = [
                 pos=(0, -1.27, Z_HUNDIDO + 0.15)),
 ]
 
-# ---------------------------------------------------------------- dibujo sobre las caras
-APOTEMA = R * math.cos(math.radians(180 / LADOS))
-MEDIA_CARA = R * math.sin(math.radians(180 / LADOS))   # 1.056 mm: de centro de cara a arista
-
-
-def cara(c_grados, u=0.0, fuera=0.0):
-    """Punto de la cara centrada en c_grados, desplazado u mm a lo ancho y `fuera` mm hacia afuera.
-    Devuelve (x, y) y el giro en Z que alinea una pieza con esa cara. +u va hacia ángulos mayores."""
-    c = math.radians(c_grados)
-    n = (math.cos(c), math.sin(c))
-    t = (-math.sin(c), math.cos(c))
-    x = n[0] * (APOTEMA + fuera) + t[0] * u
-    y = n[1] * (APOTEMA + fuera) + t[1] * u
-    return x, y, c_grados - 270
-
-
-RAS = 0.02   # v4: lo más que sobresale de su cara una pieza del dibujo (antes asomaban de canto en la lateral)
-
-
-def rama(nombre, c, u0, z0, u1, z1, grueso=0.13):
-    """Tallo recto sobre la cara c, de (u0, z0) a (u1, z1)."""
-    x, y, rz = cara(c, u0, fuera=RAS - grueso)
-    du, dz = u1 - u0, z1 - z0
-    return alth.prisma(nombre, grueso, grueso * 0.8, math.hypot(du, dz), lados=4, color=TALLO,
-                       pos=(x, y, z0), rot=(0, math.degrees(math.atan2(du, dz)), rz))
-
-
-FRENTE, DER = 270, 300
-dibujo = []
-
-# v2: aceitunas ovaladas de 9 lados (≈ 2.4 × 2.9 mm, antes discos de 1.9 mm), una por cara.
-# Se hunden 0.08 mm para que el borde que pasa de la arista no quede flotando.
-# v3: 0.15 mm de grosor (antes 0.22) y todo el dibujo a ras (≤ 0.09 mm fuera de la cara):
-# en la v2 la aceituna A y la rama asomaban de canto en la vista lateral.
-for nombre, c, u, z, r in (("A", FRENTE, 0.0, 4.6, 1.45), ("B", DER, 0.0, 5.9, 1.35)):
-    x, y, rz = cara(c, u, fuera=RAS - 0.15)
-    disco = alth.torno(f"Lata_aceituna_{nombre}", [(r, 0.0), (r, 0.15)], segmentos=9, ovalo=(0.82, 1.0),
-                       alternar=False, ruido_r=0, ruido_z=0, color=OLIVA)
-    disco.location = (x, y, z)
-    disco.rotation_euler = (math.radians(90), 0, math.radians(rz))  # el disco mira hacia afuera
-    dibujo.append(disco)
-
-# v2: una rama que baja desde arriba a la derecha, cruza la arista y termina en la aceituna A;
-# una ramita corta a la aceituna B (antes dos tallos que se juntaban: parecían cerezas).
-dibujo += [
-    rama("Lata_rama_a", DER, 0.6, 8.6, -MEDIA_CARA, 7.3),
-    rama("Lata_rama_b", FRENTE, MEDIA_CARA, 7.3, 0.0, 6.0),
-    rama("Lata_ramita", DER, -0.5, 7.75, 0.0, 7.2, grueso=0.11),
+# ---------------------------------------------------------------- dibujo (calcomanías)
+# v5: todo el dibujo son calcomanías que envuelven el cuerpo (alth.calcomania): se cortan en cada
+# arista y se pegan planas a su cara, 0.02 mm hacia afuera. En la v4 eran piezas sueltas por cara
+# que asomaban de canto en la lateral o, a ras, casi desaparecían.
+# u = 0 es el centro de la cara frontal (giro="frente"); +u va hacia la derecha.
+dibujo = [
+    alth.calcomania("Lata_aceituna_A", alth.contorno_ovalo(-0.6, 5.0, 1.15, 1.45, 8), R, LADOS, color=OLIVA),
+    alth.calcomania("Lata_aceituna_B", alth.contorno_ovalo(1.9, 5.9, 1.05, 1.4, 8), R, LADOS, color=OLIVA),
+    alth.calcomania("Lata_rama", alth.contorno_tira([(-0.4, 6.3), (0.4, 7.3), (1.4, 8.0), (2.6, 8.3)], 0.28),
+                    R, LADOS, color=TALLO),
+    alth.calcomania("Lata_ramita", alth.contorno_tira([(1.9, 7.2), (1.6, 7.85)], 0.22), R, LADOS, color=TALLO),
+    alth.calcomania("Lata_hoja", alth.contorno_gota((0.5, 7.5), 155, 2.8, 1.4), R, LADOS, color=HOJA),
 ]
-
-# Hoja: nace en la rama del frente y sube hacia la izquierda (como en la referencia).
-# v4: 2.6 × 1.3, plana (curva=0; en la v3 la curva la hundía en la cara) a 0.1 mm de la cara,
-# y a 45° (antes 35°) para que la punta no pase la arista izquierda ni salga de la banda crema.
-x, y, rz = cara(FRENTE, u=0.8, fuera=0.1)
-dibujo.append(alth.hoja("Lata_hoja", largo=2.6, ancho=1.3, grosor=0.08, nervio=0.08, curva=0.0,
-                        estaciones=3, color=HOJA, pos=(x, y, 7.0), rot=(90, -135, rz)))
 
 objs = [cuerpo, *lengueta, *dibujo]
 alth.estudio()
-rep = alth.revisar(objs, alth.RAIZ / "renders" / "lata" / MODO, modo=MODO, titulo=f"lata v4 · {MODO}",
+rep = alth.revisar(objs, alth.RAIZ / "renders" / "lata" / MODO, modo=MODO, titulo=f"lata v5 · {MODO}",
                    asset=alth.RAIZ / "assets" / "lata" / "spec.json")
 print("TOTAL_TRIS", sum(v["tris_sin_modificadores"] for v in rep["medidas_mm"].values()))
 print(rep["medidas_mm"], rep["segundos_total"])
