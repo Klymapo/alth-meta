@@ -63,9 +63,12 @@ def cara(c_grados, u=0.0, fuera=0.0):
     return x, y, c_grados - 270
 
 
+RAS = 0.02   # v4: lo más que sobresale de su cara una pieza del dibujo (antes asomaban de canto en la lateral)
+
+
 def rama(nombre, c, u0, z0, u1, z1, grueso=0.13):
     """Tallo recto sobre la cara c, de (u0, z0) a (u1, z1)."""
-    x, y, rz = cara(c, u0, fuera=-0.04)
+    x, y, rz = cara(c, u0, fuera=RAS - grueso)
     du, dz = u1 - u0, z1 - z0
     return alth.prisma(nombre, grueso, grueso * 0.8, math.hypot(du, dz), lados=4, color=TALLO,
                        pos=(x, y, z0), rot=(0, math.degrees(math.atan2(du, dz)), rz))
@@ -79,7 +82,7 @@ dibujo = []
 # v3: 0.15 mm de grosor (antes 0.22) y todo el dibujo a ras (≤ 0.09 mm fuera de la cara):
 # en la v2 la aceituna A y la rama asomaban de canto en la vista lateral.
 for nombre, c, u, z, r in (("A", FRENTE, 0.0, 4.6, 1.45), ("B", DER, 0.0, 5.9, 1.35)):
-    x, y, rz = cara(c, u, fuera=-0.08)
+    x, y, rz = cara(c, u, fuera=RAS - 0.15)
     disco = alth.torno(f"Lata_aceituna_{nombre}", [(r, 0.0), (r, 0.15)], segmentos=9, ovalo=(0.82, 1.0),
                        alternar=False, ruido_r=0, ruido_z=0, color=OLIVA)
     disco.location = (x, y, z)
@@ -95,15 +98,16 @@ dibujo += [
 ]
 
 # Hoja: nace en la rama del frente y sube hacia la izquierda (como en la referencia).
-# v3: 2.8 × 1.35 (antes 2.4 × 1.1), del tamaño de una aceituna; la punta pasa la arista
-# izquierda y `curva` la dobla hacia adentro para que siga la cara vecina.
-x, y, rz = cara(FRENTE, u=1.0, fuera=0.02)
-dibujo.append(alth.hoja("Lata_hoja", largo=2.8, ancho=1.35, grosor=0.08, nervio=0.08, curva=0.15,
-                        estaciones=3, color=HOJA, pos=(x, y, 7.2), rot=(90, -145, rz)))
+# v4: 2.6 × 1.3, plana (curva=0; en la v3 la curva la hundía en la cara) a 0.1 mm de la cara,
+# y a 45° (antes 35°) para que la punta no pase la arista izquierda ni salga de la banda crema.
+x, y, rz = cara(FRENTE, u=0.8, fuera=0.1)
+dibujo.append(alth.hoja("Lata_hoja", largo=2.6, ancho=1.3, grosor=0.08, nervio=0.08, curva=0.0,
+                        estaciones=3, color=HOJA, pos=(x, y, 7.0), rot=(90, -135, rz)))
 
 objs = [cuerpo, *lengueta, *dibujo]
 alth.estudio()
-rep = alth.revisar(objs, alth.RAIZ / "renders" / "lata" / MODO, modo=MODO, titulo=f"lata v3 · {MODO}")
+rep = alth.revisar(objs, alth.RAIZ / "renders" / "lata" / MODO, modo=MODO, titulo=f"lata v4 · {MODO}",
+                   asset=alth.RAIZ / "assets" / "lata" / "spec.json")
 print("TOTAL_TRIS", sum(v["tris_sin_modificadores"] for v in rep["medidas_mm"].values()))
 print(rep["medidas_mm"], rep["segundos_total"])
 if MODO == "final":

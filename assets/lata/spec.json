@@ -61,6 +61,24 @@
     {
       "vuelta": 3,
       "nota": "492 tris; aceituna B a 0.15 mm, argollas separadas (chica 4 lados); NO cierra: la hoja se hunde en la cara por curva=0.15 y se ve chica, y la aceituna A asoma de canto en la lateral"
+    },
+    {
+      "vuelta": 4,
+      "nota": "extra; verificación OK, 492 tris; NO cierra: la hoja a 0.1 mm asoma de canto en la lateral y las ramas a ras casi desaparecen"
     }
-  ]
+  ],
+  "tris_max": 500,
+  "cotas": [
+    {
+      "pieza": "Lata_cuerpo",
+      "eje": "W",
+      "mm": 8.16
+    },
+    {
+      "pieza": "Lata_cuerpo",
+      "eje": "H",
+      "mm": 11.74
+    }
+  ],
+  "nota_cotas": "W es de arista a arista con giro frente e incluye los rebordes (RB = R × 1.04): da ≈ 8.20, dentro de ±2 % del diámetro 8.16"
 }
