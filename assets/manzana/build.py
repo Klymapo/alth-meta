@@ -1,4 +1,4 @@
-"""Manzana ALTH · objeto de mano (k=2.0), vuelta 5.
+"""Manzana ALTH · objeto de mano (k=2.0), vuelta 6.
 
     alth-python assets/manzana/build.py            # iteración
     alth-python assets/manzana/build.py final      # render final + GLB (solo tras aprobación)
@@ -35,12 +35,19 @@ tallo = alth.prisma("Manzana_tallo", 0.42, 0.30, 3.0, lados=5, color=MARRON,
 # en las vistas de frente y 3/4.
 # v5: más grande y girada sobre su eje (rot x) para mostrar la cara de frente y en 3/4;
 # en la v4 su plano era casi horizontal y de frente se veía como una rayita.
-hoja = alth.hoja("Manzana_hoja", largo=5.0, ancho=2.6, grosor=0.2, nervio=0.3, curva=0.6,
-                 color=VERDE, pos=(0.25, -0.1, z_tallo + 0.9), rot=(55, -40, -35))
+# v6: 3.7 × 1.9 (≈ 2/5 del ancho, como la referencia); nace 2.2 mm arriba sobre el eje
+# inclinado del tallo; rot z 30 deja la cara hacia frente (0.89) y hacia 3/4 (0.84),
+# en la v5 (rot z −35) quedaba de canto en 3/4.
+Z_HOJA = 2.2
+eje_tallo = (-0.190, -0.181, 0.965)       # eje del prisma con rot=(6, -14, 20)
+k_hoja = Z_HOJA / eje_tallo[2]
+hoja = alth.hoja("Manzana_hoja", largo=3.7, ancho=1.9, grosor=0.2, nervio=0.3, curva=0.45,
+                 color=VERDE, pos=(eje_tallo[0] * k_hoja, eje_tallo[1] * k_hoja, z_tallo + Z_HOJA),
+                 rot=(55, -40, 30))
 
 objs = [cuerpo, tallo, hoja]
 alth.estudio()
-rep = alth.revisar(objs, alth.RAIZ / "renders" / "manzana" / MODO, modo=MODO, titulo=f"manzana v5 · {MODO}")
+rep = alth.revisar(objs, alth.RAIZ / "renders" / "manzana" / MODO, modo=MODO, titulo=f"manzana v6 · {MODO}")
 print("TOTAL_TRIS", sum(v["tris_sin_modificadores"] for v in rep["medidas_mm"].values()))
 print(rep["medidas_mm"], rep["segundos_total"])
 if MODO == "final":
