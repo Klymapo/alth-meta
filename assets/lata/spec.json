@@ -73,6 +73,10 @@
     {
       "vuelta": 5,
       "nota": "aprobada"
+    },
+    {
+      "vuelta": 5,
+      "nota": "re-exportada con calcomanías v2 (374 tris); rayita de canto en vista lateral aceptada"
     }
   ],
   "tris_max": 530,
