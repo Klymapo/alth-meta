@@ -1,6 +1,11 @@
 {
   "version": "1.3",
   "fecha": "2026-09-26",
+  "escala_congelada": {
+    "version": "v1.0",
+    "fecha": "2026-09-26",
+    "nota": "Aprobada por el usuario con la foto de familia (tools/escala.py final): maniquí estándar 95 mm + manzana, lata, taza, vaso y vaso de café. Cambiar escala, arquetipos o k de mano requiere nueva versión."
+  },
   "unidades": {
     "blender_unit": "1 BU = 1 mm de maqueta",
     "cabeza_C_mm": 34.5,
