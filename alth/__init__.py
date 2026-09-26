@@ -631,18 +631,34 @@ def _componer(png, destino_fondo=FONDO):
     base.convert("RGB").save(png)
 
 
+def _fuente(tam):
+    """Fuente con acentos y ñ (la de Pillow por defecto no los trae)."""
+    from PIL import ImageFont
+    for ruta in ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                 "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"):
+        try:
+            return ImageFont.truetype(ruta, tam)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
 def hoja_contacto(pngs: dict, destino, titulo=""):
+    """Junta las vistas en una sola imagen: 2 columnas, tantas filas como hagan falta."""
     from PIL import Image, ImageDraw
     imgs = {k: Image.open(v) for k, v in pngs.items()}
     px = next(iter(imgs.values())).width
-    barra = 28
-    hoja = Image.new("RGB", (px * 2, px * 2 + barra), FONDO)
+    cols = min(2, len(imgs))
+    filas = math.ceil(len(imgs) / cols)
+    barra = max(28, px // 16)
+    hoja = Image.new("RGB", (px * cols, px * filas + barra), FONDO)
     d = ImageDraw.Draw(hoja)
-    d.text((10, 8), titulo, fill="#23242B")
+    d.text((10, barra // 4), titulo, fill="#23242B", font=_fuente(max(13, barra // 2)))
+    etiqueta = _fuente(max(12, px // 34))
     for i, (k, im) in enumerate(imgs.items()):
-        x, y = (i % 2) * px, barra + (i // 2) * px
+        x, y = (i % cols) * px, barra + (i // cols) * px
         hoja.paste(im.convert("RGB"), (x, y))
-        d.text((x + 8, y + 6), k, fill="#595B66")
+        d.text((x + 8, y + 6), k, fill="#595B66", font=etiqueta)
     hoja.save(destino)
     return destino
 
