@@ -66,5 +66,18 @@
       "vuelta": 6,
       "nota": "aprobada"
     }
-  ]
+  ],
+  "cotas": [
+    {
+      "pieza": "Manzana_cuerpo",
+      "eje": "W",
+      "mm": 8.94
+    },
+    {
+      "pieza": "Manzana_cuerpo",
+      "eje": "H",
+      "mm": 8.05
+    }
+  ],
+  "nota_cotas": "D (fondo) no se verifica: mide 8.64 a propósito por la irregularidad del torno (aprobado en la vuelta 6)"
 }

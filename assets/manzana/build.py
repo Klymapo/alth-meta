@@ -47,7 +47,8 @@ hoja = alth.hoja("Manzana_hoja", largo=3.7, ancho=1.9, grosor=0.2, nervio=0.3, c
 
 objs = [cuerpo, tallo, hoja]
 alth.estudio()
-rep = alth.revisar(objs, alth.RAIZ / "renders" / "manzana" / MODO, modo=MODO, titulo=f"manzana v6 · {MODO}")
+rep = alth.revisar(objs, alth.RAIZ / "renders" / "manzana" / MODO, modo=MODO, titulo=f"manzana · {MODO}",
+                   asset=alth.RAIZ / "assets" / "manzana" / "spec.json")
 print("TOTAL_TRIS", sum(v["tris_sin_modificadores"] for v in rep["medidas_mm"].values()))
 print(rep["medidas_mm"], rep["segundos_total"])
 if MODO == "final":

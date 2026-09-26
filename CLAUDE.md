@@ -26,6 +26,18 @@ Responde en español, en tono cercano.
 - Medidas de objetos: `mm_alth = mm_real × 0.0559 × k` con el `k` de su categoría en `conversion_k`.
 - Sombreado plano con variación de ±3 % por cara, chaflán según tamaño (0.4 / 0.15 / ninguno), rugosidad 0.85. Ojos, cejas y boca van como placas con textura, no geometría.
 
+## Comando `/asset` (forma normal de trabajar)
+
+`/asset <nombre> "<qué es y tamaño real>" [ruta de referencia] [auto]` corre el ciclo completo
+(ver `.claude/commands/asset.md`). El ciclo manual de abajo sigue valiendo para ajustes puntuales.
+
+## Verificación automática
+
+`alth.revisar(..., asset=<ruta a spec.json>)` imprime `VERIFICACION OK / CON FALLAS` y la guarda en `reporte.json`:
+cotas (±2 % contra `"cotas"` del spec del asset), triángulos contra su tope, colores dentro de la paleta,
+piezas flotantes y apoyo en Z=0. Es necesaria para cerrar un asset, pero no suficiente: la hoja de contacto
+se sigue revisando contra la referencia. Lógica en `alth/verificacion.py`, pruebas en `tests/` (sin Blender).
+
 ## Ciclo por asset
 
 1. Escribe `assets/<nombre>/spec.json`: categoría, medidas reales, medidas ALTH, colores, módulos.

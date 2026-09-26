@@ -96,8 +96,12 @@ def _nodos(idb):
     return idb.node_tree
 
 
+COLORES_USADOS = {}  # nombre de material → hex, para la verificación de paleta
+
+
 def material(nombre: str, color: str, rugosidad=None, metalico=0.0, faceta=False):
     m = SPEC["material"]
+    COLORES_USADOS[nombre] = color.upper()
     mat = bpy.data.materials.get(nombre) or bpy.data.materials.new(nombre)
     arbol = _nodos(mat)
     bsdf = next((n for n in arbol.nodes if n.type == "BSDF_PRINCIPLED"), None)
@@ -468,10 +472,19 @@ def medidas(objs):
     return out
 
 
-def revisar(objs, carpeta, modo="iteracion", vistas=None, titulo=""):
+def verificar(objs, asset):
+    """Chequeos objetivos del asset (ver alth/verificacion.py). `asset`: ruta a spec.json o dict."""
+    from . import verificacion as v
+    datos = v.recolectar(objs, COLORES_USADOS)
+    return v.evaluar(datos, SPEC, v.cargar_asset(asset))
+
+
+def revisar(objs, carpeta, modo="iteracion", vistas=None, titulo="", asset=None):
     """Renderiza las vistas, compone el fondo y arma la hoja de contacto.
 
-    Devuelve un dict con rutas, tiempos y medidas; también lo guarda como reporte.json.
+    Con `asset` (ruta a assets/<nombre>/spec.json) también corre la verificación automática
+    y la imprime. Devuelve un dict con rutas, tiempos, medidas y verificación; también lo
+    guarda como reporte.json.
     """
     esc = bpy.context.scene
     cfg = MODOS[modo]
@@ -498,6 +511,14 @@ def revisar(objs, carpeta, modo="iteracion", vistas=None, titulo=""):
         "hoja": str(hoja), "vistas": {k: str(v) for k, v in pngs.items()},
         "medidas_mm": medidas(objs),
     }
+    if asset is not None:
+        from . import verificacion as v
+        try:
+            reporte["verificacion"] = verificar(objs, asset)
+            print(v.resumen(reporte["verificacion"]))
+        except Exception as e:  # noqa: BLE001 — un fallo del verificador no debe tirar el render
+            reporte["verificacion"] = {"ok": False, "checks": [], "error": repr(e)}
+            print(f"[alth] la verificación falló: {e!r}")
     (carpeta / "reporte.json").write_text(json.dumps(reporte, indent=2, ensure_ascii=False), encoding="utf-8")
     return reporte
 
