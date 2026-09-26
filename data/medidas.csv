@@ -8,3 +8,5 @@ taza,de_mano,alto,95,10.62,2.00,si,2026-09-26
 vaso,de_mano,diametro_boca,80,8.94,2.00,si,2026-09-26
 vaso,de_mano,diametro_base,60,6.71,2.00,si,2026-09-26
 vaso,de_mano,alto,120,13.42,2.00,si,2026-09-26
+vaso_cafe,de_mano,alto_con_tapa,115,12.86,2.00,si,2026-09-26
+vaso_cafe,de_mano,diametro_arriba,90,10.06,2.00,si,2026-09-26

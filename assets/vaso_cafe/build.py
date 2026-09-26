@@ -12,7 +12,7 @@ import alth  # noqa: E402
 MODO = sys.argv[-1] if sys.argv[-1] in alth.MODOS else "iteracion"
 H, R_TAPA, R_BASE = 12.86, 10.06 / 2, 6.71 / 2      # de spec.json
 LADOS = 14
-BLANCO, FUNDA, TAPA = "#FBF8F4", "#CD8959", "#2C2320"
+BLANCO, FUNDA, TAPA = "#FBF8F4", "#B08A62", "#2C2320"   # funda: carton_kraft (paleta_notas)
 Z_BOCA = 11.1                                       # donde termina el vaso y empieza la tapa
 R_BOCA = 4.75
 F0, F1 = 3.9, 8.6                                   # funda
