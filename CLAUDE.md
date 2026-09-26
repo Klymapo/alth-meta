@@ -48,6 +48,10 @@ El usuario acepta gastar límite de uso, pero **un asset simple nunca debe consu
 
 - Los renders de iteración (`renders/`) no se versionan; solo `assets/<nombre>/` con el render final, el GLB y el .blend.
 - Commits pequeños y descriptivos en español.
+- Las sesiones en la nube arrancan en una rama `claude/...` sin upstream. Para traer lo último de `main`:
+  `git pull --ff-only origin main` (un `git pull` a secas no trae nada).
+- Un asset aprobado por el usuario se sube directo a `main`: `git push origin HEAD:main`. Sin PR, salvo que el usuario lo pida.
+- Tras actualizar desde `main`, corre `bash tools/ensure_blender.sh` para regenerar `alth-python` con la versión nueva.
 
 ## Referencias
 
