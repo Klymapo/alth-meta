@@ -1,0 +1,5 @@
+# Renders de iteración: se regeneran, no se versionan
+renders/
+exports/
+__pycache__/
+*.blend1

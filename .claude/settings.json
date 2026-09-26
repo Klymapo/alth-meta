@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/tools/ensure_blender.sh\" --hook > /tmp/alth-hook.log 2>&1",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
