@@ -1,0 +1,55 @@
+{
+  "nombre": "vaso",
+  "categoria": "de_mano",
+  "tipo_presupuesto": "objeto_simple",
+  "k": 2.0,
+  "medidas_reales_mm": {
+    "diametro_boca": 80,
+    "diametro_base": 60,
+    "alto": 120
+  },
+  "medidas_alth_mm": {
+    "diametro_boca": 8.94,
+    "diametro_base": 6.71,
+    "alto": 13.42,
+    "formula": "mm_real * 0.0559 * 2.0"
+  },
+  "colores": {
+    "plastico": {
+      "paleta": "azul_desaturado",
+      "hex": "#4F6D9A"
+    },
+    "interior": {
+      "paleta": "azul_desaturado",
+      "hex": "#3B5475"
+    }
+  },
+  "modulos": [
+    "cuerpo: alth.torno de 12 lados, giro 0, cono truncado con borde enrollado en la boca, anillo de refuerzo cerca de la base, pie biselado y hueco interior (bandas: azul fuera, azul oscuro dentro)"
+  ],
+  "tris_objetivo": [
+    150,
+    350
+  ],
+  "tris_max": 350,
+  "referencia": "Sin imagen. Vaso de plástico opaco para agua, liso, color azul: cono truncado (boca 80 mm, base 60 mm, alto 120 mm), borde de la boca un poco más grueso y redondeado, anillo de refuerzo poco marcado cerca de la base, vacío, con el interior visible desde arriba.",
+  "cotas": [
+    {
+      "pieza": "Vaso_cuerpo",
+      "eje": "W",
+      "mm": 8.94
+    },
+    {
+      "pieza": "Vaso_cuerpo",
+      "eje": "H",
+      "mm": 13.42
+    }
+  ],
+  "nota_cotas": "giro 0 deja vértices en ±X: W de vértice a vértice = diámetro de boca, con el borde incluido",
+  "historial": [
+    {
+      "vuelta": 1,
+      "nota": "288 tris, verificación OK; cono truncado con borde enrollado, anillo de refuerzo y hueco interior legibles de frente y 3/4"
+    }
+  ]
+}
