@@ -37,13 +37,14 @@ cuerpo = alth.torno(
 
 # ---------------------------------------------------------------- lengüeta
 # v2: argolla doble en forma de 8 (≈ 4.3 mm, media tapa) sobre el fondo hundido; remache de 4 lados.
+# v3: argollas separadas hasta apenas tocarse (antes se enciman y se leía una sola); la chica de 4 lados.
 lengueta = [
     alth.anillo("Lata_lengueta", 1.25, 0.4, segmentos=8, color=METAL, metal=True,
-                escala=(0.8, 1.0, 1.0), pos=(0, 0.85, Z_HUNDIDO + 0.2)),
-    alth.anillo("Lata_lengueta_b", 0.7, 0.36, segmentos=5, color=METAL, metal=True,
-                pos=(0, -1.1, Z_HUNDIDO + 0.18)),
+                escala=(0.8, 1.0, 1.0), pos=(0, 1.1, Z_HUNDIDO + 0.2)),
+    alth.anillo("Lata_lengueta_b", 0.72, 0.36, segmentos=4, color=METAL, metal=True,
+                pos=(0, -1.27, Z_HUNDIDO + 0.18)),
     alth.anillo("Lata_remache", 0.45, 0.3, segmentos=4, color=METAL, metal=True,
-                pos=(0, -1.1, Z_HUNDIDO + 0.15)),
+                pos=(0, -1.27, Z_HUNDIDO + 0.15)),
 ]
 
 # ---------------------------------------------------------------- dibujo sobre las caras
@@ -64,7 +65,7 @@ def cara(c_grados, u=0.0, fuera=0.0):
 
 def rama(nombre, c, u0, z0, u1, z1, grueso=0.13):
     """Tallo recto sobre la cara c, de (u0, z0) a (u1, z1)."""
-    x, y, rz = cara(c, u0, fuera=0.08)
+    x, y, rz = cara(c, u0, fuera=-0.04)
     du, dz = u1 - u0, z1 - z0
     return alth.prisma(nombre, grueso, grueso * 0.8, math.hypot(du, dz), lados=4, color=TALLO,
                        pos=(x, y, z0), rot=(0, math.degrees(math.atan2(du, dz)), rz))
@@ -75,9 +76,11 @@ dibujo = []
 
 # v2: aceitunas ovaladas de 9 lados (≈ 2.4 × 2.9 mm, antes discos de 1.9 mm), una por cara.
 # Se hunden 0.08 mm para que el borde que pasa de la arista no quede flotando.
-for nombre, c, u, z, r in (("A", FRENTE, -0.1, 4.6, 1.45), ("B", DER, 0.0, 5.9, 1.35)):
+# v3: 0.15 mm de grosor (antes 0.22) y todo el dibujo a ras (≤ 0.09 mm fuera de la cara):
+# en la v2 la aceituna A y la rama asomaban de canto en la vista lateral.
+for nombre, c, u, z, r in (("A", FRENTE, 0.0, 4.6, 1.45), ("B", DER, 0.0, 5.9, 1.35)):
     x, y, rz = cara(c, u, fuera=-0.08)
-    disco = alth.torno(f"Lata_aceituna_{nombre}", [(r, 0.0), (r, 0.22)], segmentos=9, ovalo=(0.82, 1.0),
+    disco = alth.torno(f"Lata_aceituna_{nombre}", [(r, 0.0), (r, 0.15)], segmentos=9, ovalo=(0.82, 1.0),
                        alternar=False, ruido_r=0, ruido_z=0, color=OLIVA)
     disco.location = (x, y, z)
     disco.rotation_euler = (math.radians(90), 0, math.radians(rz))  # el disco mira hacia afuera
@@ -87,18 +90,20 @@ for nombre, c, u, z, r in (("A", FRENTE, -0.1, 4.6, 1.45), ("B", DER, 0.0, 5.9, 
 # una ramita corta a la aceituna B (antes dos tallos que se juntaban: parecían cerezas).
 dibujo += [
     rama("Lata_rama_a", DER, 0.6, 8.6, -MEDIA_CARA, 7.3),
-    rama("Lata_rama_b", FRENTE, MEDIA_CARA, 7.3, -0.1, 6.0),
+    rama("Lata_rama_b", FRENTE, MEDIA_CARA, 7.3, 0.0, 6.0),
     rama("Lata_ramita", DER, -0.5, 7.75, 0.0, 7.2, grueso=0.11),
 ]
 
 # Hoja: nace en la rama del frente y sube hacia la izquierda (como en la referencia).
-x, y, rz = cara(FRENTE, u=0.9, fuera=0.06)
-dibujo.append(alth.hoja("Lata_hoja", largo=2.4, ancho=1.1, grosor=0.08, nervio=0.08, curva=0.0,
-                        estaciones=3, color=HOJA, pos=(x, y, 7.1), rot=(90, -150, rz)))
+# v3: 2.8 × 1.35 (antes 2.4 × 1.1), del tamaño de una aceituna; la punta pasa la arista
+# izquierda y `curva` la dobla hacia adentro para que siga la cara vecina.
+x, y, rz = cara(FRENTE, u=1.0, fuera=0.02)
+dibujo.append(alth.hoja("Lata_hoja", largo=2.8, ancho=1.35, grosor=0.08, nervio=0.08, curva=0.15,
+                        estaciones=3, color=HOJA, pos=(x, y, 7.2), rot=(90, -145, rz)))
 
 objs = [cuerpo, *lengueta, *dibujo]
 alth.estudio()
-rep = alth.revisar(objs, alth.RAIZ / "renders" / "lata" / MODO, modo=MODO, titulo=f"lata v2 · {MODO}")
+rep = alth.revisar(objs, alth.RAIZ / "renders" / "lata" / MODO, modo=MODO, titulo=f"lata v3 · {MODO}")
 print("TOTAL_TRIS", sum(v["tris_sin_modificadores"] for v in rep["medidas_mm"].values()))
 print(rep["medidas_mm"], rep["segundos_total"])
 if MODO == "final":
