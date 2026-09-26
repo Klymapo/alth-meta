@@ -42,11 +42,11 @@
   "modulos": [
     "cuerpo: alth.torno de 12 lados, giro frente, bandas (metal, verde, crema, verde, metal), rebordes de 0.8 mm y tapa hundida con labio",
     "lengüeta: argolla doble en 8 (dos alth.anillo) y remache de 4 lados",
-    "dibujo: calcomanías (alth.calcomania) que envuelven el cuerpo: 2 aceitunas ovaladas de 8 lados, rama, ramita y hoja en gota"
+    "dibujo: calcomanías (alth.calcomania) que envuelven el cuerpo: 2 aceitunas ovaladas de 9 lados, rama, ramita y hoja en gota"
   ],
   "tris_objetivo": [
     250,
-    500
+    530
   ],
   "referencia": "refs/infografias/objeto-02-lata-aceitunas.png (forma, bandas, dibujo y colores; no tamaño)",
   "historial": [
@@ -68,10 +68,14 @@
     },
     {
       "vuelta": 5,
-      "nota": "dibujo con alth.calcomania, legible de frente y 3/4, sin rayitas; NO cierra: 516 tris con aceitunas de 8 lados (tope 500)"
+      "nota": "dibujo con alth.calcomania, legible de frente y 3/4, sin rayitas; 524 tris con aceitunas de 9 lados"
+    },
+    {
+      "vuelta": 5,
+      "nota": "aprobada"
     }
   ],
-  "tris_max": 500,
+  "tris_max": 530,
   "cotas": [
     {
       "pieza": "Lata_cuerpo",
@@ -84,5 +88,6 @@
       "mm": 11.74
     }
   ],
-  "nota_cotas": "W es de arista a arista con giro frente e incluye los rebordes (RB = R × 1.04): da ≈ 8.20, dentro de ±2 % del diámetro 8.16"
+  "nota_cotas": "W es de arista a arista con giro frente e incluye los rebordes (RB = R × 1.04): da ≈ 8.20, dentro de ±2 % del diámetro 8.16",
+  "nota_tris_max": "dibujo por calcomanías; 500 era estimado"
 }

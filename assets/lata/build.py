@@ -53,8 +53,8 @@ lengueta = [
 # que asomaban de canto en la lateral o, a ras, casi desaparecían.
 # u = 0 es el centro de la cara frontal (giro="frente"); +u va hacia la derecha.
 dibujo = [
-    alth.calcomania("Lata_aceituna_A", alth.contorno_ovalo(-0.6, 5.0, 1.15, 1.45, 8), R, LADOS, color=OLIVA),
-    alth.calcomania("Lata_aceituna_B", alth.contorno_ovalo(1.9, 5.9, 1.05, 1.4, 8), R, LADOS, color=OLIVA),
+    alth.calcomania("Lata_aceituna_A", alth.contorno_ovalo(-0.6, 5.0, 1.15, 1.45, 9), R, LADOS, color=OLIVA),
+    alth.calcomania("Lata_aceituna_B", alth.contorno_ovalo(1.9, 5.9, 1.05, 1.4, 9), R, LADOS, color=OLIVA),
     alth.calcomania("Lata_rama", alth.contorno_tira([(-0.4, 6.3), (0.4, 7.3), (1.4, 8.0), (2.6, 8.3)], 0.28),
                     R, LADOS, color=TALLO),
     alth.calcomania("Lata_ramita", alth.contorno_tira([(1.9, 7.2), (1.6, 7.85)], 0.22), R, LADOS, color=TALLO),

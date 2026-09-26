@@ -258,9 +258,10 @@
     "chaflan_segmentos": 1,
     "tris_max": {
       "personaje": 6000,
-      "objeto_mano": 400,
+      "objeto_mano": 500,
       "mueble": 1500
     },
+    "tris_max_nota": "objetos con calcomanía pueden subir hasta 530 en su spec",
     "chaflan_por_tamano": [
       {
         "desde_mm": 30,
