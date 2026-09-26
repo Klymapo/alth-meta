@@ -1,0 +1,64 @@
+{
+  "nombre": "vaso_cafe",
+  "categoria": "de_mano",
+  "tipo_presupuesto": "objeto_simple",
+  "k": 2.0,
+  "medidas_reales_mm": {
+    "alto_con_tapa": 115,
+    "diametro_arriba": 90,
+    "diametro_base": 60
+  },
+  "medidas_alth_mm": {
+    "alto_con_tapa": 12.86,
+    "diametro_arriba": 10.06,
+    "diametro_base": 6.71,
+    "formula": "mm_real * 0.0559 * 2.0"
+  },
+  "colores": {
+    "vaso": {
+      "paleta": "crema_suave",
+      "hex": "#FBF8F4"
+    },
+    "funda": {
+      "paleta": "medidos.taza_cafe",
+      "hex": "#CD8959",
+      "nota": "cartón kraft; el más cercano de la paleta"
+    },
+    "tapa": {
+      "paleta": "negro_calido",
+      "hex": "#2C2320"
+    }
+  },
+  "modulos": [
+    "todo en una malla: alth.torno de 14 lados sin alternar, pared cónica (base 6.71 → boca ~9.5), bandas por altura vaso / funda / vaso / tapa",
+    "funda: escalón hacia afuera en el perfil (grosor de cartón) entre el 30 % y el 67 % del alto",
+    "tapa: faldón más ancho que la boca (Ø 10.06), escalón hacia adentro y cúpula plana arriba"
+  ],
+  "tris_objetivo": [
+    200,
+    400
+  ],
+  "referencia": "refs/escenas/hombre-mayor-camioneta.png: vaso para llevar en la mano del hombre mayor; cuerpo blanco cónico (más angosto abajo), funda de cartón café claro que cubre el tercio medio y sobresale un poco, tapa negra con faldón más ancho que el vaso y un segundo nivel más angosto arriba",
+  "cotas": [
+    {
+      "pieza": "Vaso_cuerpo",
+      "eje": "W",
+      "mm": 10.06
+    },
+    {
+      "pieza": "Vaso_cuerpo",
+      "eje": "H",
+      "mm": 12.86
+    }
+  ],
+  "historial": [
+    {
+      "vuelta": 1,
+      "nota": "364 tris, verificación OK; silueta, funda y tapa legibles; tapa de un solo nivel"
+    },
+    {
+      "vuelta": 2,
+      "nota": "tapa con faldón más bajo y segundo nivel alto y metido; escalón legible de frente y 3/4; 364 tris, verificación OK"
+    }
+  ]
+}
