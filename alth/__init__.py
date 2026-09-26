@@ -305,6 +305,148 @@ def anillo(nombre, radio, grosor, segmentos=8, lados=3, color="#B7BABE", metal=F
     return _asignar(obj, color, **kw)
 
 
+# ---------------------------------------------------------------- calcomanías
+# Dibujos planos (etiquetas, logotipos, parches) pegados a una cara de un torno facetado.
+# Todas salen con el MISMO grosor hacia afuera (0.02 mm) y un poco hundidas, así que no
+# asoman de canto en las vistas laterales ni se pierden dentro del cuerpo.
+# Coordenadas de cara: u = horizontal sobre la cara (+u hacia la derecha vista de frente), z = altura.
+CALCO_GROSOR, CALCO_HUNDIDO = 0.02, 0.01
+
+
+def marco_cara(radio, lados, indice=0, giro="frente"):
+    """Sistema de coordenadas de una cara de `torno(..., segmentos=lados, alternar=False)`.
+
+    indice 0 es la cara que queda al frente con giro="frente"; +1 la de la derecha, −1 la de la izquierda.
+    `radio` es el del tramo donde va la calcomanía (el radio del torno, no el de los bordes).
+    """
+    g = 270 - 180 / lados if giro == "frente" else giro
+    c = math.radians(g + 360 * (indice + 0.5) / lados)
+    ap = radio * math.cos(math.pi / lados)
+    return {"centro": (ap * math.cos(c), ap * math.sin(c)), "n": (math.cos(c), math.sin(c)),
+            "t": (-math.sin(c), math.cos(c)), "semiancho": radio * math.sin(math.pi / lados),
+            "angulo": math.degrees(c)}
+
+
+def contorno_ovalo(cu, cz, ru, rz, lados=9, giro=0):
+    g = math.radians(giro)
+    return [(cu + ru * math.cos(2 * math.pi * i / lados + g), cz + rz * math.sin(2 * math.pi * i / lados + g))
+            for i in range(lados)]
+
+
+def contorno_gota(base, angulo, largo, ancho, estaciones=4):
+    """Hoja plana: nace en `base` (u, z) y apunta a `angulo` grados (0 = derecha, 90 = arriba)."""
+    a = math.radians(angulo)
+    d, p = (math.cos(a), math.sin(a)), (-math.sin(a), math.cos(a))
+    ts = [i / (estaciones + 1) for i in range(1, estaciones + 1)]
+    w = [ancho / 2 * math.sin(math.pi * t ** 0.62) for t in ts]
+    pt = lambda t, s: (base[0] + d[0] * t * largo + p[0] * s, base[1] + d[1] * t * largo + p[1] * s)
+    return [base] + [pt(t, x) for t, x in zip(ts, w)] + [pt(1, 0)] + [pt(t, -x) for t, x in reversed(list(zip(ts, w)))]
+
+
+def contorno_tira(puntos, ancho):
+    """Cinta plana de `ancho` mm que sigue una polilínea [(u, z), …]: ramas, tallos, rayas, letras simples."""
+    izq, der = [], []
+    n = len(puntos)
+    for i, (u, z) in enumerate(puntos):
+        a = puntos[max(i - 1, 0)]
+        b = puntos[min(i + 1, n - 1)]
+        du, dz = b[0] - a[0], b[1] - a[1]
+        L = math.hypot(du, dz) or 1.0
+        nu, nz = -dz / L * ancho / 2, du / L * ancho / 2
+        izq.append((u + nu, z + nz))
+        der.append((u - nu, z - nz))
+    return izq + der[::-1]
+
+
+def placa(nombre, contorno, marco, color="#495432", grosor=CALCO_GROSOR, hundido=CALCO_HUNDIDO):
+    """Calcomanía plana con forma de `contorno` [(u, z), …] sobre la cara `marco` (ver marco_cara).
+
+    Avisa si algún punto se sale de la cara: una calcomanía que cruza una arista debe partirse
+    en dos (una placa por cara), como una rama que pasa de una cara a la vecina.
+    """
+    cx, cy = marco["centro"]
+    (nx, ny), (tx, ty) = marco["n"], marco["t"]
+    fuera = max(abs(u) for u, _ in contorno) - marco["semiancho"]
+    if fuera > 1e-3:
+        print(f"[alth] aviso: {nombre} se sale {fuera:.2f} mm de su cara; pártela en dos caras")
+    bm = bmesh.new()
+
+    def capa(d):
+        return [bm.verts.new((cx + tx * u + nx * d, cy + ty * u + ny * d, z)) for u, z in contorno]
+
+    arriba, abajo = capa(grosor), capa(-hundido)
+    bm.faces.new(arriba)
+    bm.faces.new(abajo[::-1])
+    k = len(contorno)
+    for i in range(k):
+        j = (i + 1) % k
+        bm.faces.new((arriba[i], abajo[i], abajo[j], arriba[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    obj = _objeto(nombre, bm)
+    return _asignar(obj, color)
+
+
+def _recortar_franja(poli, umin, umax):
+    """Recorta un polígono [(u, z)] a la franja umin ≤ u ≤ umax (Sutherland–Hodgman)."""
+    def corte(pts, dentro, cruce):
+        out = []
+        for i, p in enumerate(pts):
+            q = pts[(i + 1) % len(pts)]
+            if dentro(p):
+                out.append(p)
+                if not dentro(q):
+                    out.append(cruce(p, q))
+            elif dentro(q):
+                out.append(cruce(p, q))
+        return out
+
+    def en_u(p, q, u):
+        t = (u - p[0]) / (q[0] - p[0])
+        return (u, p[1] + t * (q[1] - p[1]))
+
+    pts = corte(poli, lambda p: p[0] >= umin, lambda p, q: en_u(p, q, umin)) if poli else []
+    pts = corte(pts, lambda p: p[0] <= umax, lambda p, q: en_u(p, q, umax)) if pts else []
+    limpio = []
+    for p in pts:
+        if not limpio or math.hypot(p[0] - limpio[-1][0], p[1] - limpio[-1][1]) > 1e-6:
+            limpio.append(p)
+    if len(limpio) > 1 and math.hypot(limpio[0][0] - limpio[-1][0], limpio[0][1] - limpio[-1][1]) <= 1e-6:
+        limpio.pop()
+    return limpio if len(limpio) >= 3 else []
+
+
+def calcomania(nombre, contorno, radio, lados, indice=0, giro="frente", color="#495432",
+               grosor=CALCO_GROSOR, hundido=CALCO_HUNDIDO):
+    """Calcomanía que ENVUELVE un torno facetado, como una etiqueta impresa.
+
+    Dibuja `contorno` [(u, z), …] en la etiqueta desenrollada: u = 0 es el centro de la cara
+    `indice`, y cada cara mide 2·semiancho de ancho. La pieza se corta en cada arista y cada
+    pedazo se pega plano a su cara, con el mismo grosor hacia afuera. No hay que partir nada a mano.
+    """
+    s = radio * math.sin(math.pi / lados)
+    us = [u for u, _ in contorno]
+    k0, k1 = math.floor((min(us) + s) / (2 * s)), math.floor((max(us) + s) / (2 * s))
+    bm = bmesh.new()
+    for k in range(k0, k1 + 1):
+        pedazo = _recortar_franja(contorno, (2 * k - 1) * s, (2 * k + 1) * s)
+        if not pedazo:
+            continue
+        m = marco_cara(radio, lados, indice + k, giro)
+        cx, cy = m["centro"]
+        (nx, ny), (tx, ty) = m["n"], m["t"]
+        local = [(u - 2 * k * s, z) for u, z in pedazo]
+        arriba = [bm.verts.new((cx + tx * u + nx * grosor, cy + ty * u + ny * grosor, z)) for u, z in local]
+        abajo = [bm.verts.new((cx + tx * u - nx * hundido, cy + ty * u - ny * hundido, z)) for u, z in local]
+        bm.faces.new(arriba)
+        bm.faces.new(abajo[::-1])
+        for i in range(len(local)):
+            j = (i + 1) % len(local)
+            bm.faces.new((arriba[i], abajo[i], abajo[j], arriba[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    obj = _objeto(nombre, bm)
+    return _asignar(obj, color)
+
+
 def hoja(nombre, largo=4.0, ancho=1.9, grosor=0.18, nervio=0.25, curva=0.5,
          estaciones=4, color="#7E9B7A", pos=(0, 0, 0), rot=(0, 0, 0)):
     """Hoja en forma de gota a lo largo de +X: base angosta, lo más ancho al 35 %, punta afilada.

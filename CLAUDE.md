@@ -19,6 +19,10 @@ Responde en español, en tono cercano.
     `bandas=[(z_max, color[, "metal"]), …]` pinta franjas por altura en una sola malla;
     `giro="frente"` deja una cara plana hacia −Y (etiquetas), `giro=0` deja una arista.
   - `anillo(...)`: toroide low-poly (lengüetas, argollas, asas, pulseras, llaves).
+  - `calcomania(nombre, contorno, radio, lados)`: dibujo plano que ENVUELVE un torno facetado
+    (etiquetas, logos). Se diseña en la etiqueta desenrollada (u = 0 centro de la cara frontal, z = altura)
+    con `contorno_ovalo`, `contorno_gota` y `contorno_tira` (ramas, rayas); se corta solo en las aristas y
+    sale a 0.02 mm de la cara, así no asoma de canto ni se hunde. No uses prismas/tornos sueltos para dibujos.
   - `prisma(...)`: piezas cónicas delgadas (tallos, patas, mangos). `hoja(...)`: hojas en gota con nervio.
   - `caja(...)`, `material`, `chaflan` (proporcional al tamaño), `estudio`, `revisar`, `exportar_glb`.
   - Si un asset necesita una forma que se repetirá (asa, rueda, pliegue), agrégala a `alth/` en vez de dejarla en el `build.py`.
