@@ -28,7 +28,7 @@
     "camisa: collar (alth.torno pequeño bajo la barbilla) + mangas (alth.torno con perfil cónico y bulto de puño, sobre cada brazo hasta el codo)",
     "chaleco: alth.torno sobre el perfil del torso, inflado; abertura en V con franjas de camisa (alth.caja) que se angostan hacia abajo, solapas (alth.caja rotada) y botones metal",
     "corbata: alth.caja delgada sobre el pecho, encima de las franjas de la abertura",
-    "pantalón amplio: alth.torno sobre el perfil de cada pierna, inflado bastante más que la piel, con dobladillo (escalón como la funda de vaso_cafe) cerca del tobillo",
+    "pantalón amplio: alth.torno sobre el perfil de cada pierna, inflado bastante más que la piel; puños y dobladillo con alth.anillo (una argolla de verdad, no un escalón en el perfil)",
     "pelo: alth.hoja() reutilizada como mechón faceteado, varios por la cabeza con alth.hoja",
     "ojos/cejas/boca: placas (alth.caja delgada) sobre la cara, no geometría"
   ],
@@ -47,6 +47,7 @@
     {"vuelta": 2, "nota": "corregido el hundimiento; cerrados huecos de piel cintura/tobillo; cejas separadas de ojos"},
     {"vuelta": 3, "nota": "pelo más denso y voluminoso (lados y espalda, no solo coronilla)"},
     {"vuelta": 4, "nota": "botones metal (antes invisibles contra el chaleco negro); VERIFICACION OK, 2188 tris"},
-    {"vuelta": 5, "nota": "cambio de plan: pecho D=17.8 y cadera-pierna D=8.9 exactos (óvalo ajustado al anillo más ancho + segmentos=12 para tocar 90°); brazos/piernas 25% más gruesos; mangas y pantalón amplios; cabeza como tronco de pirámide (mandíbula 36.2x28.8, chaflán más suave); chaleco con abertura en V, solapas y cuello de camisa; cotas D de pecho y pierna agregadas. VERIFICACION OK, 2316 tris. Pelo sin tocar."}
+    {"vuelta": 5, "nota": "cambio de plan: pecho D=17.8 y cadera-pierna D=8.9 exactos (óvalo ajustado al anillo más ancho + segmentos=12 para tocar 90°); brazos/piernas 25% más gruesos; mangas y pantalón amplios; cabeza como tronco de pirámide (mandíbula 36.2x28.8, chaflán más suave); chaleco con abertura en V, solapas y cuello de camisa; cotas D de pecho y pierna agregadas. VERIFICACION OK, 2316 tris. Pelo sin tocar."},
+    {"vuelta": 6, "nota": "arreglos de cuerpo: puños y dobladillo con alth.anillo (antes un escalón en el perfil se veía como un disco de canto); dobladillo se mete un poco más en el zapato (ya no asoma piel); abertura en V del chaleco ahora baja hasta la cintura, con 3 botones repartidos. VERIFICACION OK, 2496 tris. Pelo (alth/pelo.py) todavía sin integrar al personaje: ver alth/pelo.py aparte."}
   ]
 }

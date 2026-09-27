@@ -1,15 +1,21 @@
-"""ALTH-META · pelo grueso faceteado para personajes: un casco base (cobertura garantizada)
+"""ALTH-META · pelo grueso faceteado para personajes: UNA sola malla.
 
-más mechones gruesos y curvados encima (silueta despeinada, sin huecos).
+Segundo enfoque (el de casco + púas sueltas no convergió en el tiempo dado: cada púa era su
+propio objeto, y hacerlas tocar la cabeza con precisión, sin flotar ni enterrarse, se volvió un
+problema de por sí). Ahora todo —la corona y las cuñas— es una única malla (un único objeto):
 
-Distinto del pelo hecho con `alth.hoja()` (hojas planas, finas): aquí los mechones son
-prismas anchos y curvos —una "cinta" gruesa que se afina y se comba hacia la punta— para una
-lectura más voluminosa. El casco es el que garantiza el 100 % de cobertura (coronilla, lados,
-nuca); los mechones son el detalle encima, no cargan solos con la cobertura.
+1. Una "corona" ancha (como una caja, 1.3× el cráneo), más alta y corrida hacia atrás.
+2. Su borde inferior NO es plano: sube hasta la ceja al frente y hasta la oreja a los lados,
+   y solo baja de verdad hacia la nuca — así la cara queda libre sin tener que encoger el radio.
+3. Del borde cuelgan 8-12 cuñas anchas y facetadas (base 8-12 mm, remate romo, nunca una punta
+   fina), cayendo hacia abajo y afuera; dos de ellas, a los lados del frente, enmarcan la cara.
 
-`plan_casco()` y `plan_mechones()` son puros (sin Blender) y se prueban en tests/;
-`construir_casco()` y `construir_mechones()` lo pasan a mallas reales con bmesh directo
-(no hay una forma así en alth/__init__.py: ni `torno` —redondo simétrico— ni `hoja` —plana—).
+Al ser una sola malla, la verificación de "flotantes" (que compara OBJETOS entre sí) no aplica
+adentro: solo hace falta que esta malla, como conjunto, toque la cabeza — y la corona la abraza
+por construcción.
+
+`plan_pelo()` es puro (sin Blender) y se prueba en tests/; `construir_pelo()` arma la malla real
+con bmesh directo (no hay una forma así en alth/__init__.py).
 """
 from __future__ import annotations
 
@@ -17,141 +23,89 @@ import math
 import random
 
 
-# ---------------------------------------------------------------- casco (cobertura garantizada)
-def _factor_frente(azimut_grados: float, reduccion: float) -> float:
-    """Cuánto se encoge el radio en esa dirección: 1.0 en los lados/espalda, hasta `1-reduccion`
-    mirando derecho al frente (acimut 270°, -Y). Un casco redondo (alth.torno) es una revolución:
-    lo que se agranda atrás se agranda igual de al frente en la misma altura. Este factor es lo
-    que rompe esa simetría, para que el casco sí pueda bajar hasta la oreja sin taparle la cara.
-    """
-    frente = max(0.0, -math.sin(math.radians(azimut_grados)))
-    return 1.0 - reduccion * frente ** 2
+# ---------------------------------------------------------------- geometría pura
+def _zona_z(azimut_grados: float, z_frente: float, z_lado: float, z_atras: float) -> float:
+    """Altura del borde de la corona en ese azimut: alta (corta) al frente, media a los lados,
+    baja (larga, cubre la nuca) atrás. 270° = frente (−Y), 90° = atrás (+Y), 0°/180° = lados."""
+    s = math.sin(math.radians(azimut_grados))
+    if s <= 0:
+        return z_lado + (z_frente - z_lado) * (-s)
+    return z_lado + (z_atras - z_lado) * s
 
 
-def plan_casco(cabeza: dict, escala: float = 1.3, sesgo_atras: float = 1.5, reduccion_frente: float = 0.62) -> dict:
-    """Domo más grande que el cráneo (perfil por altura + reducción angular al frente, ver
-    `_factor_frente`), para que cubra coronilla/lados/nuca sin montar sobre la cara.
-    `cabeza`: pieza como la de personaje.plan() (pos, w_arriba, d_arriba, h).
-    `escala`: 1.25-1.35 pide el propio CLAUDE.md-de-la-tarea; por debajo de 1.15 ya no cubre bien
-    las orejas y por encima de 1.45 se ve como un casco de motociclista, no pelo.
-    """
-    radio = (cabeza["w_arriba"] / 2) * escala
-    alto = cabeza["h"] * 0.58 * escala
-    z_base = cabeza["pos"][2] + cabeza["h"] * 0.40  # cubre desde la ceja/sien hacia arriba
-    perfil = [
-        (radio * 0.78, 0.0),   # ya ancho desde abajo: que no quede una franja de sien pelada
-        (radio * 0.95, alto * 0.22),
-        (radio, alto * 0.5),
-        (radio * 0.55, alto * 0.82),
-        (0.02, alto),
-    ]
+def _punto_corona(azimut_grados: float, corona: dict, escala_radio: float = 1.0):
+    a = math.radians(azimut_grados)
+    x = corona["cx"] + corona["hw"] * escala_radio * math.cos(a)
+    y = corona["cy"] + corona["hd"] * escala_radio * math.sin(a)
+    z = _zona_z(azimut_grados, corona["z_frente"], corona["z_lado"], corona["z_atras"])
+    return x, y, z
+
+
+def plan_corona(cabeza: dict, escala: float = 1.3, sesgo_atras: float = 2.5,
+                 margen_arriba: float = 3.0, segmentos: int = 12) -> dict:
+    """La caja ancha de base: `cabeza` es la pieza de personaje.plan() (pos, w_arriba, d_arriba, h)."""
     return {
-        "perfil": perfil,
-        "pos": (cabeza["pos"][0], cabeza["pos"][1] + sesgo_atras, z_base),
-        "ovalo": (1.0, cabeza["d_arriba"] / cabeza["w_arriba"]),
-        "radio_ecuador": radio,
-        "alto": alto,
-        "z_base": z_base,
-        "reduccion_frente": reduccion_frente,
+        "cx": cabeza["pos"][0], "cy": cabeza["pos"][1] + sesgo_atras,
+        "hw": cabeza["w_arriba"] / 2 * escala, "hd": cabeza["d_arriba"] / 2 * escala,
+        "z_top": cabeza["pos"][2] + cabeza["h"] + margen_arriba,
+        "z_frente": cabeza["pos"][2] + cabeza["h"] * 0.80,  # altura de ceja: no baja de ahí
+        "z_lado": cabeza["pos"][2] + cabeza["h"] * 0.64,    # altura de oreja
+        "z_atras": cabeza["pos"][2] + cabeza["h"] * 0.28,   # nuca: sí baja bastante
+        "segmentos": segmentos,
     }
 
 
-def construir_casco(cabeza: dict, escala: float = 1.3, sesgo_atras: float = 1.5,
-                     reduccion_frente: float = 0.62, segmentos: int = 14, color: str = "#C9B89F"):
-    """Como alth.torno, pero con el radio de cada vértice encogido según `_factor_frente` (no hay
-    revolución simétrica en alth/__init__.py que resuelva esto; se arma la malla directo)."""
-    import bmesh
-    from . import _asignar, _objeto
-
-    d = plan_casco(cabeza, escala=escala, sesgo_atras=sesgo_atras, reduccion_frente=reduccion_frente)
-    perfil, (ox, oy) = d["perfil"], d["ovalo"]
-    rng = random.Random(4)
-    bm = bmesh.new()
-    anillos = []
-    for r, z in perfil:
-        anillo = []
-        for s in range(segmentos):
-            az = 360.0 * s / segmentos
-            rr = r * _factor_frente(az, reduccion_frente) * (1 + rng.uniform(-0.05, 0.05))
-            a = math.radians(az)
-            anillo.append(bm.verts.new((rr * math.cos(a) * ox, rr * math.sin(a) * oy, z)))
-        anillos.append(anillo)
-    base = bm.verts.new((0.0, 0.0, perfil[0][1]))
-    for s in range(segmentos):
-        k = (s + 1) % segmentos
-        bm.faces.new((base, anillos[0][k], anillos[0][s]))
-    for a_ring, b_ring in zip(anillos, anillos[1:]):
-        for s in range(segmentos):
-            k = (s + 1) % segmentos
-            bm.faces.new((a_ring[s], a_ring[k], b_ring[k], b_ring[s]))
-    punta = bm.verts.new((0.0, 0.0, perfil[-1][1]))
-    for s in range(segmentos):
-        k = (s + 1) % segmentos
-        bm.faces.new((anillos[-1][s], anillos[-1][k], punta))
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    obj = _objeto("Pelo_casco", bm)
-    obj.location = d["pos"]
-    return _asignar(obj, color)
+MARCO_AZIMUT = (248.0, 292.0)  # a los dos lados del frente (270°), a la altura de la sien
 
 
-# ---------------------------------------------------------------- mechones (cantidad, largo, dirección, caída)
-def plan_mechones(casco: dict, cabeza: dict, cantidad: int = 22, largo=(9.0, 16.0), ancho=(3.0, 6.0),
-                   caida=(0.5, 5.0), semilla: int = 1) -> list[dict]:
-    """`cantidad` mechones repartidos por la superficie del casco (coronilla, lados, nuca).
-    `largo`/`ancho`/`caida` son rangos (mm) de donde se sortea cada mechón. No incluye los dos
-    mechones largos de al frente (ver `mechones_marco_cara`): esos van aparte y con más caída.
-    Puro: cada mechón queda como {pos, direccion (x,y,z unitario), arriba (x,y,z), largo, ancho, caida}.
+def plan_cunias(corona: dict, cunias: int = 10, ancho_base=(8.0, 12.0), largo=(10.0, 17.0),
+                 caida=(3.0, 8.0), largo_marco: float = 20.0, ancho_marco: float = 9.0,
+                 caida_marco: float = 13.0, semilla: int = 1) -> list[dict]:
+    """`cunias` (8-12) repartidas por la corona: 2 fijas de marco (enmarcan la cara, más largas y
+    con más caída) y el resto en el arco largo que no es la cara (lados + nuca). Ninguna con base
+    menor a `ancho_base[0]` (por la propia tarea, nunca < 6 mm). Puro: no toca Blender.
     """
+    if cunias < 3:
+        raise ValueError("cunias necesita al menos 1 de cada lado del marco más una atrás")
     rng = random.Random(semilla)
-    cx, cy, cz0 = casco["pos"]
-    ovalo_x, ovalo_y = casco["ovalo"]
-    perfil = casco["perfil"]
-    mechones = []
-    for _ in range(cantidad):
-        # la raíz se ubica EN la superficie real del casco (mismo perfil que lo revuelve alth.torno),
-        # no en una esfera aproximada: si no, algunas quedan flotando muy por encima del casco.
-        z_local = rng.uniform(casco["alto"] * 0.05, casco["alto"] * 0.92)  # no hasta la puntita
-        az = rng.uniform(0, 360)
-        r = _radio_perfil(perfil, z_local) * _factor_frente(az, casco.get("reduccion_frente", 0.0))
-        az_r = math.radians(az)
-        pos = (cx + r * math.cos(az_r) * ovalo_x, cy + r * math.sin(az_r) * ovalo_y, cz0 + z_local)
-        # dirección de crecimiento: hacia afuera (según su propio azimut) y hacia arriba, con
-        # una inclinación ("levantamiento") aleatoria — no la normal exacta de la superficie,
-        # pero se ve bien y no necesita la pendiente del perfil.
-        levantamiento = math.radians(rng.uniform(10, 70))
-        lift_r, lift_z = math.cos(levantamiento), math.sin(levantamiento)
-        direccion = (math.cos(az_r) * lift_r, math.sin(az_r) * lift_r, lift_z)
-        mechones.append({
-            "pos": pos, "direccion": direccion, "arriba": (0.0, 0.0, 1.0),
-            "largo": rng.uniform(*largo), "ancho": rng.uniform(*ancho), "caida": rng.uniform(*caida),
-        })
-    return mechones
-
-
-def _radio_perfil(perfil, z_local):
-    """Radio del perfil del casco a esa altura local (0 = borde inferior), interpolado —
-    igual que alth.torno lo revuelve, para que la raíz de un mechón quede EN la superficie."""
-    for (r0, z0), (r1, z1) in zip(perfil, perfil[1:]):
-        if z0 <= z_local <= z1:
-            return r0 + (r1 - r0) * (z_local - z0) / (z1 - z0)
-    return perfil[0][0] if z_local < perfil[0][1] else perfil[-1][0]
-
-
-def mechones_marco_cara(cabeza: dict, largo: float = 17.0, ancho: float = 4.0, caida: float = 9.0) -> list[dict]:
-    """Los dos mechones largos que enmarcan la cara, uno por sien, colgando hacia adelante y abajo."""
-    y_cara = cabeza["pos"][1] - cabeza["d_arriba"] / 2
-    z_sien = cabeza["pos"][2] + cabeza["h"] * 0.78
     piezas = []
-    for s in (-1, 1):
-        x = s * cabeza["w_arriba"] * 0.42
-        crudo = (s * 0.35, -0.88, 0.32)  # hacia afuera, al frente y un poco hacia abajo
-        norma = math.sqrt(sum(v * v for v in crudo))
-        direccion = tuple(v / norma for v in crudo)
-        piezas.append({"pos": (x, y_cara + 1.0, z_sien), "direccion": direccion, "arriba": (0.0, 0.0, 1.0),
-                        "largo": largo, "ancho": ancho, "caida": caida})
+    for az in MARCO_AZIMUT:
+        piezas.append(_cuna_spec(az, corona, largo_marco, ancho_marco, caida_marco, es_marco=True))
+
+    n_otras = cunias - 2
+    ini, fin = MARCO_AZIMUT[1], MARCO_AZIMUT[0] + 360.0  # el arco largo: lados + espalda
+    for i in range(n_otras):
+        t = (i + 0.5) / n_otras
+        az = (ini + (fin - ini) * t + rng.uniform(-6.0, 6.0)) % 360.0
+        piezas.append(_cuna_spec(az, corona, rng.uniform(*largo), rng.uniform(*ancho_base),
+                                  rng.uniform(*caida), es_marco=False))
     return piezas
 
 
+def _cuna_spec(az_grados: float, corona: dict, largo_val: float, ancho_val: float, caida_val: float,
+               es_marco: bool) -> dict:
+    x, y, z = _punto_corona(az_grados, corona)
+    a = math.radians(az_grados)
+    inclinacion = math.radians(34.0 if es_marco else 16.0)  # las de marco caen más desde la raíz
+    lift_r, lift_z = math.cos(inclinacion), -math.sin(inclinacion)  # hacia afuera y hacia ABAJO
+    direccion = (math.cos(a) * lift_r, math.sin(a) * lift_r, lift_z)
+    return {"pos": (x, y, z), "direccion": direccion, "arriba": (0.0, 0.0, 1.0),
+            "largo": largo_val, "ancho": ancho_val, "caida": caida_val,
+            "azimut": az_grados, "es_marco": es_marco}
+
+
+def plan_pelo(cabeza: dict, escala: float = 1.3, sesgo_atras: float = 2.5, margen_arriba: float = 3.0,
+              segmentos_corona: int = 12, cunias: int = 10, ancho_base=(8.0, 12.0), largo=(10.0, 17.0),
+              caida=(3.0, 8.0), semilla: int = 1) -> dict:
+    """Plan completo (corona + cuñas), pura. `construir_pelo` la pasa a una malla real."""
+    corona = plan_corona(cabeza, escala=escala, sesgo_atras=sesgo_atras, margen_arriba=margen_arriba,
+                          segmentos=segmentos_corona)
+    piezas = plan_cunias(corona, cunias=cunias, ancho_base=ancho_base, largo=largo, caida=caida,
+                          semilla=semilla)
+    return {"corona": corona, "cunias": piezas}
+
+
+# ---------------------------------------------------------------- malla real (bmesh directo)
 def _base_ortonormal(direccion, arriba_ref):
     from mathutils import Vector  # solo en construcción (bpy disponible)
 
@@ -164,42 +118,65 @@ def _base_ortonormal(direccion, arriba_ref):
     return d, lado, arriba
 
 
-def mechon_grueso(nombre: str, pos, direccion, largo: float, ancho: float, caida: float = 0.0,
-                   grosor: float = None, arriba_ref=(0.0, 0.0, 1.0), estaciones: int = 4, color: str = "#C9B89F"):
-    """Mechón grueso y curvo: sección romboidal (facetada) que se afina hacia la punta y se
-    comba `caida` mm hacia abajo (gravedad/estilo). Es un prisma ancho, no una hoja plana.
-    """
-    import bmesh
-    from . import _asignar, _objeto
+def _agregar_corona(bm, corona, top_escala=0.85):
+    seg = corona["segmentos"]
+    abajo, arriba = [], []
+    for s in range(seg):
+        az = 360.0 * s / seg
+        abajo.append(bm.verts.new(_punto_corona(az, corona)))
+        xt, yt, _ = _punto_corona(az, corona, escala_radio=top_escala)
+        arriba.append(bm.verts.new((xt, yt, corona["z_top"])))
+    bm.faces.new(tuple(reversed(arriba)))
+    for s in range(seg):
+        k = (s + 1) % seg
+        bm.faces.new((abajo[s], abajo[k], arriba[k], arriba[s]))
+    # Sin tapa de abajo a propósito: el anillo varía mucho de altura (alto al frente, bajo en la
+    # nuca) y una sola cara de 12 lados ahí se triangula cruzando el hueco de la cara, colgando
+    # una lengüeta de pelo justo donde tiene que quedar libre. Esa cara nunca se ve (queda contra
+    # el cráneo), así que se deja abierta.
+    return abajo, arriba
 
-    grosor = ancho * 0.45 if grosor is None else grosor
+
+def _agregar_cuna(bm, pos, direccion, largo, ancho, caida, grosor=None, arriba_ref=(0.0, 0.0, 1.0),
+                   estaciones=3, achatado=0.42):
+    """Cuña ancha y facetada: se afina hacia la punta pero SIN converger a un vértice (remate
+    romo, tapa plana) — nada de piezas delgadas, nunca una punta en aguja."""
+    from mathutils import Vector
+
+    grosor = ancho * 0.55 if grosor is None else grosor
+    origen = Vector(pos)
     d, lado, arriba = _base_ortonormal(direccion, arriba_ref)
-    bm = bmesh.new()
     anillos = []
     for i in range(estaciones + 1):
         t = i / estaciones
-        centro = d * (largo * t) - arriba * (caida * t * t)
-        w, g = (ancho / 2) * (1 - 0.72 * t), (grosor / 2) * (1 - 0.55 * t)
+        centro = origen + d * (largo * t) - arriba * (caida * t * t)
+        f = 1 - (1 - achatado) * t  # se angosta hacia la punta pero nunca llega a 0
+        w, g = (ancho / 2) * f, (grosor / 2) * f
         anillo = [bm.verts.new(tuple(centro + lado * (w * ex) + arriba * (g * ey)))
                   for ex, ey in ((1, 0), (0, 1), (-1, 0), (0, -1))]
         anillos.append(anillo)
     bm.faces.new(tuple(reversed(anillos[0])))
-    for a, b in zip(anillos, anillos[1:]):
+    for a_r, b_r in zip(anillos, anillos[1:]):
         for i in range(4):
             j = (i + 1) % 4
-            bm.faces.new((a[i], a[j], b[j], b[i]))
-    t = 1.0
-    punta = bm.verts.new(tuple(d * (largo * t) - arriba * (caida * t * t)))
-    for i in range(4):
-        j = (i + 1) % 4
-        bm.faces.new((anillos[-1][i], anillos[-1][j], punta))
+            bm.faces.new((a_r[i], a_r[j], b_r[j], b_r[i]))
+    bm.faces.new(anillos[-1])  # tapa roma de la punta
+
+
+def construir_pelo(cabeza: dict, escala: float = 1.3, sesgo_atras: float = 2.5, margen_arriba: float = 3.0,
+                    segmentos_corona: int = 12, cunias: int = 10, ancho_base=(8.0, 12.0), largo=(10.0, 17.0),
+                    caida=(3.0, 8.0), semilla: int = 1, color: str = "#D2AE72", nombre: str = "Pelo"):
+    """Corona + cuñas en UNA sola malla (un único objeto)."""
+    import bmesh
+    from . import _asignar, _objeto
+
+    plan = plan_pelo(cabeza, escala=escala, sesgo_atras=sesgo_atras, margen_arriba=margen_arriba,
+                      segmentos_corona=segmentos_corona, cunias=cunias, ancho_base=ancho_base,
+                      largo=largo, caida=caida, semilla=semilla)
+    bm = bmesh.new()
+    _agregar_corona(bm, plan["corona"])
+    for c in plan["cunias"]:
+        _agregar_cuna(bm, c["pos"], c["direccion"], c["largo"], c["ancho"], c["caida"], arriba_ref=c["arriba"])
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     obj = _objeto(nombre, bm)
-    obj.location = pos
     return _asignar(obj, color)
-
-
-def construir_mechones(especificaciones: list[dict], color: str = "#C9B89F", prefijo: str = "Pelo_mechon"):
-    return [mechon_grueso(f"{prefijo}_{i}", m["pos"], m["direccion"], m["largo"], m["ancho"],
-                           caida=m["caida"], arriba_ref=m["arriba"], color=color)
-            for i, m in enumerate(especificaciones)]

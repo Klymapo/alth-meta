@@ -105,13 +105,11 @@ def y_superficie(z_mundo, embebe=EMBEBE):
     return torso_y - radio_torso(z_mundo) * ovalo_y + embebe
 
 
-z_pecho_top = torso_z0 + piezas["torso"]["perfil"][2][1]
-z_pecho_bajo = torso_z0 + piezas["torso"]["perfil"][0][1] + 2.0
 z_v_arriba = z_cuello - 2.2   # justo bajo el cuello de camisa
-z_v_abajo = z_pecho_bajo + 1.0  # a la altura del primer botón: ahí "cierra" el chaleco
+z_v_abajo = torso_z0 + 0.8    # casi hasta la cintura (antes cerraba a la altura del pecho)
 
 # cuello de camisa blanco visible en la abertura en V: franjas que se angostan hacia abajo
-ANCHO_V = (9.5, 7.0, 4.8, 2.8)
+ANCHO_V = (9.5, 8.2, 6.8, 5.2, 3.6, 2.4)
 for i, ancho in enumerate(ANCHO_V):
     t = i / (len(ANCHO_V) - 1)
     z_franja = z_v_arriba + (z_v_abajo - z_v_arriba) * t
@@ -134,32 +132,48 @@ corbata = alth.caja("Joven_corbata", (2.6, 0.35, z_v_arriba - z_v_abajo + 1.5),
                      color=CORBATA, biselar=False, apoyada=False)
 objs.append(corbata)
 
-for i, z_boton in enumerate((z_v_abajo - 1.0, z_v_abajo - 2.5)):
+for i, t in enumerate((0.45, 0.65, 0.85)):  # repartidos a lo largo de toda la abertura, ya larga
+    z_boton = z_v_arriba + (z_v_abajo - z_v_arriba) * t
     boton = alth.caja(f"Joven_boton_{i}", (1.3, 0.4, 1.3), pos=(0.0, y_superficie(z_boton), z_boton),
                        color=BOTON, apoyada=False)
     objs.append(boton)
 
 
-# ---------------------------------------------------------------- mangas anchas (con doblez al codo)
+# ---------------------------------------------------------------- mangas anchas (puño: anillo, no disco)
+# Antes el puño era un escalón en el propio perfil del torno (ancha→angosta): de canto se veía
+# como un disco/rodaja pegada al brazo. Ahora la manga es un cono liso y el puño es un anillo de
+# verdad (alth.anillo) que la abraza por fuera, como un doblez de tela.
 for lado, s in (("izq", -1), ("der", 1)):
     b = piezas[f"brazo_{lado}"]
     r0, r1, largo = b["r0"] + GROSOR_ROPA, b["r1"] + GROSOR_ROPA, b["largo"]
-    perfil = [(r0, 0.0), (r1, largo), (r1 * 1.5, largo + 1.3), (r1 * 1.5, largo + 2.3), (r1 * 0.85, largo + 2.9)]
-    manga = alth.torno(f"Joven_manga_{lado}", perfil, segmentos=8, color=CAMISA, alternar=False,
-                        ruido_r=0, ruido_z=0, pos=b["pos"])
+    manga = alth.torno(f"Joven_manga_{lado}", [(r0, 0.0), (r1, largo)], segmentos=8, color=CAMISA,
+                        alternar=False, ruido_r=0, ruido_z=0, pos=b["pos"])
     manga.rotation_euler = tuple(math.radians(v) for v in b["rot"])
     objs.append(manga)
 
+    x_puno = b["pos"][0] + s * (largo + 0.3)  # el eje +Z local de la manga apunta a ±X del mundo
+    puno = alth.anillo(f"Joven_puno_{lado}", radio=r1 * 0.95, grosor=2.0, segmentos=10, lados=4,
+                        color=CAMISA, pos=(x_puno, b["pos"][1], b["pos"][2]), rot=(0.0, 90.0, 0.0))
+    objs.append(puno)
 
-# ---------------------------------------------------------------- pantalón amplio (con dobladillo al tobillo)
+
+# ------------------------------------------------------- pantalón amplio (dobladillo: anillo, no disco)
 for lado, s in (("izq", -1), ("der", 1)):
     pierna = piezas[f"pierna_{lado}"]
     base_infl = [(r + GROSOR_ROPA, z) for r, z in pierna["perfil"]]
     r0 = base_infl[0][0]
-    perfil = [(r0, -1.0), (r0 * 1.3, 1.1), (r0 * 1.3, 2.3), (r0 * 0.95, 2.8)] + base_infl[1:]
+    # perfil liso (sin el escalón de antes) que igual se mete un poco en el zapato: sin eso queda
+    # un filo de piel visible justo arriba de la suela.
+    perfil = [(r0 * 0.97, -1.5)] + base_infl
     pantalon = alth.torno(f"Joven_pantalon_{lado}", perfil, segmentos=10, color=PANTALON, alternar=False,
                            ruido_r=0, ruido_z=0, ovalo=pierna["ovalo"], pos=pierna["pos"])
     objs.append(pantalon)
+
+    z_dobladillo = pierna["pos"][2] + 1.6
+    dobladillo = alth.anillo(f"Joven_dobladillo_{lado}", radio=r0 * 1.05, grosor=2.4, segmentos=10, lados=4,
+                              color=PANTALON, escala=(1.0, pierna["ovalo"][1], 1.0),
+                              pos=(pierna["pos"][0], pierna["pos"][1], z_dobladillo))
+    objs.append(dobladillo)
 
 # cintura: cubre la pelvis (piel visible entre el chaleco y el pantalón)
 cadera = piezas["pelvis"]
