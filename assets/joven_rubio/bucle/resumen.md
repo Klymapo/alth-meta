@@ -2,8 +2,10 @@
 
 | vuelta | build | verificación | IoU silueta | cambios |
 |---|---|---|---|---|
-| 0 | OK | OK | 0.667 | punto de partida |
-| 1 | OK | OK | 0.663 | Reemplazado el pelo de corona con púas por un peinado completo (casquete elipsoidal envolvente + mechones facetados de flequillo con raya, laterales y capas traseras) modelado en una sola malla en build.py para coincidir con la referencia de Theo. |
-| 2 | OK | OK | 0.667 | Esculpido el peinado de Theo con mayor volumen craneal, crestas altas facetadas en abanico que elevan la silueta a ~104 mm, mechones frontales y laterales con puntas nítidas que reproducen la referencia, capas facetadas en la espalda, y añadido el nudo de la corbata. |
-| 3 | OK | OK | 0.659 | Ajustada la escala y contorno del pelo (coronilla a ~99 mm y lados más compactos para alinear las proporciones verticales y los brazos con la referencia), peinado del flequillo despejando cejas y mirada, y añadidos los picos triangulares inferiores del chaleco. |
-| 4 | OK | — | 0.674 | Esculpido el pelo con mayor altura y crestas facetadas características de la referencia (hasta Z ~103 mm), flequillo enmarcando la cara según la referencia, y añadida la trabilla trasera del chaleco en la espalda. |
+| 0 | OK | — | 0.674 | punto de partida |
+| 1 | OK | OK | 0.666 | Corregido el pelo para duplicar su volumen sobresaliendo ~40 % del ancho de la cabeza hacia los lados y por arriba con mechones facetados gruesos en bloque; corregida la posición en Y de trabilla y hebilla trasera para eliminar la falla de flotantes. |
+| 2 | OK | OK | 0.706 | Rediseñado el cabello en bloque compacto y voluminoso siguiendo fielmente la referencia: masa envolvente con crestas superiores, mechones frontales gruesos enmarcando la frente y capas traseras escalonadas, eliminando los salientes horizontales exagerados. |
+| 3 | OK | OK | 0.692 | Ajustado el cabello para ensanchar los bloques laterales a la altura de las sienes/orejas, rellenar la cresta superior izquierda y esculpir los mechones frontales como bloques más anchos y facetados, eliminando las puntas sobrantes y ajustando la silueta a la referencia. |
+
+**Versión que queda en la rama:** vuelta 2 · verificación OK · IoU 0.706
+_Regla: primero las que pasan la verificación; entre ellas, la de mejor silueta._
