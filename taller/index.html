@@ -681,8 +681,24 @@
         ? "No se pudo conectar con GitHub. Revisa tu internet y vuelve a intentar."
         : "Desde Claude no se puede conectar con GitHub. Abre el taller en klymapo.github.io/alth-meta/taller.");
     }
-    if (res.status === 401 || res.status === 403) {
-      throw new Error("GitHub rechazó el token (venció o le faltan permisos). Vuelve a pegarlo arriba.");
+    if (res.status === 401) {
+      throw new Error("GitHub no reconoce el token: está mal copiado, lo borraste o ya venció. " +
+        "Cópialo de nuevo completo (empieza con github_pat_) y pégalo en el Paso 0.");
+    }
+    if (res.status === 403) {
+      var detalle = "";
+      try { var jj = await res.clone().json(); detalle = (jj && jj.message) || ""; } catch (e3) {}
+      if (res.headers.get("x-ratelimit-remaining") === "0") {
+        throw new Error("GitHub te frenó por demasiadas consultas seguidas. Espera unos minutos.");
+      }
+      var permiso = /^\/actions/.test(path) ? "Actions"
+        : /^\/issues/.test(path) ? "Issues"
+        : "Contents";
+      throw new Error("El token entra, pero no tiene permiso de <strong>" + permiso + "</strong> en alth-meta. " +
+        "En GitHub edita el token: Repository access → Only select repositories → alth-meta, y en " +
+        "Permissions pon Read and write en Actions, Contents e Issues. Guarda y vuelve a intentar " +
+        "(no hace falta pegarlo de nuevo si solo editaste permisos)." +
+        (detalle ? "<br><small>GitHub dijo: " + detalle.replace(/[<>&]/g, "") + "</small>" : ""));
     }
     if (!res.ok) {
       var msg = "Error " + res.status;
