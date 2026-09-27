@@ -670,8 +670,15 @@ def cmd_correr(args):
     def _iou(s):
         return (s or {}).get("iou") if (s or {}).get("iou") is not None else -1
 
+    def _rango(res, s):
+        """Qué versión es 'mejor': primero la que PASA la verificación (medidas, triángulos,
+        paleta, piezas flotantes, apoyo en Z=0); entre iguales, la de mejor silueta (IoU)."""
+        ver_ok = bool(((res.get("reporte") or {}).get("verificacion") or {}).get("ok"))
+        return (ver_ok, _iou(s))
+
     ultimo_bueno = _snapshot() if resultado["ok"] else None
-    mejor_bueno, mejor_iou = (ultimo_bueno, _iou(sil)) if resultado["ok"] else (None, -1)
+    mejor_bueno, mejor_rango, mejor_n = ((ultimo_bueno, _rango(resultado, sil), n0) if resultado["ok"]
+                                         else (None, (False, -1), None))
     fallos_seguidos = 0
     for i in range(1, args.vueltas + 1):
         n = n0 + i
@@ -706,8 +713,8 @@ def cmd_correr(args):
         if resultado["ok"]:
             ultimo_bueno = _snapshot()
             fallos_seguidos = 0
-            if _iou(sil) > mejor_iou:
-                mejor_bueno, mejor_iou = ultimo_bueno, _iou(sil)
+            if _rango(resultado, sil) > mejor_rango:
+                mejor_bueno, mejor_rango, mejor_n = ultimo_bueno, _rango(resultado, sil), n
             if estado.startswith("LISTO") and ver.get("ok"):
                 print("[bucle] el modelo dice LISTO y la verificación pasó. Revisa la hoja y aprueba tú.")
                 break
@@ -725,7 +732,14 @@ def cmd_correr(args):
         if actual != mejor_bueno:
             for e, t in mejor_bueno.items():
                 (RAIZ / e).write_text(t, encoding="utf-8")
-            print(f"[bucle] dejé los archivos en la MEJOR vuelta (IoU {mejor_iou}), no en la última.")
+        ver_ok, iou = mejor_rango
+        estado_ver = "verificación OK" if ver_ok else "ninguna vuelta pasó la verificación"
+        print(f"[bucle] me quedo con la vuelta {mejor_n} ({estado_ver}, IoU {iou}).")
+        # El workflow usa esto para publicar la hoja de ESTA vuelta, no la de la última.
+        (asset.trabajo / "elegida.txt").write_text(f"v{mejor_n:02d}\n", encoding="utf-8")
+        with open(asset.trabajo / "resumen.md", "a", encoding="utf-8") as f:
+            f.write(f"\n**Versión que queda en la rama:** vuelta {mejor_n} · {estado_ver} · IoU {iou}\n"
+                    "_Regla: primero las que pasan la verificación; entre ellas, la de mejor silueta._\n")
     print(f"[bucle] listo. Resumen: {asset.rel(asset.trabajo / 'resumen.md')}")
 
 

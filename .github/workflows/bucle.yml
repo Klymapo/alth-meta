@@ -179,7 +179,10 @@ jobs:
           trabajo="renders/$nombre/bucle"
           [ -d "$trabajo" ] || { echo "No hubo resultados"; exit 0; }
           mkdir -p "$d/bucle"
-          ultima="$(ls -d "$trabajo"/v* | sort | tail -1)"
+          # la hoja de la vuelta que el bucle ELIGIÓ (pasa verificación + mejor silueta), no la última
+          elegida="$(cat "$trabajo/elegida.txt" 2>/dev/null)"
+          if [ -n "$elegida" ] && [ -d "$trabajo/$elegida" ]; then ultima="$trabajo/$elegida"
+          else ultima="$(ls -d "$trabajo"/v* | sort | tail -1)"; fi
           cp "$trabajo/resumen.md" "$d/bucle/" 2>/dev/null || true
           cp "$trabajo/error.txt" "$d/bucle/" 2>/dev/null || rm -f "$d/bucle/error.txt"
           cp "$ultima/hoja.png" "$d/bucle/hoja_ultima.png" 2>/dev/null || true
