@@ -58,7 +58,7 @@ PROVEEDORES = {
     "deepseek": {"base": "https://api.deepseek.com/v1", "clave_env": "DEEPSEEK_API_KEY",
                  "modelo": "deepseek-chat", "vision": False},
     "gemini": {"base": "https://generativelanguage.googleapis.com/v1beta/openai", "clave_env": "GEMINI_API_KEY",
-               "modelo": "gemini-2.5-flash", "vision": True},
+               "modelo": "gemini-3.8-flash", "vision": True},
     "openrouter": {"base": "https://openrouter.ai/api/v1", "clave_env": "OPENROUTER_API_KEY",
                    "modelo": None, "vision": True},
     "groq": {"base": "https://api.groq.com/openai/v1", "clave_env": "GROQ_API_KEY", "modelo": None, "vision": False},
