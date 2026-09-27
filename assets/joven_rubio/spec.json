@@ -26,9 +26,9 @@
   "modulos": [
     "alth.personaje.construir(): cuerpo base en T-pose (torso, pelvis, brazos, manos con dedos en bloque, piernas, zapatos, cabeza con orejas y nariz)",
     "camisa: collar (alth.torno pequeño bajo la barbilla) + mangas (alth.torno con perfil cónico y bulto de puño, sobre cada brazo hasta el codo)",
-    "chaleco: alth.torno sobre el perfil del torso, inflado; botones con alth.caja pequeñas",
-    "corbata: alth.caja delgada sobre el pecho",
-    "pantalón: alth.torno sobre el perfil de cada pierna, inflado, con dobladillo (escalón como la funda de vaso_cafe) cerca del tobillo",
+    "chaleco: alth.torno sobre el perfil del torso, inflado; abertura en V con franjas de camisa (alth.caja) que se angostan hacia abajo, solapas (alth.caja rotada) y botones metal",
+    "corbata: alth.caja delgada sobre el pecho, encima de las franjas de la abertura",
+    "pantalón amplio: alth.torno sobre el perfil de cada pierna, inflado bastante más que la piel, con dobladillo (escalón como la funda de vaso_cafe) cerca del tobillo",
     "pelo: alth.hoja() reutilizada como mechón faceteado, varios por la cabeza con alth.hoja",
     "ojos/cejas/boca: placas (alth.caja delgada) sobre la cara, no geometría"
   ],
@@ -38,7 +38,15 @@
     {"pieza": "Cuerpo_cabeza", "eje": "W", "mm": 40.0},
     {"pieza": "Cuerpo_cabeza", "eje": "H", "mm": 34.5},
     {"pieza": "Cuerpo_pierna_der", "eje": "H", "mm": 24.0},
-    {"pieza": "Cuerpo_zapato_der", "eje": "D", "mm": 18.0}
+    {"pieza": "Cuerpo_zapato_der", "eje": "D", "mm": 18.0},
+    {"pieza": "Cuerpo_torso", "eje": "D", "mm": 17.8},
+    {"pieza": "Cuerpo_pierna_der", "eje": "D", "mm": 11.13, "nota": "8.9 del estándar × 1.25 (grosor_extremidades)"}
   ],
-  "historial": []
+  "historial": [
+    {"vuelta": 1, "nota": "primera construcción; bug de apoyada hundía medio cuerpo, pelo escaso"},
+    {"vuelta": 2, "nota": "corregido el hundimiento; cerrados huecos de piel cintura/tobillo; cejas separadas de ojos"},
+    {"vuelta": 3, "nota": "pelo más denso y voluminoso (lados y espalda, no solo coronilla)"},
+    {"vuelta": 4, "nota": "botones metal (antes invisibles contra el chaleco negro); VERIFICACION OK, 2188 tris"},
+    {"vuelta": 5, "nota": "cambio de plan: pecho D=17.8 y cadera-pierna D=8.9 exactos (óvalo ajustado al anillo más ancho + segmentos=12 para tocar 90°); brazos/piernas 25% más gruesos; mangas y pantalón amplios; cabeza como tronco de pirámide (mandíbula 36.2x28.8, chaflán más suave); chaleco con abertura en V, solapas y cuello de camisa; cotas D de pecho y pierna agregadas. VERIFICACION OK, 2316 tris. Pelo sin tocar."}
+  ]
 }

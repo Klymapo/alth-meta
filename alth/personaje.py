@@ -29,7 +29,19 @@ DEDOS = [  # (nombre, largo_mm, ancho_mm), del índice al meñique
 PULGAR = {"largo": 5.1, "ancho": 2.1}
 OREJA = {"W": 6.5, "H": 8.4, "D": 3.8}
 NARIZ = {"W": 3.8, "H": 2.7, "D": 1.8}
+MANDIBULA_D = 28.8  # cuerpo.CABEZA ya trae mandibula_W=36.2; el fondo es solo del PDF (p. 4)
 SOLAPE = 1.5  # mm que una pieza se mete en la vecina (cuello, hombro, cadera, oreja, nariz)
+
+
+def _ovalo_ancho_max(tabla):
+    """Óvalo (X, Y) ajustado al anillo MÁS ANCHO de una tabla tipo cuerpo.TORSO/PIERNA.
+
+    cuerpo.py promedia el fondo/ancho de todos los anillos (bueno para el maniquí de bloques,
+    a ojo); aquí, como sí se verifica una cota de fondo (D) exacta, se ajusta al anillo que
+    manda en el bounding box (el más ancho: pecho o cadera), para que esa cota quede exacta.
+    """
+    _, w, dd = max(tabla, key=lambda p: p[1])
+    return (1.0, dd / w)
 
 
 def _mano(x_muneca: float, z: float, s: int) -> dict:
@@ -53,8 +65,12 @@ def _mano(x_muneca: float, z: float, s: int) -> dict:
     return {"punta_x": x_punta, "piezas": piezas}
 
 
-def plan(arquetipo: str = "estandar") -> dict:
-    """Piezas reales del cuerpo en T-pose (pies en Z=0, frente hacia −Y)."""
+def plan(arquetipo: str = "estandar", grosor_extremidades: float = 1.0) -> dict:
+    """Piezas reales del cuerpo en T-pose (pies en Z=0, frente hacia −Y).
+
+    `grosor_extremidades`: multiplicador del radio de brazos/antebrazos/piernas (1.0 = cotas
+    del estándar tal cual); un personaje más fornido puede pedir, p. ej., 1.25.
+    """
     b = base.plan(arquetipo)
     por_nombre = {p["nombre"]: p for p in b["piezas"]}
     z_hombro = por_nombre["brazo_der"]["pos"][2]
@@ -64,16 +80,20 @@ def plan(arquetipo: str = "estandar") -> dict:
 
     piezas = {
         "torso": {"tipo": "torno", "perfil": por_nombre["torso"]["perfil"],
-                  "ovalo": por_nombre["torso"]["ovalo"], "pos": por_nombre["torso"]["pos"]},
+                  "ovalo": _ovalo_ancho_max(base.TORSO), "pos": por_nombre["torso"]["pos"]},
         "pelvis": {"tipo": "caja", "tam": por_nombre["pelvis"]["tam"], "pos": por_nombre["pelvis"]["pos"]},
-        "cabeza": {"tipo": "caja", "tam": por_nombre["cabeza"]["tam"], "pos": por_nombre["cabeza"]["pos"],
-                   "chaflan": por_nombre["cabeza"]["chaflan"]},
+        "cabeza": {"tipo": "cabeza", "pos": por_nombre["cabeza"]["pos"],
+                   "w_arriba": base.CABEZA["W"], "d_arriba": base.CABEZA["D"],
+                   "w_abajo": base.CABEZA["mandibula_W"], "d_abajo": MANDIBULA_D,
+                   "h": base.CABEZA["H"], "chaflan": 2.2, "chaflan_segmentos": 3,
+                   "tam": (base.CABEZA["W"], base.CABEZA["D"], base.CABEZA["H"])},
         "nariz": {"tipo": "caja", "centro": True, "tam": (NARIZ["W"], NARIZ["D"], NARIZ["H"]),
                   "pos": (0.0, y_cara + NARIZ["D"] / 2 - SOLAPE, z_ojo - 1.4)},
     }
     for lado, s in (("izq", -1), ("der", 1)):
-        piezas[f"pierna_{lado}"] = {"tipo": "torno", "perfil": por_nombre[f"pierna_{lado}"]["perfil"],
-                                     "ovalo": por_nombre[f"pierna_{lado}"]["ovalo"],
+        pierna_perfil = [(r * grosor_extremidades, z) for r, z in por_nombre[f"pierna_{lado}"]["perfil"]]
+        piezas[f"pierna_{lado}"] = {"tipo": "torno", "perfil": pierna_perfil,
+                                     "ovalo": _ovalo_ancho_max(base.PIERNA),
                                      "pos": por_nombre[f"pierna_{lado}"]["pos"]}
         piezas[f"zapato_{lado}"] = {"tipo": "caja", "tam": por_nombre[f"zapato_{lado}"]["tam"],
                                      "pos": por_nombre[f"zapato_{lado}"]["pos"]}
@@ -83,14 +103,15 @@ def plan(arquetipo: str = "estandar") -> dict:
 
         x0 = s * base.HOMBRO_X
         largo_sup, largo_ante = base.BRAZO[0][1], base.BRAZO[1][1]
-        w_sup0, w_sup1 = base.BRAZO[0][0], base.BRAZO[1][0]
+        w_sup0, w_sup1 = base.BRAZO[0][0] * grosor_extremidades, base.BRAZO[1][0] * grosor_extremidades
+        w_muneca = base.MUNECA_W * grosor_extremidades
         rot = (0, 90 * s, 0)  # el eje local +Z del prisma apunta a +X (der) o −X (izq)
         x1 = x0 + s * largo_sup
         x2 = x1 + s * largo_ante
         piezas[f"brazo_{lado}"] = {"tipo": "prisma", "pos": (x0, 0.0, z_hombro),
                                     "r0": w_sup0 / 2, "r1": w_sup1 / 2, "largo": largo_sup, "rot": rot}
         piezas[f"antebrazo_{lado}"] = {"tipo": "prisma", "pos": (x1, 0.0, z_hombro),
-                                        "r0": w_sup1 / 2, "r1": base.MUNECA_W / 2, "largo": largo_ante, "rot": rot}
+                                        "r0": w_sup1 / 2, "r1": w_muneca / 2, "largo": largo_ante, "rot": rot}
         mano = _mano(x2, z_hombro, s)
         for parte, datos in mano["piezas"].items():
             piezas[f"mano_{lado}_{parte}"] = {"tipo": "caja", "centro": True, **datos}
@@ -99,11 +120,34 @@ def plan(arquetipo: str = "estandar") -> dict:
     return {"arquetipo": arquetipo, "anclas": b["anclas"], "piezas": piezas}
 
 
-def construir(arquetipo: str = "estandar", pos=(0.0, 0.0, 0.0), color_piel="#FBC39C", color_zapato="#292929"):
-    """Construye el cuerpo con alth.torno/prisma/caja. Devuelve {nombre: objeto}."""
-    from . import torno, prisma, caja  # atributos del paquete alth (definidos en __init__.py)
+def _cabeza_objeto(nombre, w_arriba, d_arriba, w_abajo, d_abajo, h, pos, color):
+    """Cabeza como tronco de pirámide: cráneo ancho arriba, mandíbula más angosta abajo.
+    No hay una forma de alth/__init__.py para esto (ni torno —redondo— ni caja —recta—),
+    así que arma la malla directo, con el mismo patrón interno (_objeto/_asignar) de esas formas."""
+    import bmesh
+    from . import _asignar, _objeto
 
-    pl = plan(arquetipo)
+    bm = bmesh.new()
+    esquinas = ((-1, -1), (1, -1), (1, 1), (-1, 1))
+    abajo = [bm.verts.new((sx * w_abajo / 2, sy * d_abajo / 2, 0.0)) for sx, sy in esquinas]
+    arriba = [bm.verts.new((sx * w_arriba / 2, sy * d_arriba / 2, h)) for sx, sy in esquinas]
+    bm.faces.new(tuple(reversed(abajo)))
+    bm.faces.new(arriba)
+    for i in range(4):
+        j = (i + 1) % 4
+        bm.faces.new((abajo[i], abajo[j], arriba[j], arriba[i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    obj = _objeto(nombre, bm)
+    obj.location = pos
+    return _asignar(obj, color)
+
+
+def construir(arquetipo: str = "estandar", pos=(0.0, 0.0, 0.0), color_piel="#FBC39C", color_zapato="#292929",
+              grosor_extremidades: float = 1.0):
+    """Construye el cuerpo con alth.torno/prisma/caja. Devuelve {nombre: objeto}."""
+    from . import caja, chaflan, prisma, torno  # atributos del paquete alth (definidos en __init__.py)
+
+    pl = plan(arquetipo, grosor_extremidades=grosor_extremidades)
     ox, oy, oz = pos
     objs = {}
     for nombre, p in pl["piezas"].items():
@@ -112,14 +156,17 @@ def construir(arquetipo: str = "estandar", pos=(0.0, 0.0, 0.0), color_piel="#FBC
         x, y, z = p["pos"]
         x, y, z = x + ox, y + oy, z + oz
         color = color_zapato if nombre.startswith("zapato_") else color_piel
-        if p["tipo"] == "caja":
+        if p["tipo"] == "cabeza":
+            o = _cabeza_objeto(f"Cuerpo_{nombre}", p["w_arriba"], p["d_arriba"], p["w_abajo"], p["d_abajo"],
+                                p["h"], (x, y, z), color)
+            chaflan(o, ancho=p["chaflan"], segmentos=p.get("chaflan_segmentos", 2))
+        elif p["tipo"] == "caja":
             o = caja(f"Cuerpo_{nombre}", p["tam"], pos=(x, y, z), color=color,
                       apoyada=not p.get("centro", False), biselar="chaflan" not in p)
             if "chaflan" in p:
-                from . import chaflan
                 chaflan(o, ancho=p["chaflan"], segmentos=2)
         elif p["tipo"] == "torno":
-            o = torno(f"Cuerpo_{nombre}", p["perfil"], segmentos=10, color=color, alternar=False,
+            o = torno(f"Cuerpo_{nombre}", p["perfil"], segmentos=12, color=color, alternar=False,
                        ruido_r=0, ruido_z=0, ovalo=p["ovalo"], pos=(x, y, z))
         else:  # prisma
             o = prisma(f"Cuerpo_{nombre}", p["r0"], p["r1"], p["largo"], lados=6, color=color,

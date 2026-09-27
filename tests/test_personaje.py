@@ -62,3 +62,32 @@ def test_orejas_simetricas_y_fuera_del_eje_central():
     oi, od = piezas["oreja_izq"]["pos"], piezas["oreja_der"]["pos"]
     assert oi[0] == -od[0] and od[0] > 0
     assert oi[2] == od[2]
+
+
+def test_cabeza_es_tronco_de_piramide_con_mandibula_mas_angosta():
+    cabeza = p.plan()["piezas"]["cabeza"]
+    assert cabeza["tipo"] == "cabeza"
+    assert cabeza["w_abajo"] == 36.2 and cabeza["d_abajo"] == 28.8
+    assert cabeza["w_abajo"] < cabeza["w_arriba"] and cabeza["d_abajo"] < cabeza["d_arriba"]
+
+
+def test_ovalo_del_torso_da_el_fondo_exacto_del_pecho():
+    torso = p.plan()["piezas"]["torso"]
+    radio_pecho, ancho_pecho = 30.5 / 2, 30.5  # anillo más ancho de cuerpo.TORSO (pecho)
+    assert math.isclose(radio_pecho * torso["ovalo"][1] * 2, 17.8, rel_tol=1e-9)
+
+
+def test_ovalo_de_la_pierna_da_el_fondo_exacto_de_la_cadera():
+    pierna = p.plan()["piezas"]["pierna_der"]
+    ancho_cadera = 11.0  # anillo más ancho de cuerpo.PIERNA (cadera)
+    assert math.isclose(ancho_cadera * pierna["ovalo"][1], 8.9, rel_tol=1e-9)
+
+
+def test_grosor_extremidades_engrosa_brazos_y_piernas_sin_tocar_el_largo():
+    normal = p.plan(grosor_extremidades=1.0)["piezas"]
+    grueso = p.plan(grosor_extremidades=1.25)["piezas"]
+    assert math.isclose(grueso["brazo_der"]["r0"], normal["brazo_der"]["r0"] * 1.25)
+    assert grueso["brazo_der"]["largo"] == normal["brazo_der"]["largo"]
+    r_normal = [r for r, _ in normal["pierna_der"]["perfil"]]
+    r_grueso = [r for r, _ in grueso["pierna_der"]["perfil"]]
+    assert all(math.isclose(g, n * 1.25) for g, n in zip(r_grueso, r_normal))
