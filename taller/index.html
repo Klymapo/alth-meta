@@ -299,6 +299,38 @@
   .gate-opcion .sub { font-family: var(--font-ui); font-weight: 400; font-size: 0.78rem; opacity: 0.85; display: block; margin-top: 1px; }
   #btnGateExistente { background: var(--blue-soft); color: var(--blue); border: 1px solid var(--blue); }
   #btnGateNuevo { background: var(--pink-soft); color: var(--pink); border: 1px solid var(--pink); box-shadow: none; }
+
+  /* Mesa de trabajo: la decisión vive junto a la evidencia del asset. */
+  .home { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 20px; }
+  .home h2 { font-size: 1.4rem; margin-bottom: 5px; }
+  .home-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+  .home-metrics div { background: var(--surface-2); border-radius: 14px; padding: 13px; font-size: .78rem; color: var(--text-muted); }
+  .home-metrics strong { display: block; font: 700 1.45rem var(--font-head); color: var(--text); }
+  .home-metrics .review strong { color: var(--accent-dark); }
+  .asset-detail { margin-top: 16px; border: 1px solid var(--border); border-radius: 16px; padding: 16px; background: var(--bg); }
+  .asset-detail h3 { font-size: 1.25rem; }
+  .asset-detail-grid { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap: 16px; }
+  .asset-detail img { width: 100%; max-height: 440px; object-fit: contain; border-radius: 12px; background: var(--surface-2); }
+  .asset-detail .proof { background: var(--surface); padding: 14px; border-radius: 12px; border: 1px solid var(--border); }
+  .asset-detail .proof p { margin: 8px 0; line-height: 1.45; }
+  .asset-detail .sha { font: .75rem var(--font-mono); overflow-wrap: anywhere; color: var(--text-muted); }
+  .asset-detail .btn-row { margin-top: 13px; flex-wrap: wrap; }
+  .asset-detail .approve { background: var(--good); color: var(--surface); box-shadow: none; }
+  .asset-detail .approve:disabled { opacity: .45; }
+  .technical { margin-top: 12px; }
+  .technical summary { cursor: pointer; font-size: .82rem; color: var(--blue); }
+  @media (min-width: 900px) {
+    body { max-width: 1180px; padding-inline: 24px; }
+    main { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+    main > .home, main > .token-banner, main > .card-token, main > .card-gate,
+    main > .card-biblioteca, main > .card-corridas { grid-column: 1 / -1; }
+    #bibliotecaLista.runs-list { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .asset-detail-grid { grid-template-columns: 1fr; }
+    .home { padding: 16px; }
+    .home-metrics div { padding: 10px; }
+  }
 </style>
 
 <div class="header">
@@ -321,6 +353,16 @@
     <a href="https://klymapo.github.io/alth-meta/taller/" target="_blank" rel="noopener">klymapo.github.io/alth-meta/taller</a>
     (guárdala en tu pantalla de inicio). Ahí vuelves a pegar tu token una vez.
   </div>
+
+  <section class="home" aria-labelledby="homeTitle">
+    <h2 id="homeTitle">Tu mesa de trabajo</h2>
+    <p class="card-help" id="homeStatus">Conecta GitHub para cargar la biblioteca y tus corridas.</p>
+    <div class="home-metrics">
+      <div class="review"><strong id="countReview">—</strong>Por revisar</div>
+      <div><strong id="countProgress">—</strong>En proceso</div>
+      <div><strong id="countApproved">—</strong>Aprobados</div>
+    </div>
+  </section>
 
   <details class="card-token" id="cardToken">
     <summary>
@@ -385,14 +427,38 @@
     </summary>
     <div class="card-body">
       <p class="card-help">
-        Toca uno y queda elegido en "Lanzar una corrida" y en "Aprobar", así no lo escribes.
-        "aprobado" = ya tiene su <code>final.png</code> y <code>.glb</code> en main. "en proceso" = tiene
+        Toca uno para ver su hoja, sus verificaciones y decidir qué hacer.
+        "aprobado" = ya tiene su <code>final.png</code> y <code>.glb</code> en esta versión. "en proceso" = tiene
         corridas pero no está aprobado; los nuevos que solo viven en una rama <code>bucle/…</code> también
         salen aquí, con la miniatura de su última hoja.
       </p>
       <div class="runs-list" id="bibliotecaLista">
         <p class="empty">Toca "Actualizar" para cargarla (usa tu token de arriba).</p>
       </div>
+      <section class="asset-detail" id="assetDetalle" hidden aria-label="Detalle del asset">
+        <div class="asset-detail-grid">
+          <div>
+            <h3 id="detalleNombre"></h3>
+            <p class="card-help" id="detalleEstado"></p>
+            <img id="detalleImagen" alt="Hoja de cuatro vistas del asset seleccionado" hidden>
+          </div>
+          <div class="proof">
+            <strong>Versión para revisar</strong>
+            <p id="detallePruebas" class="card-help">Cargando evidencia…</p>
+            <p id="detalleRama" class="sha"></p>
+            <div class="field">
+              <label for="detalleNota">Qué ajustar en otra vuelta (opcional)</label>
+              <textarea id="detalleNota" placeholder="Por ejemplo: hacer el pelo más corto, corregir la escala…"></textarea>
+            </div>
+            <div class="btn-row">
+              <button class="ghost" id="btnDetalleVuelta">Pedir otra vuelta</button>
+              <button class="approve" id="btnDetalleAprobar" disabled>Aprobar esta versión</button>
+            </div>
+            <p class="card-help">La aprobación usa el commit exacto de la rama y vuelve a comprobar la hoja.</p>
+            <div class="status" id="statusDetalle"></div>
+          </div>
+        </div>
+      </section>
       <button class="ghost" id="btnBibliotecaRefrescar">Actualizar</button>
     </div>
   </details>
@@ -454,7 +520,7 @@
         libera cada cuota (Gemini a medianoche hora del Pacífico, Groq a medianoche UTC).
       </p>
       <div class="field">
-        <label for="lzModelo">Modelo (vacío = usa el de "Motores de IA" o el de fábrica)</label>
+        <label for="lzModelo">Modelo (opcional)</label>
         <input type="text" id="lzModelo" list="modeloList" placeholder="p. ej. gemini-3.8-flash" />
       </div>
       <div class="field">
@@ -464,7 +530,7 @@
       </div>
       <div class="row">
         <div class="field">
-          <label for="lzVueltas">Vueltas</label>
+          <label for="lzVueltas">Intentos máximos</label>
           <input type="number" id="lzVueltas" value="4" min="1" max="12" />
         </div>
         <div class="field">
@@ -479,7 +545,7 @@
           </select>
         </div>
       </div>
-      <div class="row">
+      <details class="technical"><summary>Opciones avanzadas · rama y archivos editables</summary><div class="row">
         <div class="field">
           <label for="lzRamaBase">Rama de partida</label>
           <input type="text" id="lzRamaBase" value="auto" />
@@ -488,12 +554,12 @@
           <label for="lzEditables">Editables extra</label>
           <input type="text" id="lzEditables" placeholder="alth/pelo.py" />
         </div>
-      </div>
+      </div></details>
       <div class="field">
         <label for="lzNota">Nota para el modelo (opcional)</label>
         <textarea id="lzNota" placeholder="Céntrate en el volumen del pelo…"></textarea>
       </div>
-      <button id="btnLanzar">Lanzar bucle</button>
+      <button id="btnLanzar">Generar otra versión</button>
       <div class="status" id="statusLanzar"></div>
     </div>
   </details>
@@ -512,19 +578,20 @@
       </p>
       <div class="field">
         <label for="apAsset">Asset</label>
-        <input type="text" id="apAsset" list="assetList" placeholder="toca uno en la Biblioteca o escribe, p. ej. lata" />
+        <input type="text" id="apAsset" readonly placeholder="Elige una versión en la Biblioteca" />
       </div>
       <div class="row">
         <div class="field">
           <label for="apRamaResultado">Rama a aprobar</label>
-          <input type="text" id="apRamaResultado" value="auto" />
+          <input type="text" id="apRamaResultado" readonly placeholder="Se fija al revisar la hoja" />
         </div>
         <div class="field">
           <label for="apRamaDestino">Sube a</label>
-          <input type="text" id="apRamaDestino" value="main" />
+          <input type="text" id="apRamaDestino" value="propuesta-taller-ux-flujo" />
         </div>
       </div>
-      <button id="btnAprobar">Aprobar</button>
+      <input type="hidden" id="apCommitRevision">
+      <button id="btnAprobar" disabled>Aprobar esta versión</button>
       <div class="status" id="statusAprobar"></div>
     </div>
   </details>
@@ -537,7 +604,7 @@
     </summary>
     <div class="card-body">
       <p class="card-help">
-        Antes de crear nada, reviso la biblioteca (main y las ramas <code>bucle/…</code>) por nombre,
+        Antes de crear nada, reviso la biblioteca (esta versión y las ramas <code>bucle/…</code>) por nombre,
         alias y descripción; si ya existe algo así, te pregunto antes de duplicar trabajo. Si dices que
         sí es ese, tu foto se sube y se usa como referencia nueva de esa corrida. Sube la foto y luego, con "Cómo empezarlo":
         o abre un <strong>Issue</strong> para que yo arme el primer <code>build.py</code> en el chat, o
@@ -550,6 +617,15 @@
       <div class="field">
         <label for="nvDesc">Qué es y tamaño real</label>
         <input type="text" id="nvDesc" placeholder="espada larga medieval, como de 90 cm" />
+      </div>
+      <div class="field">
+        <label for="nvTipo">Tipo de asset · límite de intentos recomendado</label>
+        <select id="nvTipo">
+          <option value="objeto_simple" data-max="3">Objeto simple · 3 intentos</option>
+          <option value="objeto" data-max="4" selected>Objeto · 4 intentos</option>
+          <option value="mueble_vehiculo" data-max="5">Mueble o vehículo · 5 intentos</option>
+          <option value="personaje" data-max="8">Personaje · 8 intentos</option>
+        </select>
       </div>
       <div class="field">
         <label for="nvFoto">Foto de referencia</label>
@@ -617,6 +693,7 @@
 (function () {
   "use strict";
   var OWNER = "Klymapo", REPO = "alth-meta";
+  var WORKFLOW_REF = "propuesta-taller-ux-flujo";
   var API = "https://api.github.com/repos/" + OWNER + "/" + REPO;
   var enPages = /\.github\.io$/.test(location.hostname);
   document.getElementById("avisoPages").hidden = enPages;
@@ -712,7 +789,7 @@
   function dispatch(workflowFile, inputs) {
     return gh("/actions/workflows/" + workflowFile + "/dispatches", {
       method: "POST",
-      body: JSON.stringify({ ref: "main", inputs: inputs })
+      body: JSON.stringify({ ref: WORKFLOW_REF, inputs: inputs })
     });
   }
 
@@ -751,7 +828,7 @@
     return JSON.parse(new TextDecoder("utf-8").decode(bytes));
   }
   async function listarCarpeta(ruta) {
-    var items = await gh("/contents/" + ruta);
+    var items = await gh("/contents/" + ruta + "?ref=" + encodeURIComponent(WORKFLOW_REF));
     return Array.isArray(items) ? items : [];
   }
   // última rama bucle/<nombre>-N de cada asset, comparando N como número
@@ -787,7 +864,7 @@
     if (!forzar) {
       try {
         var cache = JSON.parse(ls("alth_biblioteca_cache") || "null");
-        if (cache && cache.v === 2) { biblioteca = cache.lista; return biblioteca; }
+        if (cache && cache.v === 3) { biblioteca = cache.lista; return biblioteca; }
       } catch (e) { /* sin cache, seguimos a pedirla */ }
     }
     var ramas = await ultimasRamas();
@@ -844,7 +921,7 @@
       return (a.aprobado === b.aprobado) ? a.nombre.localeCompare(b.nombre) : (a.aprobado ? 1 : -1);
     });
     biblioteca = lista;
-    try { ls("alth_biblioteca_cache", JSON.stringify({ v: 2, lista: lista })); } catch (e) { /* sin espacio */ }
+    try { ls("alth_biblioteca_cache", JSON.stringify({ v: 3, lista: lista })); } catch (e) { /* sin espacio */ }
     llenarSugerencias(lista);
     return lista;
   }
@@ -861,11 +938,16 @@
   function pintarBiblioteca(lista) {
     var el = document.getElementById("bibliotecaLista");
     if (!lista.length) { el.innerHTML = '<p class="empty">Todavía no hay ningún asset en el repo.</p>'; return; }
+    document.getElementById("countApproved").textContent = lista.filter(function (a) { return a.aprobado; }).length;
+    document.getElementById("countReview").textContent = lista.filter(function (a) { return a.rama && !a.aprobado; }).length;
+    document.getElementById("countProgress").textContent = lista.filter(function (a) { return !a.aprobado && !a.rama; }).length;
+    document.getElementById("homeStatus").textContent = "Selecciona un asset para ver su versión y decidir el siguiente paso.";
     el.innerHTML = lista.map(function (a, i) {
       var img = a.imagen
         ? '<img class="run-thumb" src="' + escapar(a.imagen) + '" alt="" onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{className:\'run-thumb\',textContent:\'🧸\'}))">'
         : '<div class="run-thumb">🧸</div>';
-      var estado = a.aprobado ? '<span class="pill good">✓ aprobado</span>' : '<span class="pill warn">◐ en proceso</span>';
+      var estado = a.aprobado ? '<span class="pill good">✓ aprobado</span>' :
+        a.rama ? '<span class="pill warn">◐ ver versión</span>' : '<span class="pill">en proceso</span>';
       var meta = (a.categoria || "sin categoría") + (a.rama ? " · " + a.rama.replace(/^bucle\//, "") : "");
       return '<div class="run" data-i="' + i + '" role="button" tabindex="0" style="cursor:pointer">' + img +
         '<div class="run-main"><div class="run-name">' + escapar(a.nombre) + '</div>' +
@@ -873,16 +955,77 @@
     }).join("");
     Array.prototype.forEach.call(el.querySelectorAll(".run"), function (row) {
       row.addEventListener("click", function () {
-        elegirAsset(lista[+row.dataset.i].ruta);
-        document.getElementById("cardLanzar").open = true;
-        document.getElementById("cardLanzar").scrollIntoView({ behavior: "smooth", block: "start" });
+        mostrarDetalle(lista[+row.dataset.i]);
+      });
+      row.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); row.click(); }
       });
     });
   }
+  var revisionElegida = null, imagenDetalleUrl = null, detallePeticion = 0;
+  async function huella(bytes) {
+    return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+      function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+  }
+  async function mostrarDetalle(asset) {
+    var peticion = ++detallePeticion;
+    elegirAsset(asset.ruta);
+    revisionElegida = null;
+    document.getElementById("apCommitRevision").value = "";
+    document.getElementById("btnDetalleAprobar").disabled = true;
+    document.getElementById("btnAprobar").disabled = true;
+    document.getElementById("assetDetalle").hidden = false;
+    document.getElementById("detalleNombre").textContent = asset.nombre;
+    document.getElementById("detalleEstado").textContent = asset.descripcion || asset.categoria || "Asset del proyecto";
+    document.getElementById("detallePruebas").textContent = asset.rama ?
+      "Comprobando que la hoja corresponde al código de la rama…" :
+      "Este asset no tiene una versión nueva para revisar.";
+    document.getElementById("detalleRama").textContent = asset.rama || "Biblioteca de esta versión";
+    var img = document.getElementById("detalleImagen");
+    if (imagenDetalleUrl) URL.revokeObjectURL(imagenDetalleUrl);
+    imagenDetalleUrl = null;
+    img.hidden = true;
+    if (!asset.rama) return;
+    try {
+      var rama = await gh("/branches/" + encodeURIComponent(asset.rama));
+      var archivo = await gh("/contents/" + asset.ruta + "/bucle/revision.json?ref=" + encodeURIComponent(rama.commit.sha));
+      var revision = decodificarJson(archivo.content);
+      if (revision.asset !== asset.ruta || !revision.verificacion_ok) throw new Error("La versión no pasó la verificación.");
+      var foto = await fetch("https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/" +
+        rama.commit.sha + "/" + asset.ruta + "/bucle/hoja_ultima.png", { cache: "no-store" });
+      if (!foto.ok) throw new Error("La hoja no está disponible.");
+      var bytes = await foto.arrayBuffer();
+      if (peticion !== detallePeticion) return;
+      if (await huella(bytes) !== revision.hoja_sha256) throw new Error("La hoja cambió. Actualiza la biblioteca.");
+      if (peticion !== detallePeticion) return;
+      imagenDetalleUrl = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
+      img.src = imagenDetalleUrl;
+      img.hidden = false;
+      revisionElegida = { asset: asset.ruta, rama: asset.rama, sha: rama.commit.sha };
+      document.getElementById("detallePruebas").textContent =
+        "✓ Verificación completa · Hoja de la vuelta " + revision.vuelta_origen +
+        " · El código y esta imagen se comprobarán otra vez antes del render final.";
+      document.getElementById("detalleRama").textContent = asset.rama + " · " + rama.commit.sha.slice(0, 12);
+      document.getElementById("apRamaResultado").value = asset.rama;
+      document.getElementById("apCommitRevision").value = rama.commit.sha;
+      document.getElementById("btnDetalleAprobar").disabled = false;
+      document.getElementById("btnAprobar").disabled = false;
+    } catch (error) {
+      if (peticion !== detallePeticion) return;
+      document.getElementById("detallePruebas").textContent = error.message +
+        " No apruebes esta versión; genera una vuelta nueva o actualiza la biblioteca.";
+    }
+  }
+  document.getElementById("btnDetalleVuelta").addEventListener("click", function () {
+    document.getElementById("lzNota").value = document.getElementById("detalleNota").value.trim();
+    document.getElementById("cardLanzar").open = true;
+    document.getElementById("cardLanzar").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  document.getElementById("btnDetalleAprobar").addEventListener("click", function () {
+    document.getElementById("btnAprobar").click();
+  });
   async function buscarParecido(nombre, desc) {
-    var lista;
-    try { lista = await cargarBiblioteca(true); }            // siempre fresca para no duplicar
-    catch (e) { lista = await cargarBiblioteca(false); }     // sin red: la última copia guardada
+    var lista = await cargarBiblioteca(true);               // sin conexión no creamos un duplicado
     var consulta = tokens(nombre.replace(/_/g, " ") + " " + desc);
     var exacto = slug(nombre);
     var mejor = null, mejorPuntos = 0;
@@ -902,7 +1045,7 @@
     var path = "refs/pendientes/" + slug(nombre) + "-" + Date.now() + "." + extOf(file);
     await gh("/contents/" + path.split("/").map(encodeURIComponent).join("/"), {
       method: "PUT",
-      body: JSON.stringify({ message: "Referencia: " + nombre, content: b64, branch: "main" })
+      body: JSON.stringify({ message: "Referencia: " + nombre, content: b64, branch: WORKFLOW_REF })
     });
     return path;
   }
@@ -951,6 +1094,10 @@
     ls("alth_gh_token_vence", vence || null);
     document.getElementById("tokenInput").value = "";
     refreshTokenBadge();
+    document.getElementById("homeStatus").textContent = "Cargando tus assets…";
+    cargarBiblioteca(true).then(pintarBiblioteca).catch(function (e) {
+      document.getElementById("homeStatus").textContent = "No pude cargar la biblioteca: " + e.message;
+    });
     setStatus("statusToken", "good", "Guardado.");
   });
   document.getElementById("btnClearToken").addEventListener("click", function () {
@@ -1038,17 +1185,30 @@
     var inputs = {
       asset: document.getElementById("apAsset").value.trim(),
       rama_resultado: document.getElementById("apRamaResultado").value.trim() || "auto",
-      rama_destino: document.getElementById("apRamaDestino").value.trim() || "main"
+      rama_destino: document.getElementById("apRamaDestino").value.trim() || WORKFLOW_REF,
+      commit_revision: document.getElementById("apCommitRevision").value
     };
-    if (!inputs.asset) { setStatus("statusAprobar", "bad", "Escribe qué asset aprobar."); return; }
+    if (!revisionElegida || inputs.asset !== revisionElegida.asset ||
+        inputs.rama_resultado !== revisionElegida.rama ||
+        inputs.commit_revision !== revisionElegida.sha) {
+      setStatus("statusAprobar", "bad", "Abre una versión en la Biblioteca y revisa su hoja primero.");
+      return;
+    }
+    if (!confirm("¿Aprobar " + inputs.asset + " en " + inputs.rama_resultado +
+      " (" + inputs.commit_revision.slice(0, 12) + ")? Se generará el GLB final en " +
+      inputs.rama_destino + ".")) return;
     btn.disabled = true;
     setStatus("statusAprobar", "info", '<span class="spin"></span> Aprobando…');
+    var enviada = false;
     try {
       await dispatch("aprobar.yml", inputs);
-      setStatus("statusAprobar", "good", "Lanzado. El render final tarda un rato; revisa Corridas recientes.");
+      enviada = true;
+      setStatus("statusAprobar", "good", "Aprobación enviada. El workflow volverá a verificar este commit y la hoja.");
+      document.getElementById("btnAprobar").disabled = true;
+      document.getElementById("btnDetalleAprobar").disabled = true;
     } catch (e) {
       setStatus("statusAprobar", "bad", e.message);
-    } finally { btn.disabled = false; }
+    } finally { btn.disabled = enviada; }
   });
 
   // ---- asset nuevo ----
@@ -1056,6 +1216,9 @@
   function actualizarNvModo() { nvOpcionesEl.style.display = nvModoEl.value === "arrancar" ? "flex" : "none"; }
   nvModoEl.addEventListener("change", actualizarNvModo);
   actualizarNvModo();
+  document.getElementById("nvTipo").addEventListener("change", function () {
+    document.getElementById("nvVueltas").value = this.selectedOptions[0].dataset.max;
+  });
 
   var nvDecidido = null;   // null | "nuevo" (el usuario ya confirmó que es distinto)
   var parecidoActual = null;
@@ -1135,7 +1298,10 @@
           return;
         }
       } catch (e) {
-        // si la búsqueda falla (sin token, sin red), seguimos y creamos de todos modos
+        setStatus("statusNuevo", "bad", "No pude comprobar si ya existe: " + escapar(e.message) +
+          ". Actualiza la Biblioteca y vuelve a intentar.");
+        btn.disabled = false;
+        return;
       }
     }
     nvDecidido = null;
@@ -1150,6 +1316,7 @@
           descripcion: desc,
           referencia: path,
           vueltas: String(document.getElementById("nvVueltas").value || "4"),
+          tipo: document.getElementById("nvTipo").value,
           proveedor: document.getElementById("nvProveedor").value,
           modelo: modeloElegido("")
         });
@@ -1163,7 +1330,7 @@
         btn.disabled = false;
         return;
       }
-      var rawUrl = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/main/" + path;
+      var rawUrl = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/" + WORKFLOW_REF + "/" + path;
       var body = "**Qué es:** " + desc + "\n\n![referencia](" + rawUrl + ")\n\n" +
         "_Enviado desde el Taller ALTH-META._";
       var issue = await gh("/issues", {
@@ -1221,7 +1388,13 @@
   document.getElementById("btnRefrescar").addEventListener("click", cargarCorridas);
 
   refreshTokenBadge();
-  if (getToken()) cargarCorridas();
+  if (getToken()) {
+    cargarCorridas();
+    document.getElementById("homeStatus").textContent = "Cargando tus assets…";
+    cargarBiblioteca(true).then(pintarBiblioteca).catch(function (e) {
+      document.getElementById("homeStatus").textContent = "No pude cargar la biblioteca: " + e.message;
+    });
+  }
 })();
 </script>
 </body></html>
