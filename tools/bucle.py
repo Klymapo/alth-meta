@@ -445,7 +445,12 @@ def cmd_correr(args):
         n = n0 + i
         texto = armar_prompt(asset, resultado, sil, i, args.vueltas)
         print(f"[bucle] vuelta {n}: pidiendo corrección al modelo…")
-        respuesta = llamar_modelo(cfg, sistema, texto, imagenes_para(asset, resultado, sil))
+        try:
+            respuesta = llamar_modelo(cfg, sistema, texto, imagenes_para(asset, resultado, sil))
+        except SystemExit as e:
+            # Deja el motivo a la vista (resumen de GitHub Actions, rama de resultado) y termina.
+            (asset.trabajo / "error.txt").write_text(f"{cfg['nombre']}/{cfg['modelo']}: {e}\n", encoding="utf-8")
+            raise
         cambios, estado = extraer_campo(respuesta, "CAMBIOS"), extraer_campo(respuesta, "ESTADO").upper()
         ok, msg, _ = aplicar(asset, respuesta)
         if not ok:

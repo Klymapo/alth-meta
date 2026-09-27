@@ -101,6 +101,7 @@ jobs:
           mkdir -p "$d/bucle"
           ultima="$(ls -d "$trabajo"/v* | sort | tail -1)"
           cp "$trabajo/resumen.md" "$d/bucle/" 2>/dev/null || true
+          cp "$trabajo/error.txt" "$d/bucle/" 2>/dev/null || rm -f "$d/bucle/error.txt"
           cp "$ultima/hoja.png" "$d/bucle/hoja_ultima.png" 2>/dev/null || true
           cp "$trabajo/superposicion.png" "$d/bucle/siluetas.png" 2>/dev/null || true
           rama="bucle/${nombre}-${{ github.run_number }}"
@@ -114,6 +115,7 @@ jobs:
             echo "## Bucle · $nombre"
             echo
             cat "$d/bucle/resumen.md" 2>/dev/null
+            if [ -f "$d/bucle/error.txt" ]; then echo; echo "### Error del modelo"; echo '```'; cat "$d/bucle/error.txt"; echo '```'; fi
             echo
             echo "Rama: \`$rama\`"
             echo
