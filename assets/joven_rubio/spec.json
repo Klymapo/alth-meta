@@ -1,0 +1,44 @@
+{
+  "nombre": "joven_rubio",
+  "categoria": "personaje",
+  "tipo_presupuesto": "personaje",
+  "k": 1.0,
+  "arquetipo": "estandar",
+  "medidas_reales_mm": {
+    "altura_persona": 1700
+  },
+  "medidas_alth_mm": {
+    "altura": 95.0,
+    "formula": "estándar cuerpo_base_95mm (mm_real 1700 * 0.0559 * 1.0 = 95.0), no por pieza"
+  },
+  "colores": {
+    "piel": {"paleta": "medidos.piel_clara", "hex": "#FBC39C"},
+    "cabello": {"paleta": "medidos.cabello_rubio", "hex": "#EFC989"},
+    "camisa": {"paleta": "medidos.camisa_blanca", "hex": "#FBEFE1"},
+    "chaleco": {"paleta": "medidos.chaleco_negro", "hex": "#302E2D"},
+    "corbata": {"paleta": "medidos.corbata_azul", "hex": "#41598D"},
+    "pantalon": {"paleta": "medidos.pantalon_azul", "hex": "#4A5770"},
+    "zapatos": {"paleta": "medidos.zapato_negro", "hex": "#292929"},
+    "cejas_ojos": {"paleta": "marron_calido", "hex": "#4A3220"},
+    "ojo_blanco": {"paleta": "crema_suave", "hex": "#FBF8F4"},
+    "botones": {"paleta": "metal", "hex": "#B7BABE"}
+  },
+  "modulos": [
+    "alth.personaje.construir(): cuerpo base en T-pose (torso, pelvis, brazos, manos con dedos en bloque, piernas, zapatos, cabeza con orejas y nariz)",
+    "camisa: collar (alth.torno pequeño bajo la barbilla) + mangas (alth.torno con perfil cónico y bulto de puño, sobre cada brazo hasta el codo)",
+    "chaleco: alth.torno sobre el perfil del torso, inflado; botones con alth.caja pequeñas",
+    "corbata: alth.caja delgada sobre el pecho",
+    "pantalón: alth.torno sobre el perfil de cada pierna, inflado, con dobladillo (escalón como la funda de vaso_cafe) cerca del tobillo",
+    "pelo: alth.hoja() reutilizada como mechón faceteado, varios por la cabeza con alth.hoja",
+    "ojos/cejas/boca: placas (alth.caja delgada) sobre la cara, no geometría"
+  ],
+  "tris_objetivo": [4000, 6000],
+  "referencia": "refs/personajes/joven-rubio-4-vistas.jpg (T-pose, 4 vistas) y joven-rubio.jpg (pose 3/4): joven de pelo rubio en mechones facetados y despeinados, cara redonda con ojos grandes cafés, cejas gruesas, sonrisa leve, camisa blanca con mangas dobladas hasta el codo, chaleco negro de dos botones, corbata azul, pantalón azul marino con dobladillo en el tobillo, zapatos negros gruesos",
+  "cotas": [
+    {"pieza": "Cuerpo_cabeza", "eje": "W", "mm": 40.0},
+    {"pieza": "Cuerpo_cabeza", "eje": "H", "mm": 34.5},
+    {"pieza": "Cuerpo_pierna_der", "eje": "H", "mm": 24.0},
+    {"pieza": "Cuerpo_zapato_der", "eje": "D", "mm": 18.0}
+  ],
+  "historial": []
+}
