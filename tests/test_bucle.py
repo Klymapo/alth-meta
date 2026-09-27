@@ -113,3 +113,90 @@ def test_ref_de_spec():
 def test_seccion_convenciones():
     txt = b.seccion_md((RAIZ / "CLAUDE.md").read_text(encoding="utf-8"), "Convenciones")
     assert "1 unidad de Blender = 1 mm" in txt
+
+
+# ---------------------------------------------------------------- saturación de proveedores (503)
+import io as _io  # noqa: E402
+import json as _json  # noqa: E402
+import urllib.error as _ue  # noqa: E402
+
+import pytest  # noqa: E402
+
+
+def _http(code):
+    return _ue.HTTPError("u", code, "x", {}, _io.BytesIO(b'{"error":"high demand"}'))
+
+
+class _Resp:
+    def __init__(self, datos):
+        self._d = _json.dumps(datos).encode()
+
+    def read(self):
+        return self._d
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def _cfg_gemini():
+    return {"nombre": "gemini", "base": "https://x/v1", "clave": "k", "modelo": "gemini-3.8-flash", "vision": True}
+
+
+def test_elegir_alternos_filtra_y_ordena():
+    ids = ["models/gemini-3.8-flash", "models/gemini-3.8-flash-lite", "models/gemini-3.5-flash",
+           "models/gemini-3.8-flash-image", "models/gemini-3.8-pro", "models/gemini-3.9-flash-preview",
+           "models/text-embedding-004"]
+    assert b.elegir_alternos(ids, "gemini-3.8-flash", 3) == [
+        "gemini-3.5-flash", "gemini-3.9-flash-preview", "gemini-3.8-flash-lite"]
+
+
+def test_503_reintenta_y_luego_responde(monkeypatch):
+    monkeypatch.setattr(b, "_dormir", lambda s: None)
+    llamadas = []
+
+    def urlopen(req, timeout=0):
+        llamadas.append(req.full_url)
+        if len(llamadas) < 3:
+            raise _http(503)
+        return _Resp({"choices": [{"message": {"content": "hola"}}]})
+
+    monkeypatch.setattr(b.urllib.request, "urlopen", urlopen)
+    assert b.llamar_modelo(_cfg_gemini(), "s", "t", []) == "hola"
+    assert len(llamadas) == 3
+
+
+def test_gemini_saturado_brinca_a_modelo_hermano(monkeypatch):
+    monkeypatch.setattr(b, "_dormir", lambda s: None)
+    usados = []
+
+    def urlopen(req, timeout=0):
+        if req.full_url.endswith("/models"):
+            return _Resp({"data": [{"id": "models/gemini-3.8-flash"}, {"id": "models/gemini-3.5-flash"}]})
+        modelo = _json.loads(req.data)["model"]
+        usados.append(modelo)
+        if modelo == "gemini-3.8-flash":
+            raise _http(503)
+        return _Resp({"choices": [{"message": {"content": "ok"}}]})
+
+    monkeypatch.setattr(b.urllib.request, "urlopen", urlopen)
+    texto, cfg = b.llamar_con_respaldo([_cfg_gemini()], "s", "t", [])
+    assert texto == "ok" and cfg["modelo"] == "gemini-3.5-flash"
+    assert usados.count("gemini-3.8-flash") == 1 + len(b.ESPERAS_SATURADO)
+
+
+def test_todo_saturado_explica_que_hacer(monkeypatch):
+    monkeypatch.setattr(b, "_dormir", lambda s: None)
+
+    def urlopen(req, timeout=0):
+        if req.full_url.endswith("/models"):
+            return _Resp({"data": []})
+        raise _http(503)
+
+    monkeypatch.setattr(b.urllib.request, "urlopen", urlopen)
+    with pytest.raises(SystemExit) as e:
+        b.llamar_con_respaldo([_cfg_gemini()], "s", "t", [])
+    msg = str(e.value)
+    assert "saturado" in msg and "15–30 min" in msg and "GROQ_API_KEY" in msg
