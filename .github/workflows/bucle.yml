@@ -112,8 +112,6 @@ jobs:
           git commit -m "bucle: $nombre (${{ inputs.proveedor }} ${{ inputs.modelo }}), corrida ${{ github.run_number }}" || exit 0
           git push origin "$rama"
           {
-            echo "## Bucle · $nombre"
-            echo
             cat "$d/bucle/resumen.md" 2>/dev/null
             if [ -f "$d/bucle/error.txt" ]; then echo; echo "### Error del modelo"; echo '```'; cat "$d/bucle/error.txt"; echo '```'; fi
             echo
