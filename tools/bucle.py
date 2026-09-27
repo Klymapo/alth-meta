@@ -76,6 +76,20 @@ PROVEEDORES = {
 # cambian de nombre muy seguido (agrégalo a mano con --proveedor openrouter --modelo … si quieres).
 CADENA_AUTO = ["gemini", "groq"]
 
+# Reintentos. Un 503 "high demand" de Gemini suele durar minutos, no segundos: con estas esperas
+# el bucle aguanta ~7 min por modelo antes de rendirse (antes solo ~1 min y tumbaba la corrida).
+SATURADO = (500, 502, 503, 504)
+ESPERAS_SATURADO = (30, 60, 120, 180)
+ESPERAS_CUOTA = (20, 40)
+# Si el modelo de fábrica de Gemini sigue saturado, prueba hasta este número de modelos
+# "flash" hermanos que la propia API anuncie en /models (otros servidores, otra saturación).
+ALTERNOS_MAX = 2
+
+
+def _dormir(segundos: float) -> None:
+    time.sleep(segundos)  # separado para que las pruebas no esperen de verdad
+
+
 # Para avisar CUÁNDO reintentar cuando un proveedor se quedó sin cuota del día (no es exacto,
 # es la referencia pública de cada uno).
 CUANDO_SE_REINICIA = {
@@ -395,7 +409,8 @@ def llamar_modelo(cfg: dict, sistema: str, texto: str, imagenes, temperatura=0.3
     if cfg.get("clave"):
         cab["Authorization"] = f"Bearer {cfg['clave']}"
     url = cfg["base"].rstrip("/") + "/chat/completions"
-    for intento in range(reintentos):
+    intento = 0
+    while True:
         try:
             req = urllib.request.Request(url, data=cuerpo, headers=cab, method="POST")
             with urllib.request.urlopen(req, timeout=900) as r:
@@ -403,18 +418,23 @@ def llamar_modelo(cfg: dict, sistema: str, texto: str, imagenes, temperatura=0.3
             return datos["choices"][0]["message"]["content"]
         except urllib.error.HTTPError as e:
             detalle = e.read().decode(errors="replace")[:500]
-            if e.code in (429, 500, 502, 503, 504) and intento < reintentos - 1:
-                espera = 20 * (intento + 1)
-                print(f"[bucle] el proveedor respondió {e.code}; reintento en {espera} s")
-                time.sleep(espera)
+            # 5xx = servidor saturado (temporal): vale la pena esperar varios minutos.
+            # 429 = cuota: reintentar poco, casi nunca se libera en segundos.
+            esperas = ESPERAS_SATURADO if e.code in SATURADO else ESPERAS_CUOTA if e.code == 429 else ()
+            if intento < len(esperas):
+                espera = esperas[intento]
+                intento += 1
+                print(f"[bucle] {cfg['nombre']}/{cfg['modelo']} respondió {e.code}; "
+                      f"reintento {intento}/{len(esperas)} en {espera} s")
+                _dormir(espera)
                 continue
             raise _FalloProveedor(e.code, detalle)
         except urllib.error.URLError as e:
             if intento < reintentos - 1:
-                time.sleep(10)
+                intento += 1
+                _dormir(10)
                 continue
             raise _FalloProveedor("conexión", str(e.reason))
-    raise _FalloProveedor("sin respuesta", "")
 
 
 def llamar_con_respaldo(cadena: list[dict], sistema: str, texto: str, imagenes,
@@ -423,21 +443,80 @@ def llamar_con_respaldo(cadena: list[dict], sistema: str, texto: str, imagenes,
     Si TODOS fallan, revienta con un SystemExit que junta el motivo de cada uno
     (y cuándo se espera que se reinicie su cuota, si aplica)."""
     errores = []
+    saturados = False
     for i, cfg in enumerate(cadena):
         imgs = imagenes if cfg["vision"] else []
-        try:
-            return llamar_modelo(cfg, sistema, texto, imgs, temperatura), cfg
-        except _FalloProveedor as e:
-            cuando = CUANDO_SE_REINICIA.get(cfg["nombre"])
-            pista = f" — se reinicia {cuando}" if cuando and str(e.codigo) in ("429", "402", "403") else ""
-            linea = f"{cfg['nombre']}/{cfg['modelo']}: {e.codigo}{pista} ({e.detalle[:200]})"
-            print(f"[bucle] {linea}")
-            if i < len(cadena) - 1:
-                print(f"[bucle] sigo con el siguiente proveedor de la cadena: {cadena[i + 1]['nombre']}…")
-            errores.append(linea)
-    mensaje = "Ningún proveedor de la cadena respondió:\n" + "\n".join(errores) if errores \
-        else "La cadena de proveedores está vacía (¿faltan claves de API?)."
+        candidatos = [cfg]
+        while candidatos:
+            actual = candidatos.pop(0)
+            try:
+                return llamar_modelo(actual, sistema, texto, imgs, temperatura), actual
+            except _FalloProveedor as e:
+                cuando = CUANDO_SE_REINICIA.get(actual["nombre"])
+                if str(e.codigo) in ("429", "402", "403"):
+                    pista = f" — cuota agotada, se reinicia {cuando}" if cuando else " — cuota agotada"
+                elif e.codigo in SATURADO:
+                    pista, saturados = " — servidor saturado (temporal)", True
+                else:
+                    pista = ""
+                linea = f"{actual['nombre']}/{actual['modelo']}: {e.codigo}{pista} ({e.detalle[:200]})"
+                print(f"[bucle] {linea}")
+                errores.append(linea)
+                # Solo al primer fallo por saturación del modelo de fábrica: busca hermanos.
+                if actual is cfg and e.codigo in SATURADO and cfg["nombre"] == "gemini":
+                    for m in modelos_alternos(cfg):
+                        candidatos.append({**cfg, "modelo": m})
+                    if candidatos:
+                        print(f"[bucle] pruebo otros modelos de {cfg['nombre']}: "
+                              f"{', '.join(c['modelo'] for c in candidatos)}")
+        if i < len(cadena) - 1:
+            print(f"[bucle] sigo con el siguiente proveedor de la cadena: {cadena[i + 1]['nombre']}…")
+    if not errores:
+        mensaje = "La cadena de proveedores está vacía (¿faltan claves de API?)."
+    else:
+        mensaje = "Ningún proveedor de la cadena respondió:\n" + "\n".join(errores)
+        if saturados:
+            mensaje += ("\n\nQué hacer: la saturación es temporal y NO gasta tu cuota. Vuelve a lanzar la "
+                        "corrida en 15–30 min (encadena sola desde esta rama).")
+        if len(cadena) == 1:
+            faltan = [n for n in CADENA_AUTO if n != cadena[0]["nombre"]]
+            if faltan:
+                mensaje += ("\nTip: la cadena solo tenía a " + cadena[0]["nombre"] + ". Agrega también "
+                            + " / ".join(PROVEEDORES[n]["clave_env"] for n in faltan)
+                            + " en Settings → Secrets → Actions para que brinque sola cuando uno falle.")
     raise SystemExit("[bucle] " + mensaje)
+
+
+def modelos_alternos(cfg: dict) -> list[str]:
+    """Pregunta a la API qué modelos tiene y regresa hasta ALTERNOS_MAX de la misma familia
+    ("flash"), primero los estables y al final los 'lite'. Si algo falla, lista vacía."""
+    try:
+        cab = {"Authorization": f"Bearer {cfg['clave']}"} if cfg.get("clave") else {}
+        req = urllib.request.Request(cfg["base"].rstrip("/") + "/models", headers=cab)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            datos = json.loads(r.read())
+    except Exception as e:  # noqa: BLE001  (es un extra: si no se puede, no pasa nada)
+        print(f"[bucle] no pude listar modelos de {cfg['nombre']}: {e}")
+        return []
+    return elegir_alternos([m.get("id", "") for m in datos.get("data", [])], cfg["modelo"])
+
+
+def elegir_alternos(ids: list[str], actual: str, maximo: int = ALTERNOS_MAX) -> list[str]:
+    """Parte pura de modelos_alternos (probada en tests/): filtra y ordena los nombres."""
+    evitar = ("image", "tts", "audio", "live", "embed", "vision", "thinking", "exp")
+    vistos, buenos = set(), []
+    for i in ids:
+        nombre = i.split("/", 1)[1] if i.startswith("models/") else i
+        bajo = nombre.lower()
+        if nombre == actual or nombre in vistos or "flash" not in bajo or any(t in bajo for t in evitar):
+            continue
+        vistos.add(nombre)
+        buenos.append(nombre)
+    # estables antes que preview, y 'lite' al final; dentro de cada grupo, el número más alto primero
+    def clave(n):
+        num = re.findall(r"\d+(?:\.\d+)?", n)
+        return ("lite" in n, "preview" in n, -float(num[0]) if num else 0.0, n)
+    return sorted(buenos, key=clave)[:maximo]
 
 
 # ---------------------------------------------------------------- aplicar respuesta
