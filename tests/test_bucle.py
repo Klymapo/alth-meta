@@ -239,3 +239,43 @@ def test_se_queda_con_la_verificada_aunque_otra_tenga_mejor_silueta(tmp_path, mo
     trabajo = tmp_path / "renders" / "muñeco" / "bucle"
     assert (trabajo / "elegida.txt").read_text().strip() == "v01"
     assert "vuelta 1 · verificación OK" in (trabajo / "resumen.md").read_text()
+
+
+# ---------------------------------------------------------------- progreso para el Taller
+def test_progreso_crea_rama_y_actualiza_archivo(monkeypatch):
+    monkeypatch.setenv("GITHUB_REPOSITORY", "yo/repo")
+    monkeypatch.setenv("GITHUB_RUN_ID", "99")
+    monkeypatch.setenv("ALTH_PROGRESO_TOKEN", "t")
+    llamadas, rama = [], {"existe": False}
+
+    def urlopen(req, timeout=0):
+        url, m = req.full_url, req.get_method()
+        llamadas.append((m, url.split("/repos/yo/repo")[1]))
+        if m == "PUT" and not rama["existe"]:
+            raise _http(404)
+        if m == "GET" and url.endswith("/git/ref/heads/progreso"):
+            raise _http(404)
+        if m == "GET" and url.endswith("/git/ref/heads/main"):
+            return _Resp({"object": {"sha": "abc"}})
+        if m == "POST":
+            rama["existe"] = True
+            return _Resp({})
+        cuerpo = _json.loads(req.data)
+        datos = _json.loads(b.base64.b64decode(cuerpo["content"]))
+        llamadas.append(("datos", datos["pct"], cuerpo.get("sha")))
+        return _Resp({"content": {"sha": f"s{len(llamadas)}"}})
+
+    monkeypatch.setattr(b.urllib.request, "urlopen", urlopen)
+    p = b.Progreso("theo", 4)
+    p.unidades(2.5, "renderizando", 2)
+    p.publicar(100, "Terminado")
+    datos = [c for c in llamadas if c[0] == "datos"]
+    assert datos[0][1] == 50 and datos[0][2] is None          # 2.5 de 5 unidades
+    assert datos[1][1] == 100 and datos[1][2] is not None     # segunda vez actualiza con sha
+    assert ("POST", "/git/refs") in llamadas
+
+
+def test_progreso_inactivo_fuera_de_actions(monkeypatch):
+    monkeypatch.delenv("ALTH_PROGRESO_TOKEN", raising=False)
+    monkeypatch.setattr(b.urllib.request, "urlopen", lambda *a, **k: (_ for _ in ()).throw(AssertionError("red")))
+    b.Progreso("x", 3).publicar(10, "algo")

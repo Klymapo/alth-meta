@@ -1,10 +1,14 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Taller ALTH-META</title>
+<link rel="icon" type="image/png" sizes="32x32" href="icono-32.png">
+<link rel="apple-touch-icon" href="icono-180.png">
+<meta name="theme-color" content="#3a2616">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
   :root {
     --bg: #FBF6EC;
+    --velo: rgba(251, 246, 236, 0.74);
     --surface: #FFFFFF;
     --surface-2: #F5E9D6;
     --border: #E9DBBE;
@@ -38,6 +42,7 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #1C1712;
+      --velo: rgba(28, 23, 18, 0.80);
       --surface: #262019;
       --surface-2: #302820;
       --border: #453a2c;
@@ -61,6 +66,7 @@
     }
   }
   :root[data-theme="dark"] {
+    --velo: rgba(28, 23, 18, 0.80);
     --bg: #1C1712; --surface: #262019; --surface-2: #302820; --border: #453a2c;
     --text: #F1E6D7; --text-muted: #B7A88F;
     --accent: #E7A578; --accent-contrast: #2A1608; --accent-soft: rgba(231,165,120,0.16); --accent-dark: #E7A578;
@@ -73,8 +79,9 @@
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--bg); }
   body {
-    background: var(--bg);
+    background: transparent;
     color: var(--text);
     font-family: var(--font-ui);
     padding-inline: 16px;
@@ -82,13 +89,22 @@
     max-width: 560px;
     margin: 0 auto;
   }
+  /* fondo: el taller de la escultora, con un velo del color del tema para que todo se lea */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(var(--velo), var(--velo)), url("fondo.jpg") center / cover no-repeat;
+  }
+  @media (max-width: 700px) {
+    body::before { background-image: linear-gradient(var(--velo), var(--velo)), url("fondo-movil.jpg"); }
+  }
   h1, h2, h3 { text-wrap: balance; margin: 0; font-family: var(--font-head); }
 
   /* ---------- encabezado con mascota ---------- */
   .header {
     position: sticky;
     top: env(safe-area-inset-top, 0px);
-    background: var(--bg);
+    background: var(--velo);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
     padding-block: 12px;
     display: flex;
     align-items: center;
@@ -100,8 +116,9 @@
     width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%;
     background: var(--accent-soft); border: 2px solid var(--accent);
     display: flex; align-items: center; justify-content: center;
-    position: relative;
+    position: relative; overflow: hidden;
   }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .avatar .eye {
     position: absolute; top: 17px; width: 5px; height: 6px; border-radius: 50%;
     background: var(--accent-dark);
@@ -242,6 +259,13 @@
     margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .run a { color: var(--blue); font-size: 0.8rem; font-weight: 700; text-decoration: none; flex-shrink: 0; }
+  .run.en-curso { flex-wrap: wrap; border-color: var(--blue); }
+  .run-prog { flex-basis: 100%; display: flex; flex-direction: column; gap: 5px; }
+  .run-prog-top { display: flex; justify-content: space-between; gap: 8px; font-size: 0.74rem; color: var(--text-muted); }
+  .run-prog-top span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .run-prog-top strong { color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0; }
+  .run-prog-track { height: 8px; border-radius: 99px; background: var(--surface); border: 1px solid var(--border); overflow: hidden; }
+  .run-prog-fill { height: 100%; border-radius: 99px; background: var(--blue); transition: width .6s ease; }
   .run-thumb {
     width: 46px; height: 46px; border-radius: 12px; object-fit: cover; flex-shrink: 0;
     background: var(--surface); border: 1px solid var(--border);
@@ -302,10 +326,7 @@
 </style>
 
 <div class="header">
-  <div class="avatar" aria-hidden="true">
-    <span class="eye l"></span><span class="eye r"></span>
-    <span class="smile"></span>
-  </div>
+  <div class="avatar" aria-hidden="true"><img src="icono-180.png" alt=""></div>
   <div class="titles">
     <h1>Taller ALTH-META</h1>
     <div class="sub" id="tokenSub">Sin token guardado</div>
@@ -931,7 +952,8 @@
   }
 
   function pillFor(run) {
-    if (run.status !== "completed") return '<span class="pill warn"><span class="spin"></span>' + run.status + "</span>";
+    if (run.status !== "completed") return '<span class="pill warn"><span class="spin"></span>' +
+      (run.status === "queued" ? "en cola" : "en curso") + "</span>";
     if (run.conclusion === "success") return '<span class="pill good">✓ éxito</span>';
     if (run.conclusion === "failure") return '<span class="pill bad">✕ falló</span>';
     return '<span class="pill">' + (run.conclusion || "—") + "</span>";
@@ -1186,13 +1208,62 @@
   });
 
   // ---- corridas recientes ----
-  async function cargarCorridas() {
+  // Cada corrida lleva el asset en su título (run-name: "Bucle · assets/…"). Las que siguen
+  // en curso muestran su % real: la preparación sale de los pasos del job y el bucle publica
+  // su avance en la rama `progreso` (bucle-<id>.json). Mientras haya alguna en curso, la
+  // lista se actualiza sola cada 15 s.
+  var autoTimer = null;
+
+  function nombreCorrida(r) {
+    var t = r.display_title || "";
+    var m = /^(Bucle|Aprobar) · (.+)$/.exec(t);
+    if (m) {
+      var partes = m[2].replace(/\/+$/, "").split("/");
+      return m[1] + " · " + partes[partes.length - 1];
+    }
+    return (r.name === "Bucle ALTH (cualquier IA)" ? "Bucle" : "Aprobar");
+  }
+
+  async function progresoDe(r) {
+    // Devuelve {pct, etapa} combinando pasos del job (preparación) y el archivo del bucle.
+    var pasos = [];
+    try {
+      var jobs = await gh("/actions/runs/" + r.id + "/jobs");
+      pasos = (jobs.jobs[0] && jobs.jobs[0].steps) || [];
+    } catch (e) { /* sin pasos, seguimos con lo que haya */ }
+    var iBucle = pasos.findIndex(function (s) { return s.name === "Correr el bucle"; });
+    var bucle = iBucle >= 0 ? pasos[iBucle] : null;
+    if (bucle && bucle.status === "completed") return { pct: 97, etapa: "Guardando el resultado en su rama" };
+    if (!bucle || bucle.status !== "in_progress") {
+      var previos = iBucle >= 0 ? pasos.slice(0, iBucle) : pasos;
+      var hechos = previos.filter(function (s) { return s.status === "completed"; }).length;
+      var actual = previos.find(function (s) { return s.status === "in_progress"; });
+      return { pct: Math.round(8 * hechos / Math.max(1, previos.length || 8)),
+               etapa: "Preparando" + (actual ? ": " + actual.name : "…") };
+    }
+    if (/^Aprobar/.test(r.name)) return { pct: 50, etapa: "Aprobando" };
+    try {
+      var f = await gh("/contents/bucle-" + r.id + ".json?ref=progreso");
+      var d = JSON.parse(decodeURIComponent(escape(atob(f.content.replace(/\n/g, "")))));
+      return { pct: Math.round(8 + 0.88 * d.pct), etapa: d.etapa };
+    } catch (e) {
+      return { pct: 8, etapa: "Arrancando el bucle…" };
+    }
+  }
+
+  function barra(p) {
+    return '<div class="run-prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + p.pct + '">' +
+      '<div class="run-prog-top"><span>' + escapar(p.etapa) + '</span><strong>' + p.pct + ' %</strong></div>' +
+      '<div class="run-prog-track"><div class="run-prog-fill" style="width:' + p.pct + '%"></div></div></div>';
+  }
+
+  async function cargarCorridas(silencioso) {
     var list = document.getElementById("runsList");
     if (!getToken()) {
       list.innerHTML = '<p class="empty">Guarda tu token arriba y toca "Actualizar" para ver tus corridas.</p>';
       return;
     }
-    list.innerHTML = '<p class="empty"><span class="spin"></span> Cargando…</p>';
+    if (silencioso !== true) list.innerHTML = '<p class="empty"><span class="spin"></span> Cargando…</p>';
     try {
       var results = await Promise.all([
         gh("/actions/workflows/bucle.yml/runs?per_page=6"),
@@ -1205,20 +1276,33 @@
         list.innerHTML = '<p class="empty">Todavía no hay corridas.</p>';
         return;
       }
+      var enCurso = runs.filter(function (r) { return r.status !== "completed"; });
+      var progresos = {};
+      await Promise.all(enCurso.map(async function (r) { progresos[r.id] = await progresoDe(r); }));
       list.innerHTML = runs.map(function (r) {
-        var nombre = r.name === "Bucle ALTH (cualquier IA)" ? "Bucle" : "Aprobar";
-        return '<div class="run">' +
-          '<div class="run-main"><div class="run-name">' + nombre + " #" + r.run_number + "</div>" +
-          '<div class="run-meta">' + r.head_branch + " · " + relTime(r.created_at) + "</div></div>" +
+        return '<div class="run' + (progresos[r.id] ? " en-curso" : "") + '">' +
+          '<div class="run-main"><div class="run-name">' + escapar(nombreCorrida(r)) + " #" + r.run_number + "</div>" +
+          '<div class="run-meta">' + relTime(r.created_at) + "</div></div>" +
           pillFor(r) +
           '<a href="' + r.html_url + '" target="_blank" rel="noopener">Ver</a>' +
+          (progresos[r.id] ? barra(progresos[r.id]) : "") +
           "</div>";
       }).join("");
+      clearTimeout(autoTimer);
+      if (enCurso.length) {
+        autoTimer = setTimeout(function () {
+          if (document.visibilityState === "visible") cargarCorridas(true);
+          else document.addEventListener("visibilitychange", function una() {
+            document.removeEventListener("visibilitychange", una);
+            cargarCorridas(true);
+          });
+        }, 15000);
+      }
     } catch (e) {
-      list.innerHTML = '<p class="empty">' + e.message + "</p>";
+      if (silencioso !== true) list.innerHTML = '<p class="empty">' + e.message + "</p>";
     }
   }
-  document.getElementById("btnRefrescar").addEventListener("click", cargarCorridas);
+  document.getElementById("btnRefrescar").addEventListener("click", function () { cargarCorridas(); });
 
   refreshTokenBadge();
   if (getToken()) cargarCorridas();

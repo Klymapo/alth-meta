@@ -519,6 +519,81 @@ def elegir_alternos(ids: list[str], actual: str, maximo: int = ALTERNOS_MAX) -> 
     return sorted(buenos, key=clave)[:maximo]
 
 
+# ---------------------------------------------------------------- progreso en vivo (Taller)
+class Progreso:
+    """Publica el avance de la corrida para que el Taller muestre la barra de %.
+
+    Solo actúa dentro de GitHub Actions (necesita ALTH_PROGRESO_TOKEN, GITHUB_REPOSITORY y
+    GITHUB_RUN_ID): escribe `bucle-<run_id>.json` en la rama `progreso` con la API de Contents,
+    que el Taller ya puede leer con su token. Si algo falla, avisa una vez y sigue: el progreso
+    nunca debe tumbar una corrida."""
+    RAMA = "progreso"
+
+    def __init__(self, asset_nombre: str, vueltas: int):
+        self.repo = os.environ.get("GITHUB_REPOSITORY")
+        self.run = os.environ.get("GITHUB_RUN_ID")
+        self.token = os.environ.get("ALTH_PROGRESO_TOKEN")
+        self.activo = bool(self.repo and self.run and self.token)
+        self.asset, self.vueltas = asset_nombre, max(1, vueltas)
+        self.ruta = f"bucle-{self.run}.json"
+        self.sha = None
+        self._avisado = False
+
+    def _api(self, metodo, ruta, cuerpo=None):
+        req = urllib.request.Request(
+            f"https://api.github.com/repos/{self.repo}{ruta}", method=metodo,
+            data=json.dumps(cuerpo).encode() if cuerpo is not None else None,
+            headers={"Authorization": f"Bearer {self.token}", "Accept": "application/vnd.github+json",
+                     "Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read() or b"{}")
+
+    def _asegurar_rama(self):
+        try:
+            self._api("GET", f"/git/ref/heads/{self.RAMA}")
+        except urllib.error.HTTPError as e:
+            if e.code != 404:
+                raise
+            base = self._api("GET", "/git/ref/heads/main")["object"]["sha"]
+            self._api("POST", "/git/refs", {"ref": f"refs/heads/{self.RAMA}", "sha": base})
+
+    def unidades(self, hechas: float, etapa: str, vuelta: int | None = None):
+        """hechas: cuántas 'unidades' van (vuelta 0 = 1 unidad; cada vuelta con la IA = 1)."""
+        self.publicar(round(100 * hechas / (self.vueltas + 1)), etapa, vuelta)
+
+    def publicar(self, pct: int, etapa: str, vuelta: int | None = None):
+        if not self.activo:
+            return
+        datos = {"pct": max(0, min(100, int(pct))), "etapa": etapa, "vuelta": vuelta,
+                 "vueltas": self.vueltas, "asset": self.asset, "actualizado": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+        cuerpo = {"message": f"progreso {self.asset}: {datos['pct']} %", "branch": self.RAMA,
+                  "content": base64.b64encode(json.dumps(datos, ensure_ascii=False).encode()).decode()}
+        for intento in range(2):
+            try:
+                if self.sha:
+                    cuerpo["sha"] = self.sha
+                r = self._api("PUT", f"/contents/{self.ruta}", cuerpo)
+                self.sha = r["content"]["sha"]
+                return
+            except urllib.error.HTTPError as e:
+                if intento == 0 and e.code in (404, 422):   # la rama aún no existe
+                    try:
+                        self._asegurar_rama()
+                        continue
+                    except Exception:  # noqa: BLE001
+                        pass
+                self._fallo(f"HTTP {e.code}")
+                return
+            except Exception as e:  # noqa: BLE001
+                self._fallo(str(e))
+                return
+
+    def _fallo(self, motivo):
+        if not self._avisado:
+            print(f"[bucle] (aviso) no pude publicar el progreso para el Taller: {motivo}. Sigo igual.")
+            self._avisado = True
+
+
 # ---------------------------------------------------------------- aplicar respuesta
 def aplicar(asset: Asset, respuesta: str) -> tuple[bool, str, dict[str, str]]:
     """Escribe los archivos de la respuesta si pasan la guardia. Devuelve (ok, mensaje, respaldo)."""
@@ -659,6 +734,8 @@ def cmd_correr(args):
     nombres = " → ".join(f"{c['nombre']}/{c['modelo']}" for c in cadena)
     print(f"[bucle] {asset.nombre} · cadena: {nombres} · hasta {args.vueltas} vueltas")
     n0 = (asset.historial[-1]["vuelta"] + 1) if asset.historial else 0
+    prog = Progreso(asset.nombre, args.vueltas)
+    prog.unidades(0, "Renderizando el punto de partida", 0)
     resultado = correr_build(asset, args.timeout)
     sil = medir_silueta(asset, resultado, asset.trabajo / "superposicion.png")
     guardar_vuelta(asset, n0, resultado)
@@ -684,6 +761,7 @@ def cmd_correr(args):
         n = n0 + i
         texto = armar_prompt(asset, resultado, sil, i, args.vueltas)
         print(f"[bucle] vuelta {n}: pidiendo corrección al modelo…")
+        prog.unidades(i, f"Vuelta {i}/{args.vueltas}: la IA propone cambios", i)
         try:
             respuesta, cfg = llamar_con_respaldo(cadena, sistema, texto, imagenes_para(asset, resultado, sil))
         except SystemExit as e:
@@ -703,6 +781,7 @@ def cmd_correr(args):
                 asset.spec = json.loads(asset.spec_path.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 pass
+        prog.unidades(i + 0.5, f"Vuelta {i}/{args.vueltas}: renderizando en Blender", i)
         resultado = correr_build(asset, args.timeout)
         sil = medir_silueta(asset, resultado, asset.trabajo / "superposicion.png")
         guardar_vuelta(asset, n, resultado, respuesta)
@@ -740,6 +819,7 @@ def cmd_correr(args):
         with open(asset.trabajo / "resumen.md", "a", encoding="utf-8") as f:
             f.write(f"\n**Versión que queda en la rama:** vuelta {mejor_n} · {estado_ver} · IoU {iou}\n"
                     "_Regla: primero las que pasan la verificación; entre ellas, la de mejor silueta._\n")
+    prog.publicar(100, f"Terminado · queda la vuelta {mejor_n}" if mejor_n is not None else "Terminado")
     print(f"[bucle] listo. Resumen: {asset.rel(asset.trabajo / 'resumen.md')}")
 
 
