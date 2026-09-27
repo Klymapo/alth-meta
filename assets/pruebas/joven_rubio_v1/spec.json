@@ -1,0 +1,96 @@
+{
+  "nombre": "joven_rubio_v1",
+  "estado": "PRUEBA — no es el modelo final. Es un paso intermedio: el cuerpo aprobado hasta la vuelta 6 de assets/joven_rubio, con el pelo nuevo de alth/pelo.py en vez de los mechones de alth.hoja(). Vive en assets/pruebas/ a propósito, para no confundirse con el asset real.",
+  "version": 1,
+  "categoria": "personaje",
+  "tipo_presupuesto": "personaje",
+  "referencia": "refs/personajes/joven-rubio-4-vistas.jpg (T-pose, 4 vistas) y joven-rubio.jpg (pose 3/4)",
+
+  "personaje": {
+    "arquetipo": "estandar",
+    "k": 1.0,
+    "medidas_reales_mm": {"altura_persona": 1700},
+    "medidas_alth_mm": {
+      "altura": 95.0,
+      "formula": "estándar cuerpo_base_95mm (mm_real 1700 * 0.0559 * 1.0 = 95.0), no por pieza"
+    },
+    "colores": {
+      "piel": {"paleta": "medidos.piel_clara", "hex": "#FBC39C"},
+      "camisa": {"paleta": "medidos.camisa_blanca", "hex": "#FBEFE1"},
+      "chaleco": {"paleta": "medidos.chaleco_negro", "hex": "#302E2D"},
+      "corbata": {"paleta": "medidos.corbata_azul", "hex": "#41598D"},
+      "pantalon": {"paleta": "medidos.pantalon_azul", "hex": "#4A5770"},
+      "zapatos": {"paleta": "medidos.zapato_negro", "hex": "#292929"},
+      "cejas_ojos": {"paleta": "marron_calido", "hex": "#4A3220"},
+      "ojo_blanco": {"paleta": "crema_suave", "hex": "#FBF8F4"},
+      "botones": {"paleta": "metal", "hex": "#B7BABE"}
+    },
+    "grosor_extremidades": 1.25,
+    "modulos": [
+      "alth.personaje.construir(): cuerpo base en T-pose (torso, pelvis, brazos, manos con dedos en bloque, piernas, zapatos, cabeza con orejas y nariz), grosor_extremidades=1.25",
+      "cabeza: tronco de pirámide (mandíbula 36.2x28.8 más angosta que el cráneo 40x29.8), chaflán suave",
+      "collar: alth.torno pequeño bajo la barbilla",
+      "chaleco: alth.torno sobre el perfil del torso, inflado; abertura en V hasta la cintura con franjas de camisa (alth.caja) que se angostan, solapas (alth.caja rotada) y 3 botones metal",
+      "corbata: alth.caja delgada sobre el pecho, encima de las franjas de la abertura",
+      "mangas: alth.torno cónico liso; puño con alth.anillo (una argolla real, no un escalón del perfil)",
+      "pantalón: alth.torno sobre el perfil de cada pierna, inflado (tela amplia); dobladillo con alth.anillo, metido un poco en el zapato",
+      "ojos/cejas/boca: placas (alth.caja delgada) sobre la cara, no geometría; su Y sigue la mandíbula (tronco de pirámide) con y_cara_en()"
+    ],
+    "tris_objetivo": [4000, 6000],
+    "cotas": [
+      {"pieza": "Cuerpo_cabeza", "eje": "W", "mm": 40.0},
+      {"pieza": "Cuerpo_cabeza", "eje": "H", "mm": 34.5},
+      {"pieza": "Cuerpo_pierna_der", "eje": "H", "mm": 24.0},
+      {"pieza": "Cuerpo_zapato_der", "eje": "D", "mm": 18.0},
+      {"pieza": "Cuerpo_torso", "eje": "D", "mm": 17.8},
+      {"pieza": "Cuerpo_pierna_der", "eje": "D", "mm": 11.13, "nota": "8.9 del estándar × 1.25 (grosor_extremidades)"}
+    ],
+    "historial_heredado_de_assets/joven_rubio": [
+      {"vuelta": 1, "nota": "primera construcción; bug de apoyada hundía medio cuerpo, pelo escaso"},
+      {"vuelta": 2, "nota": "corregido el hundimiento; cerrados huecos de piel cintura/tobillo; cejas separadas de ojos"},
+      {"vuelta": 3, "nota": "pelo más denso y voluminoso (lados y espalda, no solo coronilla)"},
+      {"vuelta": 4, "nota": "botones metal (antes invisibles contra el chaleco negro); VERIFICACION OK, 2188 tris"},
+      {"vuelta": 5, "nota": "pecho D=17.8 y cadera-pierna D=8.9 exactos; brazos/piernas 25% más gruesos; mangas y pantalón amplios; cabeza como tronco de pirámide; chaleco con abertura en V, solapas y cuello de camisa. VERIFICACION OK, 2316 tris."},
+      {"vuelta": 6, "nota": "puños y dobladillo con alth.anillo (antes un escalón del perfil se veía como disco); dobladillo sin huecos de piel; V del chaleco hasta la cintura. VERIFICACION OK, 2496 tris."}
+    ]
+  },
+
+  "pelo": {
+    "modulo": "alth.pelo (segundo enfoque: corona + cuñas en UNA sola malla; el primero, casco + púas sueltas, no convergió en 4 vueltas)",
+    "color": {"paleta": "medidos.rubio_arena", "hex": "#D2AE72", "nota": "propuesto en esta misma serie de vueltas y ya registrado en spec/alth_spec.json → paleta"},
+    "diseño": [
+      "corona: caja ancha (1.3x el cráneo), corrida hacia atrás y más alta; su borde inferior varía por altura (alto/corto hasta la ceja al frente, bajo/largo hasta la nuca), en vez de ser plano — así la cara queda libre sin encoger el radio",
+      "10 cuñas de borde, anchas y romas (base 8-12 mm, nunca < 6 mm), cayendo hacia abajo/afuera; 2 de ellas (a 248° y 292°) enmarcan la cara, más largas y con más caída",
+      "3 cuñas de copete: nacen cerca de la punta de la corona (no del borde) y apuntan sobre todo hacia +Z (arriba) y un poco hacia −Y (adelante), no radialmente; más largas que las del borde — dan el volumen de arriba, para que se lea 'de punta' de frente y no como un aro parejo",
+      "sin tapa inferior en la corona a propósito: con el borde tan desparejo de alto, una sola cara ahí se triangulaba mal y colgaba una lengüeta de pelo sobre la ventana de la cara; esa cara nunca se ve (queda contra el cráneo)"
+    ],
+    "parametros_usados": {
+      "escala": 1.3, "sesgo_atras": 2.5, "margen_arriba": 3.0, "segmentos_corona": 12,
+      "cunias": 10, "ancho_base": [8.0, 12.0], "largo": [10.0, 17.0], "caida": [3.0, 8.0],
+      "largo_marco": 20.0, "ancho_marco": 9.0, "caida_marco": 13.0,
+      "copete": 3, "ancho_copete": [9.0, 13.0], "largo_copete": [15.0, 22.0], "caida_copete": [1.0, 3.0]
+    },
+    "tris_pelo_solo": 446,
+    "historial_prototipo": [
+      {"vuelta": 1, "nota": "enfoque casco (torno) + púas sueltas (alth.hoja); no convergió en 4 vueltas: cada púa era su propio objeto y hacerlas tocar la cabeza sin flotar/enterrarse fue un problema en sí mismo"},
+      {"vuelta": 2, "nota": "segundo enfoque, vuelta 1/3: corona+cuñas en una sola malla; bug de triangulación en la tapa inferior colgaba una lengüeta sobre la cara"},
+      {"vuelta": 3, "nota": "quitada la tapa inferior de la corona; cara libre, cobertura completa de lados/nuca. Listo para aprobar"},
+      {"vuelta": 4, "nota": "cuñas de copete (volumen arriba, no solo alrededor); rubio_arena #D2AE72 registrado en la paleta"}
+    ]
+  },
+
+  "cotas": [
+    {"pieza": "Cuerpo_cabeza", "eje": "W", "mm": 40.0},
+    {"pieza": "Cuerpo_cabeza", "eje": "H", "mm": 34.5},
+    {"pieza": "Cuerpo_pierna_der", "eje": "H", "mm": 24.0},
+    {"pieza": "Cuerpo_zapato_der", "eje": "D", "mm": 18.0},
+    {"pieza": "Cuerpo_torso", "eje": "D", "mm": 17.8},
+    {"pieza": "Cuerpo_pierna_der", "eje": "D", "mm": 11.13, "nota": "8.9 del estándar × 1.25 (grosor_extremidades)"}
+  ],
+  "tris_objetivo": [4000, 6500],
+
+  "pendiente_de_aprobacion": [
+    "si este pelo reemplaza al de alth.hoja() en assets/joven_rubio/build.py",
+    "color rubio_arena definitivo (ya en la paleta, pero es la primera vez que se usa en un asset real)"
+  ]
+}
