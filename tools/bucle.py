@@ -439,7 +439,14 @@ def cmd_correr(args):
     guardar_vuelta(asset, n0, resultado)
     if not asset.historial or not args.continuar:
         registrar(asset, n0, resultado, sil, "punto de partida", cfg["modelo"])
-    ultimo_bueno = {e: (RAIZ / e).read_text(encoding="utf-8") for e in asset.editables} if resultado["ok"] else None
+    def _snapshot():
+        return {e: (RAIZ / e).read_text(encoding="utf-8") for e in asset.editables}
+
+    def _iou(s):
+        return (s or {}).get("iou") if (s or {}).get("iou") is not None else -1
+
+    ultimo_bueno = _snapshot() if resultado["ok"] else None
+    mejor_bueno, mejor_iou = (ultimo_bueno, _iou(sil)) if resultado["ok"] else (None, -1)
     fallos_seguidos = 0
     for i in range(1, args.vueltas + 1):
         n = n0 + i
@@ -467,8 +474,10 @@ def cmd_correr(args):
         print(f"[bucle] v{n}: build {'OK' if resultado['ok'] else 'FALLÓ'} · verificación "
               f"{'OK' if ver.get('ok') else '—'} · IoU {(sil or {}).get('iou')} · {cambios}")
         if resultado["ok"]:
-            ultimo_bueno = {e: (RAIZ / e).read_text(encoding="utf-8") for e in asset.editables}
+            ultimo_bueno = _snapshot()
             fallos_seguidos = 0
+            if _iou(sil) > mejor_iou:
+                mejor_bueno, mejor_iou = ultimo_bueno, _iou(sil)
             if estado.startswith("LISTO") and ver.get("ok"):
                 print("[bucle] el modelo dice LISTO y la verificación pasó. Revisa la hoja y aprueba tú.")
                 break
@@ -481,10 +490,12 @@ def cmd_correr(args):
                 resultado = correr_build(asset, args.timeout)
                 sil = medir_silueta(asset, resultado, asset.trabajo / "superposicion.png")
                 fallos_seguidos = 0
-    if ultimo_bueno and not resultado.get("ok"):
-        for e, t in ultimo_bueno.items():
-            (RAIZ / e).write_text(t, encoding="utf-8")
-        print("[bucle] la última vuelta falló; dejé los archivos en la última versión buena.")
+    if mejor_bueno is not None:
+        actual = _snapshot() if resultado.get("ok") else None
+        if actual != mejor_bueno:
+            for e, t in mejor_bueno.items():
+                (RAIZ / e).write_text(t, encoding="utf-8")
+            print(f"[bucle] dejé los archivos en la MEJOR vuelta (IoU {mejor_iou}), no en la última.")
     print(f"[bucle] listo. Resumen: {asset.rel(asset.trabajo / 'resumen.md')}")
 
 
