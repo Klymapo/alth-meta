@@ -1,0 +1,129 @@
+name: Bucle ALTH (cualquier IA)
+
+# Corre el bucle de modelado en la nube de GitHub: gratis mientras el repo sea público
+# y sin tener la computadora prendida. Se lanza a mano desde la pestaña "Actions" (también
+# desde la app de GitHub en el celular): Actions → "Bucle ALTH" → Run workflow.
+#
+# Claves: Settings → Secrets and variables → Actions → New repository secret.
+# Solo hace falta la del proveedor que uses: GEMINI_API_KEY, DEEPSEEK_API_KEY,
+# OPENROUTER_API_KEY o GROQ_API_KEY. (Ollama es local: no corre aquí.)
+#
+# El resultado queda en una rama `bucle/<asset>-<n>` con el build.py nuevo, la última hoja
+# de contacto y el resumen. Nada se mezcla a main sin que tú lo apruebes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: "Carpeta del asset (p. ej. assets/pruebas/joven_rubio_v1 o lata)"
+        required: true
+      vueltas:
+        description: "Vueltas máximas"
+        default: "4"
+      proveedor:
+        description: "gemini | deepseek | openrouter | groq | personalizado"
+        default: "gemini"
+      modelo:
+        description: "Modelo (vacío = el de fábrica del proveedor)"
+        default: ""
+      nota:
+        description: "Indicación para el modelo (opcional)"
+        default: ""
+      editables:
+        description: "Archivos extra que puede reescribir, separados por coma (p. ej. alth/pelo.py)"
+        default: ""
+      rama_base:
+        description: "Rama de la que parte"
+        default: "main"
+
+permissions:
+  contents: write
+
+jobs:
+  bucle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.rama_base }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Librerías del sistema para Blender
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1
+
+      - name: Blender sin interfaz (bpy)
+        run: |
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          bash tools/ensure_blender.sh --strict
+          pip install -q numpy pillow scipy
+
+      - name: Correr el bucle
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          ALTH_API_KEY: ${{ secrets.ALTH_API_KEY }}
+          ALTH_API_BASE: ${{ vars.ALTH_API_BASE }}
+          IN_ASSET: ${{ inputs.asset }}
+          IN_VUELTAS: ${{ inputs.vueltas }}
+          IN_PROVEEDOR: ${{ inputs.proveedor }}
+          IN_MODELO: ${{ inputs.modelo }}
+          IN_NOTA: ${{ inputs.nota }}
+          IN_EDITABLES: ${{ inputs.editables }}
+        run: |
+          export ALTH_PYTHON="$(command -v alth-python)"
+          args=(correr "$IN_ASSET" --vueltas "$IN_VUELTAS" --proveedor "$IN_PROVEEDOR")
+          [ -n "$IN_MODELO" ] && args+=(--modelo "$IN_MODELO")
+          [ -n "$IN_NOTA" ] && args+=(--nota "$IN_NOTA")
+          IFS=',' read -ra EXTRA <<< "$IN_EDITABLES"
+          for e in "${EXTRA[@]}"; do e="$(echo "$e" | xargs)"; [ -n "$e" ] && args+=(--editable "$e"); done
+          python3 tools/bucle.py "${args[@]}"
+
+      - name: Guardar resultado en una rama
+        if: always()
+        env:
+          IN_ASSET: ${{ inputs.asset }}
+        run: |
+          d="$IN_ASSET"; [ -d "$d" ] || d="assets/$IN_ASSET"
+          nombre="$(basename "$d")"
+          trabajo="renders/$nombre/bucle"
+          [ -d "$trabajo" ] || { echo "No hubo resultados"; exit 0; }
+          mkdir -p "$d/bucle"
+          ultima="$(ls -d "$trabajo"/v* | sort | tail -1)"
+          cp "$trabajo/resumen.md" "$d/bucle/" 2>/dev/null || true
+          cp "$ultima/hoja.png" "$d/bucle/hoja_ultima.png" 2>/dev/null || true
+          cp "$trabajo/superposicion.png" "$d/bucle/siluetas.png" 2>/dev/null || true
+          rama="bucle/${nombre}-${{ github.run_number }}"
+          git config user.name "bucle-alth"
+          git config user.email "bucle-alth@users.noreply.github.com"
+          git checkout -b "$rama"
+          git add -A "$d" alth/
+          git commit -m "bucle: $nombre (${{ inputs.proveedor }} ${{ inputs.modelo }}), corrida ${{ github.run_number }}" || exit 0
+          git push origin "$rama"
+          {
+            echo "## Bucle · $nombre"
+            echo
+            cat "$d/bucle/resumen.md" 2>/dev/null
+            echo
+            echo "Rama: \`$rama\`"
+            echo
+            echo "![hoja](https://github.com/${{ github.repository }}/blob/$rama/$d/bucle/hoja_ultima.png?raw=true)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Subir todas las vueltas como artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bucle-renders
+          path: renders/
+          if-no-files-found: ignore
