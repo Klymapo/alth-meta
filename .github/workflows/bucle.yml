@@ -140,7 +140,20 @@ jobs:
             IFS=',' read -ra EXTRA <<< "$IN_EDITABLES"
             for e in "${EXTRA[@]}"; do e="$(echo "$e" | xargs)"; [ -n "$e" ] && args+=(--editable "$e"); done
           fi
-          python3 tools/bucle.py "${args[@]}"
+          set -o pipefail
+          python3 -u tools/bucle.py "${args[@]}" 2>&1 | tee bucle.log
+
+      - name: Mostrar el motivo del fallo
+        if: failure()
+        run: |
+          # El motivo queda como anotación roja en la corrida (se ve sin abrir el log, también
+          # desde el celular y desde la API) y en el resumen.
+          [ -f bucle.log ] || { echo "::error title=Bucle ALTH::Falló antes de arrancar el bucle (revisa los pasos de arriba)"; exit 0; }
+          motivo="$(grep -E '^\[bucle\]|Error|error' bucle.log | tail -12)"
+          [ -n "$motivo" ] || motivo="$(tail -12 bucle.log)"
+          msg="$(printf '%s' "$motivo" | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}1')"
+          echo "::error title=Bucle ALTH — por qué falló::$msg"
+          { echo "### Por qué falló"; echo '```'; tail -25 bucle.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Guardar resultado en una rama
         if: always()
