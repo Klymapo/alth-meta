@@ -10,6 +10,10 @@ name: Bucle ALTH (cualquier IA)
 # Si eliges un proveedor específico, solo hace falta esa clave: GEMINI_API_KEY,
 # DEEPSEEK_API_KEY, OPENROUTER_API_KEY o GROQ_API_KEY. (Ollama es local: no corre aquí.)
 #
+# modo "arrancar" crea un asset NUEVO desde cero (spec.json + build.py) a partir de una
+# descripción y una imagen ya subida al repo: la primera versión también la escribe la IA,
+# no hace falta que nadie escriba Python a mano para empezar.
+#
 # El resultado queda en una rama `bucle/<asset>-<n>` con el build.py nuevo, la última hoja
 # de contacto y el resumen. Nada se mezcla a main sin que tú lo apruebes.
 
@@ -17,8 +21,17 @@ on:
   workflow_dispatch:
     inputs:
       asset:
-        description: "Carpeta del asset (p. ej. assets/pruebas/joven_rubio_v1 o lata)"
+        description: "Carpeta del asset (p. ej. assets/pruebas/joven_rubio_v1 o lata). En modo 'arrancar', el nombre nuevo que se va a crear."
         required: true
+      modo:
+        description: "correr = seguir un asset que ya existe | arrancar = crear uno nuevo (spec.json + build.py) desde una descripción y una foto"
+        default: "correr"
+      descripcion:
+        description: "Solo para 'arrancar': qué es y su tamaño real, p. ej. \"espada larga medieval, 90 cm\""
+        default: ""
+      referencia:
+        description: "Solo para 'arrancar': ruta de la imagen de referencia ya subida al repo (p. ej. refs/pendientes/espada-123.jpg)"
+        default: ""
       vueltas:
         description: "Vueltas máximas"
         default: "4"
@@ -99,6 +112,9 @@ jobs:
           ALTH_API_KEY: ${{ secrets.ALTH_API_KEY }}
           ALTH_API_BASE: ${{ vars.ALTH_API_BASE }}
           IN_ASSET: ${{ inputs.asset }}
+          IN_MODO: ${{ inputs.modo }}
+          IN_DESCRIPCION: ${{ inputs.descripcion }}
+          IN_REFERENCIA: ${{ inputs.referencia }}
           IN_VUELTAS: ${{ inputs.vueltas }}
           IN_PROVEEDOR: ${{ inputs.proveedor }}
           IN_MODELO: ${{ inputs.modelo }}
@@ -106,11 +122,19 @@ jobs:
           IN_EDITABLES: ${{ inputs.editables }}
         run: |
           export ALTH_PYTHON="$(command -v alth-python)"
-          args=(correr "$IN_ASSET" --vueltas "$IN_VUELTAS" --proveedor "$IN_PROVEEDOR")
-          [ -n "$IN_MODELO" ] && args+=(--modelo "$IN_MODELO")
-          [ -n "$IN_NOTA" ] && args+=(--nota "$IN_NOTA")
-          IFS=',' read -ra EXTRA <<< "$IN_EDITABLES"
-          for e in "${EXTRA[@]}"; do e="$(echo "$e" | xargs)"; [ -n "$e" ] && args+=(--editable "$e"); done
+          if [ "$IN_MODO" = "arrancar" ]; then
+            [ -n "$IN_DESCRIPCION" ] && [ -n "$IN_REFERENCIA" ] || {
+              echo "Modo 'arrancar' necesita 'descripcion' y 'referencia'."; exit 1; }
+            args=(arrancar "$IN_ASSET" --descripcion "$IN_DESCRIPCION" --ref "$IN_REFERENCIA" \
+                  --vueltas "$IN_VUELTAS" --proveedor "$IN_PROVEEDOR")
+            [ -n "$IN_MODELO" ] && args+=(--modelo "$IN_MODELO")
+          else
+            args=(correr "$IN_ASSET" --vueltas "$IN_VUELTAS" --proveedor "$IN_PROVEEDOR")
+            [ -n "$IN_MODELO" ] && args+=(--modelo "$IN_MODELO")
+            [ -n "$IN_NOTA" ] && args+=(--nota "$IN_NOTA")
+            IFS=',' read -ra EXTRA <<< "$IN_EDITABLES"
+            for e in "${EXTRA[@]}"; do e="$(echo "$e" | xargs)"; [ -n "$e" ] && args+=(--editable "$e"); done
+          fi
           python3 tools/bucle.py "${args[@]}"
 
       - name: Guardar resultado en una rama

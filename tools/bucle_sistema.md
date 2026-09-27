@@ -32,4 +32,14 @@ ESTADO: SIGUE    (o LISTO si ya coincide con la referencia y la verificación sa
 <archivo completo>
 ```
 
-(Repite el bloque ARCHIVO por cada archivo que cambies. Solo puedes tocar los archivos marcados como editables.)
+(Repite el bloque ARCHIVO por cada archivo que cambies. Solo puedes tocar los archivos marcados como
+editables. Si uno de ellos es un `spec.json`, el bloque de código va con ```json en vez de ```python,
+pero el archivo completo también debe ser JSON válido — nada de comentarios ni comas colgantes.)
+
+## Si la indicación dice "ARRANQUE"
+
+No hay diseño previo, solo una caja de relleno gris. Te toca escribir la primera versión completa:
+geometría real con `alth.torno` / `prisma` / `hoja` / `caja` / `anillo` según lo que sea, y llenar el
+`spec.json` (categoria, medidas_reales_mm, medidas_alth_mm con la fórmula del repo, colores de la
+paleta, modulos, una primera entrada en cotas). En esta vuelta no hace falta que quede perfecto:
+cuerpo y proporciones primero, detalles después.

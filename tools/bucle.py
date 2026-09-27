@@ -94,14 +94,14 @@ COLA_SALIDA = 60
 
 # ---------------------------------------------------------------- utilidades puras (probadas en tests/)
 def extraer_archivos(respuesta: str) -> dict[str, str]:
-    """Bloques `### ARCHIVO: ruta` + ```python … ```. Si no hay encabezados y hay un solo bloque de
-    código, se toma como build.py (clave "")."""
+    """Bloques `### ARCHIVO: ruta` + ``` … ``` (cualquier lenguaje de cerca, incluido json para
+    spec.json). Si no hay encabezados y hay un solo bloque de código, se toma como build.py (clave "")."""
     archivos = {}
-    patron = re.compile(r"###\s*ARCHIVO:\s*`?([^\n`]+?)`?\s*\n+```(?:python|py)?\s*\n(.*?)\n```", re.S)
+    patron = re.compile(r"###\s*ARCHIVO:\s*`?([^\n`]+?)`?\s*\n+```(?:\w+)?\s*\n(.*?)\n```", re.S)
     for ruta, codigo in patron.findall(respuesta):
         archivos[ruta.strip()] = codigo.rstrip() + "\n"
     if not archivos:
-        bloques = re.findall(r"```(?:python|py)?\s*\n(.*?)\n```", respuesta, re.S)
+        bloques = re.findall(r"```(?:\w+)?\s*\n(.*?)\n```", respuesta, re.S)
         if len(bloques) >= 1:
             archivos[""] = max(bloques, key=len).rstrip() + "\n"
     return archivos
@@ -455,11 +455,17 @@ def aplicar(asset: Asset, respuesta: str) -> tuple[bool, str, dict[str, str]]:
             if not coincide:
                 return False, f"Intentó escribir {ruta}, que no es editable ({', '.join(asset.editables)}).", {}
             destino = coincide[0]
-        problemas = revisar_codigo(codigo)
-        if destino == asset.editables[0] and "revisar(" not in codigo:
-            problemas.append("build.py ya no llama a alth.revisar(...)")
-        if problemas:
-            return False, f"{destino}: " + "; ".join(problemas), {}
+        if destino.endswith(".json"):
+            try:
+                json.loads(codigo)
+            except json.JSONDecodeError as e:
+                return False, f"{destino}: JSON inválido ({e}).", {}
+        else:
+            problemas = revisar_codigo(codigo)
+            if destino == asset.editables[0] and "revisar(" not in codigo:
+                problemas.append("build.py ya no llama a alth.revisar(...)")
+            if problemas:
+                return False, f"{destino}: " + "; ".join(problemas), {}
         destinos[destino] = codigo
     respaldo = {d: (RAIZ / d).read_text(encoding="utf-8") for d in destinos}
     for d, codigo in destinos.items():
@@ -503,6 +509,70 @@ def registrar(asset: Asset, n: int, resultado: dict, sil, cambios="", modelo="")
 
 
 # ---------------------------------------------------------------- comandos
+_BUILD_ARRANQUE = '''"""{nombre} ALTH · arranque (todavía sin diseño real: solo una caja de relleno).
+
+    alth-python assets/{nombre}/build.py            # iteración
+"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import alth  # noqa: E402
+
+MODO = sys.argv[-1] if sys.argv[-1] in alth.MODOS else "iteracion"
+
+alth.nueva_escena()
+relleno = alth.caja("Relleno", (10, 10, 10), color="#B7BABE")
+
+objs = [relleno]
+alth.estudio()
+rep = alth.revisar(objs, alth.RAIZ / "renders" / "{nombre}" / MODO, modo=MODO, titulo="{nombre} · arranque",
+                   asset=alth.RAIZ / "assets" / "{nombre}" / "spec.json")
+print(rep["medidas_mm"], rep["segundos_total"])
+'''
+
+
+def cmd_arrancar(args):
+    """Crea el primer boceto de un asset nuevo (spec.json + build.py de relleno) y de una vez
+    sigue con el bucle normal: la IA de la cadena escribe la primera versión real, tú no tienes
+    que escribir ni una línea de Python para empezar."""
+    nombre = Path(args.asset).name
+    carpeta = RAIZ / "assets" / nombre
+    if (carpeta / "build.py").exists():
+        sys.exit(f"[bucle] assets/{nombre}/build.py ya existe; usa 'correr', no 'arrancar'.")
+    if not args.ref:
+        sys.exit("[bucle] arrancar necesita --ref refs/….png (la foto o imagen de referencia).")
+    if not args.descripcion:
+        sys.exit('[bucle] arrancar necesita --descripcion "qué es y su tamaño real".')
+    carpeta.mkdir(parents=True, exist_ok=True)
+    spec_seed = {
+        "nombre": nombre, "categoria": "", "tipo_presupuesto": args.tipo or "objeto",
+        "descripcion_humana": args.descripcion,
+        "medidas_reales_mm": {}, "medidas_alth_mm": {}, "colores": {}, "modulos": [], "cotas": [],
+        "historial": [], "referencia": args.ref,
+        "bucle": {
+            "ref": args.ref,
+            "editables": [f"assets/{nombre}/spec.json"],
+            "nota": (
+                f"ARRANQUE de un asset nuevo. Qué es y su tamaño real: {args.descripcion}\n"
+                "Todavía no hay diseño: build.py de momento solo trae una caja de relleno gris. "
+                "En esta vuelta propón la PRIMERA versión completa de la geometría (con "
+                "alth.torno/prisma/hoja/caja/anillo, lo que corresponda) Y llena este mismo "
+                "spec.json: categoria, medidas_reales_mm, medidas_alth_mm (fórmula "
+                "mm_real * 0.0559 * k, con el k de spec/alth_spec.json -> conversion_k), colores "
+                "SOLO de la paleta, modulos, y una primera entrada en cotas para las piezas "
+                "principales. No te preocupes por perfeccionar detalles todavía: cuerpo y "
+                "proporciones primero. Sigue el 'Ciclo por asset' de CLAUDE.md."
+            ),
+        },
+    }
+    (carpeta / "spec.json").write_text(json.dumps(spec_seed, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    (carpeta / "build.py").write_text(_BUILD_ARRANQUE.format(nombre=nombre), encoding="utf-8")
+    print(f"[bucle] arranque listo en assets/{nombre}/ (spec.json + build.py de relleno). Sigo con el bucle…")
+    args.asset = f"assets/{nombre}"
+    cmd_correr(args)
+
+
 def cmd_correr(args):
     asset = Asset(args.asset, args)
     cadena = config_cadena(args)
@@ -542,6 +612,11 @@ def cmd_correr(args):
                          "reporte": resultado.get("reporte"), "carpeta": resultado.get("carpeta")}
             registrar(asset, n, resultado, sil, f"RECHAZADA: {msg}", cfg["modelo"])
             continue
+        if asset.spec_path.exists():
+            try:  # si el modelo también reescribió spec.json (modo 'arrancar'), toma lo nuevo
+                asset.spec = json.loads(asset.spec_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                pass
         resultado = correr_build(asset, args.timeout)
         sil = medir_silueta(asset, resultado, asset.trabajo / "superposicion.png")
         guardar_vuelta(asset, n, resultado, respuesta)
@@ -642,19 +717,23 @@ def main(argv=None):
     p = argparse.ArgumentParser(description="Bucle de modelado ALTH-META con cualquier modelo de IA.",
                                 formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
     sub = p.add_subparsers(dest="cmd", required=True)
-    for nombre in ("correr", "paquete", "aplicar", "medir"):
+    for nombre in ("correr", "arrancar", "paquete", "aplicar", "medir"):
         s = sub.add_parser(nombre)
-        s.add_argument("asset", help="carpeta del asset (assets/lata o solo 'lata')")
+        s.add_argument("asset", help="carpeta del asset (assets/lata o solo 'lata'; en 'arrancar' "
+                                     "es el nombre nuevo que se va a crear)")
         if nombre == "aplicar":
             s.add_argument("respuesta", help="archivo con la respuesta completa del modelo")
-        s.add_argument("--ref")
+        s.add_argument("--ref", help="arrancar: la imagen de referencia es obligatoria aquí")
         s.add_argument("--recorte")
         s.add_argument("--vista")
         s.add_argument("--editable", action="append")
         s.add_argument("--nota")
         s.add_argument("--timeout", type=int, default=900)
         s.add_argument("--sin-correr", action="store_true", help="paquete: usa el último render sin volver a correr")
-        if nombre == "correr":
+        if nombre == "arrancar":
+            s.add_argument("--descripcion", required=True, help='qué es y su tamaño real, p. ej. "espada larga medieval, 90 cm"')
+            s.add_argument("--tipo", help="objeto_simple | objeto | mueble_vehiculo | personaje (para el presupuesto de vueltas)")
+        if nombre in ("correr", "arrancar"):
             s.add_argument("--vueltas", type=int, default=4)
             s.add_argument("--proveedor", help="auto (por defecto) | ollama | deepseek | gemini | "
                                                "openrouter | groq | personalizado")
@@ -662,7 +741,8 @@ def main(argv=None):
             s.add_argument("--sin-vision", action="store_true")
             s.add_argument("--continuar", action="store_true", help="sigue el historial previo")
     a = p.parse_args(argv)
-    {"correr": cmd_correr, "paquete": cmd_paquete, "aplicar": cmd_aplicar, "medir": cmd_medir}[a.cmd](a)
+    {"correr": cmd_correr, "arrancar": cmd_arrancar, "paquete": cmd_paquete,
+     "aplicar": cmd_aplicar, "medir": cmd_medir}[a.cmd](a)
 
 
 if __name__ == "__main__":
