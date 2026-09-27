@@ -1,4 +1,5 @@
 name: Bucle ALTH (cualquier IA)
+run-name: "Bucle · ${{ inputs.asset }}"
 
 # Corre el bucle de modelado en la nube de GitHub: gratis mientras el repo sea público
 # y sin tener la computadora prendida. Se lanza a mano desde la pestaña "Actions" (también
@@ -134,6 +135,7 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           ALTH_API_KEY: ${{ secrets.ALTH_API_KEY }}
           ALTH_API_BASE: ${{ vars.ALTH_API_BASE }}
+          ALTH_PROGRESO_TOKEN: ${{ github.token }}   # barra de % del Taller (rama progreso)
           IN_ASSET: ${{ inputs.asset }}
           IN_MODO: ${{ inputs.modo }}
           IN_DESCRIPCION: ${{ inputs.descripcion }}
@@ -190,6 +192,7 @@ jobs:
           trabajo="renders/$nombre/bucle"
           [ -d "$trabajo" ] || { echo "No hubo resultados"; exit 0; }
           mkdir -p "$d/bucle"
+          # La hoja de revisión se generó desde el código finalmente elegido.
           cp "$trabajo/resumen.md" "$d/bucle/" 2>/dev/null || true
           cp "$trabajo/error.txt" "$d/bucle/" 2>/dev/null || rm -f "$d/bucle/error.txt"
           if [ -f "$trabajo/revision/revision.json" ]; then

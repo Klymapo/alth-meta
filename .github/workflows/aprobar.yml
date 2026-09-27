@@ -1,4 +1,5 @@
 name: Aprobar ALTH (cierra un asset)
+run-name: "Aprobar · ${{ inputs.asset }}"
 
 # El paso final que el bucle deja pendiente a propósito: renderiza en modo FINAL,
 # exporta el .glb y sube el resultado. Lo lanzas tú, a mano, cuando la hoja de una
