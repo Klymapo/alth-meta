@@ -1,0 +1,53 @@
+{
+  "nombre": "joven_rubio",
+  "categoria": "personaje",
+  "tipo_presupuesto": "personaje",
+  "k": 1.0,
+  "arquetipo": "estandar",
+  "medidas_reales_mm": {
+    "altura_persona": 1700
+  },
+  "medidas_alth_mm": {
+    "altura": 95.0,
+    "formula": "estándar cuerpo_base_95mm (mm_real 1700 * 0.0559 * 1.0 = 95.0), no por pieza"
+  },
+  "colores": {
+    "piel": {"paleta": "medidos.piel_clara", "hex": "#FBC39C"},
+    "cabello": {"paleta": "medidos.cabello_rubio", "hex": "#EFC989"},
+    "camisa": {"paleta": "medidos.camisa_blanca", "hex": "#FBEFE1"},
+    "chaleco": {"paleta": "medidos.chaleco_negro", "hex": "#302E2D"},
+    "corbata": {"paleta": "medidos.corbata_azul", "hex": "#41598D"},
+    "pantalon": {"paleta": "medidos.pantalon_azul", "hex": "#4A5770"},
+    "zapatos": {"paleta": "medidos.zapato_negro", "hex": "#292929"},
+    "cejas_ojos": {"paleta": "marron_calido", "hex": "#4A3220"},
+    "ojo_blanco": {"paleta": "crema_suave", "hex": "#FBF8F4"},
+    "botones": {"paleta": "metal", "hex": "#B7BABE"}
+  },
+  "modulos": [
+    "alth.personaje.construir(): cuerpo base en T-pose (torso, pelvis, brazos, manos con dedos en bloque, piernas, zapatos, cabeza con orejas y nariz)",
+    "camisa: collar (alth.torno pequeño bajo la barbilla) + mangas (alth.torno con perfil cónico y bulto de puño, sobre cada brazo hasta el codo)",
+    "chaleco: alth.torno sobre el perfil del torso, inflado; abertura en V con franjas de camisa (alth.caja) que se angostan hacia abajo, solapas (alth.caja rotada) y botones metal",
+    "corbata: alth.caja delgada sobre el pecho, encima de las franjas de la abertura",
+    "pantalón amplio: alth.torno sobre el perfil de cada pierna, inflado bastante más que la piel; puños y dobladillo con alth.anillo (una argolla de verdad, no un escalón en el perfil)",
+    "pelo: alth.hoja() reutilizada como mechón faceteado, varios por la cabeza con alth.hoja",
+    "ojos/cejas/boca: placas (alth.caja delgada) sobre la cara, no geometría"
+  ],
+  "tris_objetivo": [4000, 6000],
+  "referencia": "refs/personajes/joven-rubio-4-vistas.jpg (T-pose, 4 vistas) y joven-rubio.jpg (pose 3/4): joven de pelo rubio en mechones facetados y despeinados, cara redonda con ojos grandes cafés, cejas gruesas, sonrisa leve, camisa blanca con mangas dobladas hasta el codo, chaleco negro de dos botones, corbata azul, pantalón azul marino con dobladillo en el tobillo, zapatos negros gruesos",
+  "cotas": [
+    {"pieza": "Cuerpo_cabeza", "eje": "W", "mm": 40.0},
+    {"pieza": "Cuerpo_cabeza", "eje": "H", "mm": 34.5},
+    {"pieza": "Cuerpo_pierna_der", "eje": "H", "mm": 24.0},
+    {"pieza": "Cuerpo_zapato_der", "eje": "D", "mm": 18.0},
+    {"pieza": "Cuerpo_torso", "eje": "D", "mm": 17.8},
+    {"pieza": "Cuerpo_pierna_der", "eje": "D", "mm": 11.13, "nota": "8.9 del estándar × 1.25 (grosor_extremidades)"}
+  ],
+  "historial": [
+    {"vuelta": 1, "nota": "primera construcción; bug de apoyada hundía medio cuerpo, pelo escaso"},
+    {"vuelta": 2, "nota": "corregido el hundimiento; cerrados huecos de piel cintura/tobillo; cejas separadas de ojos"},
+    {"vuelta": 3, "nota": "pelo más denso y voluminoso (lados y espalda, no solo coronilla)"},
+    {"vuelta": 4, "nota": "botones metal (antes invisibles contra el chaleco negro); VERIFICACION OK, 2188 tris"},
+    {"vuelta": 5, "nota": "cambio de plan: pecho D=17.8 y cadera-pierna D=8.9 exactos (óvalo ajustado al anillo más ancho + segmentos=12 para tocar 90°); brazos/piernas 25% más gruesos; mangas y pantalón amplios; cabeza como tronco de pirámide (mandíbula 36.2x28.8, chaflán más suave); chaleco con abertura en V, solapas y cuello de camisa; cotas D de pecho y pierna agregadas. VERIFICACION OK, 2316 tris. Pelo sin tocar."},
+    {"vuelta": 6, "nota": "arreglos de cuerpo: puños y dobladillo con alth.anillo (antes un escalón en el perfil se veía como un disco de canto); dobladillo se mete un poco más en el zapato (ya no asoma piel); abertura en V del chaleco ahora baja hasta la cintura, con 3 botones repartidos. VERIFICACION OK, 2496 tris. Pelo (alth/pelo.py) todavía sin integrar al personaje: ver alth/pelo.py aparte."}
+  ]
+}

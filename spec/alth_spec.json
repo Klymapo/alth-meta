@@ -234,6 +234,7 @@
       "piel_clara_sombra": "#D99A76",
       "piel_oscura": "#B3613A",
       "cabello_rubio": "#EFC989",
+      "rubio_arena": "#D2AE72",
       "cabello_castano": "#72432B",
       "cabello_cobrizo": "#975137",
       "cabello_rojo": "#B04636",
@@ -332,6 +333,7 @@
     "metal": "de la referencia objeto-02 (metal claro #B7BABE, metal sombra #8A8F96); usar con material metal_suave",
     "verde_oliva": "de la referencia objeto-02 (verde etiqueta #7E8B5A, oliva oscura #495432)",
     "crema_etiqueta": "#EADCC4 · de la referencia objeto-02 (crema etiqueta); banda crema de la lata de aceitunas",
-    "carton_kraft": "#B08A62 · cartón de funda (vaso_cafe); reemplaza a taza_cafe para cartón"
+    "carton_kraft": "#B08A62 · cartón de funda (vaso_cafe); reemplaza a taza_cafe para cartón",
+    "rubio_arena": "#D2AE72 · pelo rubio arena, menos saturado que cabello_rubio; propuesto y aprobado para el prototipo de alth/pelo.py (joven_rubio)"
   }
 }
