@@ -92,5 +92,13 @@
   "pendiente_de_aprobacion": [
     "si este pelo reemplaza al de alth.hoja() en assets/joven_rubio/build.py",
     "color rubio_arena definitivo (ya en la paleta, pero es la primera vez que se usa en un asset real)"
-  ]
+  ],
+
+  "bucle": {
+    "ref": "refs/personajes/joven-rubio-4-vistas.jpg",
+    "recorte": [0, 0, 0.5, 0.5],
+    "vista": "frente",
+    "editables": ["alth/pelo.py"],
+    "nota": "Céntrate en el pelo: en la referencia es una masa voluminosa de cuñas gruesas y facetadas que cubren la parte de arriba y caen hacia adelante sobre la frente y los lados. Hoy es un casco plano con mechones delgados que salen como patas. Más volumen arriba, cuñas más anchas y romas. No toques el cuerpo."
+  }
 }
