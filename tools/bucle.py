@@ -41,6 +41,7 @@ from __future__ import annotations
 import argparse
 import ast
 import base64
+import hashlib
 import io
 import json
 import os
@@ -84,6 +85,7 @@ ESPERAS_CUOTA = (20, 40)
 # Si el modelo de fábrica de Gemini sigue saturado, prueba hasta este número de modelos
 # "flash" hermanos que la propia API anuncie en /models (otros servidores, otra saturación).
 ALTERNOS_MAX = 2
+PRESUPUESTO_MAX = {"objeto_simple": 3, "objeto": 4, "mueble_vehiculo": 5, "personaje": 8}
 
 
 def _dormir(segundos: float) -> None:
@@ -230,7 +232,11 @@ def correr_build(asset: Asset, timeout: int) -> dict:
     antes = {p: p.stat().st_mtime for p in (RAIZ / "renders").rglob("reporte.json")} \
         if (RAIZ / "renders").exists() else {}
     try:
-        r = subprocess.run([exe, str(asset.build)], cwd=RAIZ, capture_output=True, text=True, timeout=timeout)
+        # El código propuesto por la IA no debe heredar las claves usadas para llamarla.
+        entorno = {k: v for k, v in os.environ.items()
+                   if not (k.endswith("_API_KEY") or k in {"GH_TOKEN", "GITHUB_TOKEN", "ALTH_API_KEY"})}
+        r = subprocess.run([exe, str(asset.build)], cwd=RAIZ, env=entorno,
+                           capture_output=True, text=True, timeout=timeout)
         salida, codigo = (r.stdout + "\n" + r.stderr).strip(), r.returncode
     except subprocess.TimeoutExpired:
         salida, codigo = f"El script tardó más de {timeout} s y se detuvo.", -1
@@ -662,6 +668,33 @@ def registrar(asset: Asset, n: int, resultado: dict, sil, cambios="", modelo="")
     escribir_resumen(asset)
 
 
+def guardar_revision(asset: Asset, resultado: dict, vuelta: int, motivo: str) -> dict:
+    """Congela la evidencia del código que queda en la rama, nunca la de otra vuelta."""
+    if not resultado.get("ok") or not resultado.get("carpeta"):
+        raise ValueError("No hay render válido del código seleccionado")
+    carpeta = Path(resultado["carpeta"])
+    hoja, reporte = carpeta / "hoja.png", carpeta / "reporte.json"
+    if not hoja.is_file() or not reporte.is_file():
+        raise ValueError("Falta la hoja o el reporte del código seleccionado")
+    destino = asset.trabajo / "revision"
+    destino.mkdir(exist_ok=True)
+    shutil.copy2(hoja, destino / "hoja.png")
+    shutil.copy2(reporte, destino / "reporte.json")
+    huella = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+    archivos = {ruta: huella(RAIZ / ruta) for ruta in asset.editables}
+    if asset.spec_path.is_file():
+        archivos[asset.rel(asset.spec_path)] = huella(asset.spec_path)
+    datos = {
+        "asset": asset.rel(asset.dir), "vuelta_origen": vuelta, "motivo": motivo,
+        "archivos_sha256": archivos, "hoja_sha256": huella(destino / "hoja.png"),
+        "reporte_sha256": huella(destino / "reporte.json"),
+        "verificacion_ok": bool((resultado.get("reporte") or {}).get("verificacion", {}).get("ok")),
+    }
+    (destino / "revision.json").write_text(
+        json.dumps(datos, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return datos
+
+
 # ---------------------------------------------------------------- comandos
 _BUILD_ARRANQUE = '''"""{nombre} ALTH · arranque (todavía sin diseño real: solo una caja de relleno).
 
@@ -729,6 +762,10 @@ def cmd_arrancar(args):
 
 def cmd_correr(args):
     asset = Asset(args.asset, args)
+    maximo = PRESUPUESTO_MAX.get(asset.spec.get("tipo_presupuesto", "objeto"), 4)
+    if args.vueltas > maximo:
+        print(f"[bucle] reduzco el máximo de {args.vueltas} a {maximo} intentos para este tipo de asset.")
+        args.vueltas = maximo
     cadena = config_cadena(args)
     sistema = texto_sistema()
     nombres = " → ".join(f"{c['nombre']}/{c['modelo']}" for c in cadena)
@@ -811,8 +848,15 @@ def cmd_correr(args):
         if actual != mejor_bueno:
             for e, t in mejor_bueno.items():
                 (RAIZ / e).write_text(t, encoding="utf-8")
+            print(f"[bucle] restauré la mejor vuelta (v{mejor_n}) antes de generar la evidencia.")
+            resultado = correr_build(asset, args.timeout)
+            if not resultado["ok"]:
+                raise SystemExit("[bucle] falló el render de la vuelta restaurada; no hay evidencia aprobable.")
         ver_ok, iou = mejor_rango
         estado_ver = "verificación OK" if ver_ok else "ninguna vuelta pasó la verificación"
+        motivo = "mejor versión verificada" if ver_ok else "mejor silueta sin verificación completa"
+        guardar_revision(asset, resultado, mejor_n, motivo)
+        print(f"[bucle] hoja de revisión corresponde al código seleccionado (v{mejor_n}).")
         print(f"[bucle] me quedo con la vuelta {mejor_n} ({estado_ver}, IoU {iou}).")
         # El workflow usa esto para publicar la hoja de ESTA vuelta, no la de la última.
         (asset.trabajo / "elegida.txt").write_text(f"v{mejor_n:02d}\n", encoding="utf-8")
@@ -905,7 +949,8 @@ def main(argv=None):
         s.add_argument("--sin-correr", action="store_true", help="paquete: usa el último render sin volver a correr")
         if nombre == "arrancar":
             s.add_argument("--descripcion", required=True, help='qué es y su tamaño real, p. ej. "espada larga medieval, 90 cm"')
-            s.add_argument("--tipo", help="objeto_simple | objeto | mueble_vehiculo | personaje (para el presupuesto de vueltas)")
+            s.add_argument("--tipo", choices=tuple(PRESUPUESTO_MAX),
+                           help="Tipo de asset para el presupuesto de intentos")
         if nombre in ("correr", "arrancar"):
             s.add_argument("--vueltas", type=int, default=4)
             s.add_argument("--proveedor", help="auto (por defecto) | ollama | deepseek | gemini | "

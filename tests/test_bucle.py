@@ -3,6 +3,7 @@
     python3 -m pytest tests/
 """
 import sys
+import json
 from pathlib import Path
 
 import numpy as np
@@ -216,9 +217,15 @@ def test_se_queda_con_la_verificada_aunque_otra_tenga_mejor_silueta(tmp_path, mo
     def version():
         return int(build.read_text().split("=")[1])
 
-    monkeypatch.setattr(b, "correr_build", lambda a, t: {
-        "ok": True, "salida": "", "carpeta": None,
-        "reporte": {"verificacion": {"ok": plan[version()][0]}}})
+    def fake_build(asset, timeout):
+        carpeta = tmp_path / "renders" / "muñeco" / "iteracion"
+        carpeta.mkdir(parents=True, exist_ok=True)
+        (carpeta / "hoja.png").write_bytes(f"hoja-v{version()}".encode())
+        reporte = {"verificacion": {"ok": plan[version()][0]}}
+        (carpeta / "reporte.json").write_text(json.dumps(reporte), encoding="utf-8")
+        return {"ok": True, "salida": "", "carpeta": carpeta, "reporte": reporte}
+
+    monkeypatch.setattr(b, "correr_build", fake_build)
     monkeypatch.setattr(b, "medir_silueta", lambda a, r, dest: {"iou": plan[version()][1]})
     monkeypatch.setattr(b, "config_cadena", lambda a: [{"nombre": "falso", "modelo": "m", "vision": False}])
     monkeypatch.setattr(b, "texto_sistema", lambda: "")
@@ -239,6 +246,10 @@ def test_se_queda_con_la_verificada_aunque_otra_tenga_mejor_silueta(tmp_path, mo
     trabajo = tmp_path / "renders" / "muñeco" / "bucle"
     assert (trabajo / "elegida.txt").read_text().strip() == "v01"
     assert "vuelta 1 · verificación OK" in (trabajo / "resumen.md").read_text()
+    revision = json.loads((trabajo / "revision" / "revision.json").read_text())
+    assert revision["vuelta_origen"] == 1
+    assert revision["verificacion_ok"]
+    assert (trabajo / "revision" / "hoja.png").read_bytes() == b"hoja-v1"
 
 
 # ---------------------------------------------------------------- progreso para el Taller

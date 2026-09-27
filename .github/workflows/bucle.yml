@@ -30,6 +30,9 @@ on:
       descripcion:
         description: "Solo para 'arrancar': qué es y su tamaño real, p. ej. \"espada larga medieval, 90 cm\""
         default: ""
+      tipo:
+        description: "Presupuesto inicial: objeto_simple | objeto | mueble_vehiculo | personaje"
+        default: "objeto"
       referencia:
         description: "Ruta de una imagen de referencia ya subida al repo (p. ej. refs/pendientes/espada-123.jpg). Obligatoria en 'arrancar'; en 'correr' reemplaza la referencia de esa corrida"
         default: ""
@@ -75,8 +78,8 @@ jobs:
               echo "Encadenando desde la última corrida: $ultima"
               echo "ref=$ultima" >> "$GITHUB_OUTPUT"
             else
-              echo "No hay corridas previas de '$nombre'; empiezo desde main"
-              echo "ref=main" >> "$GITHUB_OUTPUT"
+              echo "No hay corridas previas de '$nombre'; empiezo desde ${{ github.ref_name }}"
+              echo "ref=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
             fi
           else
             echo "ref=$IN_RAMA_BASE" >> "$GITHUB_OUTPUT"
@@ -86,19 +89,25 @@ jobs:
         with:
           ref: ${{ steps.rama.outputs.ref }}
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Herramientas siempre de main
-        if: steps.rama.outputs.ref != 'main'
+      - name: Herramientas de la versión elegida del Taller
+        if: steps.rama.outputs.ref != github.ref_name
+        env:
+          TOOL_REF: ${{ github.ref_name }}
         run: |
           # Al encadenar desde una rama bucle/* vieja, su tools/bucle.py también es viejo (así falló
           # la corrida 6: "proveedor desconocido: auto"). Regla: herramientas, pruebas, spec y la
-          # librería alth/ vienen de main; SOLO se conservan de la rama los archivos que el bucle
+          # librería alth/ vienen de la versión del Taller que disparaste; se conservan de la rama los archivos que el bucle
           # editó ahí (p. ej. alth/pelo.py) y la carpeta del asset.
-          git fetch -q origin main
-          editados="$(git log --format= --name-only origin/main..HEAD -- alth/ | sort -u)"
-          git checkout origin/main -- tools/ tests/ alth/ spec/ AGENTS.md
+          git fetch -q origin "$TOOL_REF"
+          editados="$(git log --format= --name-only "origin/$TOOL_REF"..HEAD -- alth/ | sort -u)"
+          git checkout "origin/$TOOL_REF" -- tools/ tests/ alth/ spec/ AGENTS.md
           for f in $editados; do git checkout HEAD -- "$f" 2>/dev/null && echo "conservo de la rama: $f"; done
-          echo "Herramientas al día con main ($(git rev-parse --short origin/main))."
+          # Se usan herramientas actuales durante el job, sin meterlas por accidente
+          # en el commit de un asset.
+          git restore --staged tools/ tests/ spec/ AGENTS.md
+          echo "Herramientas al día con $TOOL_REF."
 
       - uses: actions/setup-python@v5
         with:
@@ -130,6 +139,7 @@ jobs:
           IN_ASSET: ${{ inputs.asset }}
           IN_MODO: ${{ inputs.modo }}
           IN_DESCRIPCION: ${{ inputs.descripcion }}
+          IN_TIPO: ${{ inputs.tipo }}
           IN_REFERENCIA: ${{ inputs.referencia }}
           IN_VUELTAS: ${{ inputs.vueltas }}
           IN_PROVEEDOR: ${{ inputs.proveedor }}
@@ -142,15 +152,15 @@ jobs:
             [ -n "$IN_DESCRIPCION" ] && [ -n "$IN_REFERENCIA" ] || {
               echo "Modo 'arrancar' necesita 'descripcion' y 'referencia'."; exit 1; }
             args=(arrancar "$IN_ASSET" --descripcion "$IN_DESCRIPCION" --ref "$IN_REFERENCIA" \
-                  --vueltas "$IN_VUELTAS" --proveedor "$IN_PROVEEDOR")
+                  --tipo "$IN_TIPO" --vueltas "$IN_VUELTAS" --proveedor "$IN_PROVEEDOR")
             [ -n "$IN_MODELO" ] && args+=(--modelo "$IN_MODELO")
           else
             args=(correr "$IN_ASSET" --vueltas "$IN_VUELTAS" --proveedor "$IN_PROVEEDOR")
             [ -n "$IN_MODELO" ] && args+=(--modelo "$IN_MODELO")
             [ -n "$IN_NOTA" ] && args+=(--nota "$IN_NOTA")
             if [ -n "$IN_REFERENCIA" ]; then
-              # foto nueva subida a main desde el Taller: tráela aunque partamos de una rama bucle/*
-              [ -f "$IN_REFERENCIA" ] || { git fetch -q origin main && git checkout origin/main -- "$IN_REFERENCIA"; }
+              # Foto nueva de la versión del Taller que disparó este workflow.
+              [ -f "$IN_REFERENCIA" ] || { git fetch -q origin "${{ github.ref_name }}" && git checkout "origin/${{ github.ref_name }}" -- "$IN_REFERENCIA"; }
               args+=(--ref "$IN_REFERENCIA")
             fi
             IFS=',' read -ra EXTRA <<< "$IN_EDITABLES"
@@ -175,19 +185,23 @@ jobs:
         if: always()
         env:
           IN_ASSET: ${{ inputs.asset }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           d="$IN_ASSET"; [ -d "$d" ] || d="assets/$IN_ASSET"
           nombre="$(basename "$d")"
           trabajo="renders/$nombre/bucle"
           [ -d "$trabajo" ] || { echo "No hubo resultados"; exit 0; }
           mkdir -p "$d/bucle"
-          # la hoja de la vuelta que el bucle ELIGIÓ (pasa verificación + mejor silueta), no la última
-          elegida="$(cat "$trabajo/elegida.txt" 2>/dev/null)"
-          if [ -n "$elegida" ] && [ -d "$trabajo/$elegida" ]; then ultima="$trabajo/$elegida"
-          else ultima="$(ls -d "$trabajo"/v* | sort | tail -1)"; fi
+          # La hoja de revisión se generó desde el código finalmente elegido.
           cp "$trabajo/resumen.md" "$d/bucle/" 2>/dev/null || true
           cp "$trabajo/error.txt" "$d/bucle/" 2>/dev/null || rm -f "$d/bucle/error.txt"
-          cp "$ultima/hoja.png" "$d/bucle/hoja_ultima.png" 2>/dev/null || true
+          if [ -f "$trabajo/revision/revision.json" ]; then
+            cp "$trabajo/revision/hoja.png" "$d/bucle/hoja_ultima.png"
+            cp "$trabajo/revision/reporte.json" "$d/bucle/reporte_revision.json"
+            cp "$trabajo/revision/revision.json" "$d/bucle/revision.json"
+          else
+            rm -f "$d/bucle/hoja_ultima.png" "$d/bucle/reporte_revision.json" "$d/bucle/revision.json"
+          fi
           cp "$trabajo/superposicion.png" "$d/bucle/siluetas.png" 2>/dev/null || true
           rama="bucle/${nombre}-${{ github.run_number }}"
           git config user.name "bucle-alth"
@@ -195,7 +209,7 @@ jobs:
           git checkout -b "$rama"
           git add -A "$d" alth/
           git commit -m "bucle: $nombre (${{ inputs.proveedor }} ${{ inputs.modelo }}), corrida ${{ github.run_number }}" || exit 0
-          git push origin "$rama"
+          git -c credential.helper='!gh auth git-credential' push origin "$rama"
           {
             echo "_Partió de: \`${{ steps.rama.outputs.ref }}\`_"
             echo
