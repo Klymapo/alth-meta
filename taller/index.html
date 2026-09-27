@@ -1,0 +1,1211 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Taller ALTH-META</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #FBF6EC;
+    --surface: #FFFFFF;
+    --surface-2: #F5E9D6;
+    --border: #E9DBBE;
+    --text: #3A2F2A;
+    --text-muted: #8B7E6E;
+
+    --accent: #D67F4A;          /* naranja_apagado — botón principal, gate */
+    --accent-contrast: #FFFFFF;
+    --accent-soft: #F4DBCD;
+    --accent-dark: #A16038;
+
+    --blue: #4F6D9A;            /* azul_desaturado — biblioteca, corridas */
+    --blue-soft: #C8D5E7;
+
+    --pink: #A8453B;            /* rojo_calido — asset nuevo */
+    --pink-soft: #F3D1CC;
+
+    --good: #5E7759;            /* verde_salvia — aprobar / éxito */
+    --good-soft: #D6E3D2;
+    --warn: #9A7B3C;            /* oro_envejecido — en proceso / cuota */
+    --warn-soft: #F4E2B8;
+    --bad: #7E332C;
+    --bad-soft: #F3D1CC;
+
+    --font-ui: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    --font-head: 'Quicksand', var(--font-ui);
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+    --radius: 20px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1C1712;
+      --surface: #262019;
+      --surface-2: #302820;
+      --border: #453a2c;
+      --text: #F1E6D7;
+      --text-muted: #B7A88F;
+      --accent: #E7A578;
+      --accent-contrast: #2A1608;
+      --accent-soft: rgba(231,165,120,0.16);
+      --accent-dark: #E7A578;
+      --blue: #9BB2D6;
+      --blue-soft: rgba(155,178,214,0.16);
+      --pink: #E7998E;
+      --pink-soft: rgba(231,153,142,0.16);
+      --good: #AFC4A7;
+      --good-soft: rgba(175,196,167,0.16);
+      --warn: #DCC572;
+      --warn-soft: rgba(220,197,114,0.16);
+      --bad: #E5988F;
+      --bad-soft: rgba(229,152,143,0.18);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1C1712; --surface: #262019; --surface-2: #302820; --border: #453a2c;
+    --text: #F1E6D7; --text-muted: #B7A88F;
+    --accent: #E7A578; --accent-contrast: #2A1608; --accent-soft: rgba(231,165,120,0.16); --accent-dark: #E7A578;
+    --blue: #9BB2D6; --blue-soft: rgba(155,178,214,0.16);
+    --pink: #E7998E; --pink-soft: rgba(231,153,142,0.16);
+    --good: #AFC4A7; --good-soft: rgba(175,196,167,0.16);
+    --warn: #DCC572; --warn-soft: rgba(220,197,114,0.16);
+    --bad: #E5988F; --bad-soft: rgba(229,152,143,0.18);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    padding-inline: 16px;
+    padding-block: 12px 48px;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; font-family: var(--font-head); }
+
+  /* ---------- encabezado con mascota ---------- */
+  .header {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    background: var(--bg);
+    padding-block: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 2px solid var(--border);
+    z-index: 5;
+  }
+  .avatar {
+    width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%;
+    background: var(--accent-soft); border: 2px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .avatar .eye {
+    position: absolute; top: 17px; width: 5px; height: 6px; border-radius: 50%;
+    background: var(--accent-dark);
+  }
+  .avatar .eye.l { left: 12px; } .avatar .eye.r { right: 12px; }
+  .avatar .smile {
+    position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    width: 14px; height: 7px; border-radius: 0 0 14px 14px;
+    border: 2px solid var(--accent-dark); border-top: none;
+  }
+  .header .titles { flex: 1; min-width: 0; }
+  .header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
+  .header .sub { font-size: 0.74rem; color: var(--text-muted); margin-top: 1px; }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--bad); flex-shrink: 0; box-shadow: 0 0 0 3px var(--bad-soft);
+  }
+  .dot.ok { background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); }
+  .dot.warn { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-soft); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-head);
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.01em;
+    padding: 4px 10px; border-radius: 99px;
+    background: var(--surface-2); color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .pill.good { background: var(--good-soft); color: var(--good); }
+  .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+
+  main { display: flex; flex-direction: column; gap: 16px; margin-top: 18px; }
+
+  /* ---------- tarjetas ---------- */
+  details {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 2px 0 var(--border);
+    border-top: 5px solid var(--card-accent, var(--border));
+  }
+  details.card-token   { --card-accent: var(--text-muted); }
+  details.card-gate    { --card-accent: var(--accent); }
+  details.card-biblioteca { --card-accent: var(--blue); }
+  details.card-motores { --card-accent: var(--text-muted); }
+  details.card-lanzar  { --card-accent: var(--accent); }
+  details.card-aprobar { --card-accent: var(--good); }
+  details.card-nuevo   { --card-accent: var(--pink); }
+  details.card-corridas{ --card-accent: var(--blue); }
+
+  summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 15px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+  summary::-webkit-details-marker { display: none; }
+  .icon-badge {
+    width: 36px; height: 36px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem; background: var(--card-accent, var(--surface-2)); background: color-mix(in srgb, var(--card-accent, var(--border)) 22%, var(--surface-2));
+  }
+  summary .title-block { flex: 1; min-width: 0; }
+  summary .chev { color: var(--text-muted); transition: transform 0.15s ease; font-size: 0.85rem; flex-shrink: 0; }
+  details[open] summary .chev { transform: rotate(90deg); }
+  summary .eyebrow {
+    font-family: var(--font-head); font-size: 0.7rem; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700;
+    display: block; margin-bottom: 1px;
+  }
+  summary .titulo { font-family: var(--font-head); font-weight: 700; font-size: 1rem; }
+  .card-body { padding: 2px 16px 18px 64px; display: flex; flex-direction: column; gap: 12px; }
+  @media (max-width: 380px) { .card-body { padding-left: 16px; } }
+  .card-help { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+  .card-help code {
+    font-family: var(--font-mono); background: var(--surface-2);
+    padding: 1px 5px; border-radius: 4px; font-size: 0.78em;
+  }
+
+  label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-head); }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .row { display: flex; gap: 10px; }
+  .row > .field { flex: 1; min-width: 0; }
+  input[type=text], input[type=number], input[type=password], select, textarea {
+    font: inherit; font-size: 0.95rem; color: var(--text);
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 11px 12px; width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  textarea { resize: vertical; min-height: 56px; font-family: var(--font-ui); }
+  input[type=file] {
+    font-size: 0.84rem; color: var(--text-muted);
+    background: var(--surface-2); border: 1px dashed var(--border);
+    border-radius: 12px; padding: 14px 12px;
+  }
+
+  button {
+    font: inherit; font-family: var(--font-head); font-weight: 700; font-size: 0.95rem;
+    background: var(--accent); color: var(--accent-contrast);
+    border: none; border-radius: 14px; padding: 13px 16px;
+    cursor: pointer; width: 100%;
+    box-shadow: 0 3px 0 var(--accent-dark);
+    transition: transform 0.05s ease;
+  }
+  button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--accent-dark); }
+  button:disabled { opacity: 0.55; cursor: default; box-shadow: none; transform: none; }
+  button.ghost {
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+    box-shadow: none;
+  }
+  button.ghost:active { transform: none; opacity: 0.8; }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row button { width: auto; flex: 1; }
+
+  .status { font-size: 0.85rem; padding: 11px 13px; border-radius: 12px; display: none; line-height: 1.45; }
+  .status.show { display: block; }
+  .status.info { background: var(--surface-2); color: var(--text-muted); }
+  .status.good { background: var(--good-soft); color: var(--good); }
+  .status.bad { background: var(--bad-soft); color: var(--bad); }
+  .status a { color: inherit; font-weight: 700; }
+
+  .runs-list { display: flex; flex-direction: column; gap: 8px; }
+  .run {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; border: 1px solid var(--border); border-radius: 14px;
+    background: var(--surface-2);
+  }
+  .run-main { flex: 1; min-width: 0; }
+  .run-name { font-family: var(--font-head); font-size: 0.9rem; font-weight: 700; }
+  .run-meta {
+    font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);
+    margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .run a { color: var(--blue); font-size: 0.8rem; font-weight: 700; text-decoration: none; flex-shrink: 0; }
+  .run-thumb {
+    width: 46px; height: 46px; border-radius: 12px; object-fit: cover; flex-shrink: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; color: var(--text-muted);
+  }
+
+  /* biblioteca: cuadrícula de tarjetas con la miniatura arriba, más visual que una lista */
+  #bibliotecaLista.runs-list {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  #bibliotecaLista .run {
+    flex-direction: column; align-items: stretch; text-align: center; gap: 8px;
+    padding: 10px 10px 12px;
+  }
+  #bibliotecaLista .run-thumb {
+    width: 100%; height: 92px; border-radius: 12px; font-size: 1.6rem;
+  }
+  #bibliotecaLista .run-main { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  #bibliotecaLista .pill { align-self: center; }
+  #bibliotecaLista .run:active { transform: scale(0.98); }
+  @media (max-width: 340px) { #bibliotecaLista.runs-list { grid-template-columns: 1fr; } }
+
+  .parecido {
+    display: none; flex-direction: column; gap: 10px;
+    border: 2px solid var(--pink); background: var(--pink-soft);
+    border-radius: 16px; padding: 14px;
+  }
+  .parecido.show { display: flex; }
+  .parecido-cabeza { display: flex; gap: 10px; align-items: center; }
+  .parecido-nombre { font-family: var(--font-head); font-weight: 700; }
+
+  .empty { font-size: 0.84rem; color: var(--text-muted); padding: 6px 2px; line-height: 1.5; }
+  .token-banner {
+    background: var(--accent-soft); border: 1px solid var(--accent);
+    border-radius: 14px; padding: 12px 14px; font-size: 0.82rem; line-height: 1.5;
+  }
+  .token-banner strong { color: var(--accent-dark); }
+  .spin {
+    display: inline-block; width: 11px; height: 11px; border-radius: 50%;
+    border: 2px solid var(--surface-2); border-top-color: var(--accent);
+    animation: sp 0.7s linear infinite; vertical-align: -1px;
+  }
+  @keyframes sp { to { transform: rotate(360deg); } }
+
+  /* botón grande de la compuerta (paso 1) */
+  .gate-grid { display: flex; flex-direction: column; gap: 10px; }
+  .gate-opcion {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    text-align: left; padding: 16px; border-radius: 16px; cursor: pointer;
+    font-family: var(--font-head); font-weight: 700; font-size: 0.95rem;
+    box-shadow: none;
+  }
+  .gate-opcion .emoji { font-size: 1.6rem; }
+  .gate-opcion .sub { font-family: var(--font-ui); font-weight: 400; font-size: 0.78rem; opacity: 0.85; display: block; margin-top: 1px; }
+  #btnGateExistente { background: var(--blue-soft); color: var(--blue); border: 1px solid var(--blue); }
+  #btnGateNuevo { background: var(--pink-soft); color: var(--pink); border: 1px solid var(--pink); box-shadow: none; }
+</style>
+
+<div class="header">
+  <div class="avatar" aria-hidden="true">
+    <span class="eye l"></span><span class="eye r"></span>
+    <span class="smile"></span>
+  </div>
+  <div class="titles">
+    <h1>Taller ALTH-META</h1>
+    <div class="sub" id="tokenSub">Sin token guardado</div>
+  </div>
+  <span class="dot" id="tokenDot"></span>
+</div>
+
+<main>
+
+  <div class="token-banner" id="avisoPages" hidden>
+    <strong>Ábrelo desde GitHub Pages.</strong> Dentro de Claude esta página no tiene permitido
+    conectarse a GitHub, así que aquí los botones fallan. La misma página, con tu mismo flujo, vive en
+    <a href="https://klymapo.github.io/alth-meta/taller/" target="_blank" rel="noopener">klymapo.github.io/alth-meta/taller</a>
+    (guárdala en tu pantalla de inicio). Ahí vuelves a pegar tu token una vez.
+  </div>
+
+  <details class="card-token" id="cardToken">
+    <summary>
+      <div class="icon-badge">🔑</div>
+      <div class="title-block"><span class="eyebrow">Paso 0</span><span class="titulo">Tu llave de GitHub</span></div>
+      <span class="chev">›</span>
+    </summary>
+    <div class="card-body">
+      <p class="card-help">
+        Se necesita un <em>fine-grained personal access token</em> de GitHub, limitado solo a este
+        repositorio. Créalo en <code>github.com/settings/personal-access-tokens/new</code>:
+        "Only select repositories" → <code>alth-meta</code> → en Permissions, pon "Read and write" en
+        <strong>Actions</strong>, <strong>Contents</strong> e <strong>Issues</strong>. Ponle una fecha
+        de vencimiento (90 días está bien) y renuévalo cuando expire.
+      </p>
+      <p class="card-help">
+        El token se guarda solo en este teléfono (en el navegador), nunca se manda a ningún lado más
+        que a la API de GitHub.
+      </p>
+      <div class="field">
+        <label for="tokenInput">Token</label>
+        <input type="password" id="tokenInput" placeholder="github_pat_…" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="tokenVence">Vence el (opcional, para que te avise aquí)</label>
+        <input type="text" id="tokenVence" placeholder="AAAA-MM-DD" inputmode="numeric" />
+      </div>
+      <div class="btn-row">
+        <button id="btnSaveToken">Guardar</button>
+        <button class="ghost" id="btnClearToken">Borrar</button>
+      </div>
+      <div class="status" id="statusToken"></div>
+    </div>
+  </details>
+
+  <details open class="card-gate" id="cardGate">
+    <summary>
+      <div class="icon-badge">🧭</div>
+      <div class="title-block"><span class="eyebrow">Paso 1</span><span class="titulo">¿Qué quieres hacer?</span></div>
+      <span class="chev">›</span>
+    </summary>
+    <div class="card-body">
+      <p class="card-help">Antes de lanzar nada, dime esto y te llevo directo a lo que sigue.</p>
+      <div class="gate-grid">
+        <button class="ghost gate-opcion" id="btnGateExistente">
+          <span class="emoji">📚</span>
+          <span>Trabajar en uno ya hecho<span class="sub">Ver la biblioteca de assets</span></span>
+        </button>
+        <button class="gate-opcion" id="btnGateNuevo">
+          <span class="emoji">✨</span>
+          <span>Quiero uno nuevo<span class="sub">Empezar desde una foto o descripción</span></span>
+        </button>
+      </div>
+    </div>
+  </details>
+
+  <details class="card-biblioteca" id="cardBiblioteca">
+    <summary>
+      <div class="icon-badge">📚</div>
+      <div class="title-block"><span class="eyebrow">Biblioteca</span><span class="titulo">Assets ya hechos</span></div>
+      <span class="chev">›</span>
+    </summary>
+    <div class="card-body">
+      <p class="card-help">
+        Toca uno y queda elegido en "Lanzar una corrida" y en "Aprobar", así no lo escribes.
+        "aprobado" = ya tiene su <code>final.png</code> y <code>.glb</code> en main. "en proceso" = tiene
+        corridas pero no está aprobado; los nuevos que solo viven en una rama <code>bucle/…</code> también
+        salen aquí, con la miniatura de su última hoja.
+      </p>
+      <div class="runs-list" id="bibliotecaLista">
+        <p class="empty">Toca "Actualizar" para cargarla (usa tu token de arriba).</p>
+      </div>
+      <button class="ghost" id="btnBibliotecaRefrescar">Actualizar</button>
+    </div>
+  </details>
+
+  <details class="card-motores">
+    <summary>
+      <div class="icon-badge">⚙️</div>
+      <div class="title-block"><span class="eyebrow">Ajustes</span><span class="titulo">Motores de IA</span></div>
+      <span class="chev">›</span>
+    </summary>
+    <div class="card-body">
+      <p class="card-help">
+        Así son, hoy, las opciones gratis que puede usar el bucle. No está Claude: su API no es
+        gratis (por eso existe todo esto), aunque su chat web sí lo es si algún día quieres armar
+        un paquete a mano en vez de automático.
+      </p>
+      <ul class="card-help" style="margin:0; padding-left:18px; display:flex; flex-direction:column; gap:4px;">
+        <li><strong>Gemini</strong> — ve imágenes (la hoja, la referencia, las siluetas), por eso da la
+          mejor corrección. Cuota generosa, se reinicia a medianoche hora del Pacífico.</li>
+        <li><strong>Groq</strong> — muy rápido y con más usos al día, pero NO ve imágenes (solo el texto
+          de medidas y silueta). Buen respaldo cuando Gemini se topa.</li>
+        <li><strong>OpenRouter</strong> — catálogo grande de modelos gratis, pero cambian de nombre
+          seguido; por eso no está en la cadena automática. Si lo usas, revisa que el modelo siga vigente.</li>
+        <li><strong>DeepSeek</strong> — su chat web es gratis, pero su API cobra desde la primera llamada;
+          úsalo solo si te interesa pagar por velocidad/calidad.</li>
+        <li><strong>Personalizado</strong> — cualquier otro servicio compatible con la API de OpenAI
+          (otro proveedor nuevo que salga, tu propio servidor, etc.), con su URL y clave.</li>
+      </ul>
+      <div class="field">
+        <label for="modeloPreferido">Modelo a usar (vacío = el de fábrica del proveedor elegido)</label>
+        <input type="text" id="modeloPreferido" list="modeloList" placeholder="p. ej. gemini-3.8-flash" />
+        <datalist id="modeloList">
+          <option value="gemini-3.8-flash">
+          <option value="llama-3.3-70b-versatile">
+          <option value="openai/gpt-oss-20b">
+          <option value="deepseek-chat">
+        </datalist>
+      </div>
+      <p class="card-help">
+        Se guarda en este teléfono y se usa como valor de partida en "Lanzar una corrida" y en
+        "Asset desde una foto". Los nombres de modelo cambian seguido — si uno deja de funcionar,
+        borra este campo para volver al de fábrica, o escribe el nuevo aquí.
+      </p>
+    </div>
+  </details>
+
+  <details class="card-lanzar" id="cardLanzar">
+    <summary>
+      <div class="icon-badge">🚀</div>
+      <div class="title-block"><span class="eyebrow">Bucle</span><span class="titulo">Lanzar una corrida</span></div>
+      <span class="chev">›</span>
+    </summary>
+    <div class="card-body">
+      <p class="card-help">
+        Corre el asset que ya tiene <code>build.py</code> a través de <code>tools/bucle.py</code> en
+        GitHub Actions. "auto" en la rama de partida sigue desde tu última corrida de ese asset.
+        "auto" en proveedor prueba Gemini y, si se topa con la cuota del día, brinca solo a Groq
+        — revisa "Corridas recientes" para ver cuál respondió y, si los dos fallaron, cuándo se
+        libera cada cuota (Gemini a medianoche hora del Pacífico, Groq a medianoche UTC).
+      </p>
+      <div class="field">
+        <label for="lzModelo">Modelo (vacío = usa el de "Motores de IA" o el de fábrica)</label>
+        <input type="text" id="lzModelo" list="modeloList" placeholder="p. ej. gemini-3.8-flash" />
+      </div>
+      <div class="field">
+        <label for="lzAsset">Asset</label>
+        <input type="text" id="lzAsset" list="assetList" placeholder="toca uno en la Biblioteca o escribe, p. ej. lata" />
+        <datalist id="assetList"></datalist>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="lzVueltas">Vueltas</label>
+          <input type="number" id="lzVueltas" value="4" min="1" max="12" />
+        </div>
+        <div class="field">
+          <label for="lzProveedor">Proveedor</label>
+          <select id="lzProveedor">
+            <option value="auto" selected>auto (Gemini → Groq)</option>
+            <option value="gemini">gemini</option>
+            <option value="groq">groq</option>
+            <option value="deepseek">deepseek (de paga)</option>
+            <option value="openrouter">openrouter</option>
+            <option value="personalizado">personalizado</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="lzRamaBase">Rama de partida</label>
+          <input type="text" id="lzRamaBase" value="auto" />
+        </div>
+        <div class="field">
+          <label for="lzEditables">Editables extra</label>
+          <input type="text" id="lzEditables" placeholder="alth/pelo.py" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="lzNota">Nota para el modelo (opcional)</label>
+        <textarea id="lzNota" placeholder="Céntrate en el volumen del pelo…"></textarea>
+      </div>
+      <button id="btnLanzar">Lanzar bucle</button>
+      <div class="status" id="statusLanzar"></div>
+    </div>
+  </details>
+
+  <details class="card-aprobar">
+    <summary>
+      <div class="icon-badge">✅</div>
+      <div class="title-block"><span class="eyebrow">Cierre</span><span class="titulo">Aprobar un resultado</span></div>
+      <span class="chev">›</span>
+    </summary>
+    <div class="card-body">
+      <p class="card-help">
+        Cuando una hoja te convenza: mezcla esa rama, renderiza en modo <code>final</code>, exporta el
+        <code>.glb</code> y sube todo a la rama destino. No agrega la fila en
+        <code>data/medidas.csv</code>; eso queda pendiente para revisar a mano o pedírmelo en el chat.
+      </p>
+      <div class="field">
+        <label for="apAsset">Asset</label>
+        <input type="text" id="apAsset" list="assetList" placeholder="toca uno en la Biblioteca o escribe, p. ej. lata" />
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="apRamaResultado">Rama a aprobar</label>
+          <input type="text" id="apRamaResultado" value="auto" />
+        </div>
+        <div class="field">
+          <label for="apRamaDestino">Sube a</label>
+          <input type="text" id="apRamaDestino" value="main" />
+        </div>
+      </div>
+      <button id="btnAprobar">Aprobar</button>
+      <div class="status" id="statusAprobar"></div>
+    </div>
+  </details>
+
+  <details class="card-nuevo" id="cardNuevo">
+    <summary>
+      <div class="icon-badge">✨</div>
+      <div class="title-block"><span class="eyebrow">Nuevo</span><span class="titulo">Asset desde una foto</span></div>
+      <span class="chev">›</span>
+    </summary>
+    <div class="card-body">
+      <p class="card-help">
+        Antes de crear nada, reviso la biblioteca (main y las ramas <code>bucle/…</code>) por nombre,
+        alias y descripción; si ya existe algo así, te pregunto antes de duplicar trabajo. Si dices que
+        sí es ese, tu foto se sube y se usa como referencia nueva de esa corrida. Sube la foto y luego, con "Cómo empezarlo":
+        o abre un <strong>Issue</strong> para que yo arme el primer <code>build.py</code> en el chat, o
+        le pides directo a la IA gratis (Gemini/Groq) que escriba ella la primera versión.
+      </p>
+      <div class="field">
+        <label for="nvNombre">Nombre corto</label>
+        <input type="text" id="nvNombre" placeholder="espada_larga" />
+      </div>
+      <div class="field">
+        <label for="nvDesc">Qué es y tamaño real</label>
+        <input type="text" id="nvDesc" placeholder="espada larga medieval, como de 90 cm" />
+      </div>
+      <div class="field">
+        <label for="nvFoto">Foto de referencia</label>
+        <input type="file" id="nvFoto" accept="image/*" />
+      </div>
+
+      <div class="parecido" id="nvParecido">
+        <div class="parecido-cabeza">
+          <img class="run-thumb" id="nvParecidoImg" alt="">
+          <div>
+            <div class="parecido-nombre" id="nvParecidoNombre"></div>
+            <div class="card-help" id="nvParecidoMotivo"></div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button id="btnParecidoMismo" style="flex:1">Sí, trabajar sobre ese</button>
+          <button class="ghost" id="btnParecidoNuevo" style="flex:1">No, es distinto</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="nvModo">Cómo empezarlo (si resulta que es nuevo)</label>
+        <select id="nvModo">
+          <option value="arrancar" selected>La IA gratis escribe el primer boceto (automático)</option>
+          <option value="issue">Solo crear un Issue para pedírselo a Claude en el chat</option>
+        </select>
+      </div>
+      <div class="row" id="nvArrancarOpciones">
+        <div class="field">
+          <label for="nvVueltas">Vueltas</label>
+          <input type="number" id="nvVueltas" value="4" min="1" max="12" />
+        </div>
+        <div class="field">
+          <label for="nvProveedor">Proveedor</label>
+          <select id="nvProveedor">
+            <option value="auto" selected>auto (Gemini → Groq)</option>
+            <option value="gemini">gemini</option>
+            <option value="groq">groq</option>
+            <option value="openrouter">openrouter</option>
+          </select>
+        </div>
+      </div>
+      <button id="btnNuevo">Enviar</button>
+      <div class="status" id="statusNuevo"></div>
+    </div>
+  </details>
+
+  <details class="card-corridas">
+    <summary>
+      <div class="icon-badge">📊</div>
+      <div class="title-block"><span class="eyebrow">Estado</span><span class="titulo">Corridas recientes</span></div>
+      <span class="chev">›</span>
+    </summary>
+    <div class="card-body">
+      <button class="ghost" id="btnRefrescar">Actualizar</button>
+      <div class="runs-list" id="runsList">
+        <p class="empty">Guarda tu token arriba y toca "Actualizar" para ver tus corridas.</p>
+      </div>
+    </div>
+  </details>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var OWNER = "Klymapo", REPO = "alth-meta";
+  var API = "https://api.github.com/repos/" + OWNER + "/" + REPO;
+  var enPages = /\.github\.io$/.test(location.hostname);
+  document.getElementById("avisoPages").hidden = enPages;
+
+  function ls(key, val) {
+    try {
+      if (val === undefined) return localStorage.getItem(key);
+      if (val === null) { localStorage.removeItem(key); return; }
+      localStorage.setItem(key, val);
+    } catch (e) { /* almacenamiento no disponible; seguimos sin recordar nada */ }
+  }
+
+  function getToken() { return ls("alth_gh_token") || ""; }
+
+  function setStatus(id, kind, html) {
+    var el = document.getElementById(id);
+    el.className = "status show " + kind;
+    el.innerHTML = html;
+  }
+  function clearStatus(id) {
+    var el = document.getElementById(id);
+    el.className = "status"; el.innerHTML = "";
+  }
+
+  function refreshTokenBadge() {
+    var t = getToken();
+    var vence = ls("alth_gh_token_vence") || "";
+    var dot = document.getElementById("tokenDot"), sub = document.getElementById("tokenSub");
+    document.getElementById("tokenInput").placeholder = t ? "•••• ya guardado, pega uno nuevo para cambiarlo" : "github_pat_…";
+    if (!t) {
+      dot.className = "dot";
+      sub.textContent = "Sin token guardado";
+      return;
+    }
+    var texto = "Token guardado en este teléfono";
+    var clase = " ok";
+    if (vence) {
+      var dias = Math.ceil((new Date(vence + "T00:00:00") - new Date()) / 86400000);
+      if (dias < 0) { texto += " · VENCIÓ, pega uno nuevo arriba"; clase = " bad"; }
+      else if (dias === 0) { texto += " · vence hoy, renuévalo pronto"; clase = " warn"; }
+      else if (dias <= 7) { texto += " · vence en " + dias + " día" + (dias === 1 ? "" : "s"); clase = " warn"; }
+      else { texto += " · vence el " + vence; }
+    }
+    dot.className = "dot" + clase;
+    sub.textContent = texto;
+  }
+
+  async function gh(path, opts) {
+    var token = getToken();
+    if (!token) throw new Error("Guarda tu token de GitHub arriba primero.");
+    opts = opts || {};
+    opts.headers = Object.assign({
+      "Authorization": "Bearer " + token,
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    }, opts.headers || {});
+    var res;
+    try {
+      res = await fetch(API + path, opts);
+    } catch (e) {
+      throw new Error(enPages
+        ? "No se pudo conectar con GitHub. Revisa tu internet y vuelve a intentar."
+        : "Desde Claude no se puede conectar con GitHub. Abre el taller en klymapo.github.io/alth-meta/taller.");
+    }
+    if (res.status === 401 || res.status === 403) {
+      throw new Error("GitHub rechazó el token (venció o le faltan permisos). Vuelve a pegarlo arriba.");
+    }
+    if (!res.ok) {
+      var msg = "Error " + res.status;
+      try { var j = await res.json(); if (j && j.message) msg += ": " + j.message; } catch (e2) {}
+      throw new Error(msg);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  function dispatch(workflowFile, inputs) {
+    return gh("/actions/workflows/" + workflowFile + "/dispatches", {
+      method: "POST",
+      body: JSON.stringify({ ref: "main", inputs: inputs })
+    });
+  }
+
+  function slug(s) {
+    return (s || "").toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "asset";
+  }
+
+  // ---- biblioteca: qué assets ya existen (main + ramas bucle/*), para no duplicar trabajo ----
+  var biblioteca = null;
+  var RAW = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/refs/heads/";
+  function tokens(s) {
+    return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .split(/[^a-z0-9]+/).filter(function (t) { return t.length >= 3; });
+  }
+  function clavesFuertes(a) {
+    return tokens(a.nombre.replace(/_/g, " ")).concat(tokens((a.alias || []).join(" ")));
+  }
+  function clavesDebiles(a) {
+    return tokens((a.categoria || "") + " " + (a.descripcion || ""));
+  }
+  function puntajeTexto(consultaTokens, a) {
+    var fuertes = {}; clavesFuertes(a).forEach(function (x) { fuertes[x] = true; });
+    var debiles = {}; clavesDebiles(a).forEach(function (x) { debiles[x] = true; });
+    var puntos = 0;
+    consultaTokens.forEach(function (q) {
+      if (fuertes[q]) puntos += 2; else if (debiles[q]) puntos += 1;
+    });
+    return puntos;
+  }
+  function decodificarJson(b64) {
+    var bin = atob((b64 || "").replace(/\s/g, ""));
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return JSON.parse(new TextDecoder("utf-8").decode(bytes));
+  }
+  async function listarCarpeta(ruta) {
+    var items = await gh("/contents/" + ruta);
+    return Array.isArray(items) ? items : [];
+  }
+  // última rama bucle/<nombre>-N de cada asset, comparando N como número
+  async function ultimasRamas() {
+    var todas = [], pagina = 1;
+    while (true) {
+      var lote = await gh("/branches?per_page=100&page=" + pagina);
+      todas = todas.concat(lote || []);
+      if (!lote || lote.length < 100) break;
+      pagina++;
+    }
+    var mejores = {};
+    todas.forEach(function (b) {
+      var m = /^bucle\/(.+)-(\d+)$/.exec(b.name);
+      if (!m) return;
+      var n = parseInt(m[2], 10);
+      if (!mejores[m[1]] || n > mejores[m[1]].n) mejores[m[1]] = { rama: b.name, n: n };
+    });
+    return mejores;
+  }
+  function entradaDesdeSpec(spec, ruta) {
+    return {
+      nombre: spec.nombre || ruta.split("/").pop(),
+      ruta: ruta,
+      categoria: spec.categoria || "",
+      alias: spec.alias || [],
+      descripcion: spec.descripcion_humana || "",
+      aprobado: false, imagen: null, rama: null
+    };
+  }
+  async function cargarBiblioteca(forzar) {
+    if (biblioteca && !forzar) return biblioteca;
+    if (!forzar) {
+      try {
+        var cache = JSON.parse(ls("alth_biblioteca_cache") || "null");
+        if (cache && cache.v === 2) { biblioteca = cache.lista; return biblioteca; }
+      } catch (e) { /* sin cache, seguimos a pedirla */ }
+    }
+    var ramas = await ultimasRamas();
+    var raiz = await listarCarpeta("assets");
+    var candidatas = [];
+    for (var i = 0; i < raiz.length; i++) {
+      var it = raiz[i];
+      if (it.type !== "dir") continue;
+      var hijos = await listarCarpeta(it.path);
+      if (hijos.some(function (h) { return h.name === "spec.json"; })) {
+        candidatas.push({ path: it.path, hijos: hijos });
+      } else {
+        for (var j = 0; j < hijos.length; j++) {
+          if (hijos[j].type !== "dir") continue;
+          var nietos = await listarCarpeta(hijos[j].path);
+          if (nietos.some(function (h) { return h.name === "spec.json"; })) {
+            candidatas.push({ path: hijos[j].path, hijos: nietos });
+          }
+        }
+      }
+    }
+    var lista = [], vistos = {};
+    for (var k = 0; k < candidatas.length; k++) {
+      var c = candidatas[k];
+      var specItem = c.hijos.find(function (h) { return h.name === "spec.json"; });
+      var finalItem = c.hijos.find(function (h) { return h.name === "final.png"; });
+      var spec = {};
+      try { spec = await (await fetch(specItem.download_url)).json(); } catch (e) { /* spec ilegible */ }
+      var entrada = entradaDesdeSpec(spec, c.path);
+      var base = c.path.split("/").pop();
+      vistos[base] = true;
+      if (finalItem) { entrada.aprobado = true; entrada.imagen = finalItem.download_url; }
+      if (ramas[base]) {
+        entrada.rama = ramas[base].rama;
+        if (!entrada.imagen) entrada.imagen = RAW + entrada.rama + "/" + c.path + "/bucle/hoja_ultima.png";
+      }
+      lista.push(entrada);
+    }
+    // assets nuevos que todavía solo viven en su rama bucle/<nombre>-N (modo "arrancar")
+    var nombresRama = Object.keys(ramas).filter(function (n) { return !vistos[n]; });
+    for (var r = 0; r < nombresRama.length; r++) {
+      var nombre = nombresRama[r], rama = ramas[nombre].rama, ruta = "assets/" + nombre;
+      var specRama = {};
+      try {
+        var f = await gh("/contents/" + ruta + "/spec.json?ref=" + encodeURIComponent(rama));
+        specRama = decodificarJson(f.content);
+      } catch (e) { /* sin spec legible: igual lo mostramos por su nombre */ }
+      var nueva = entradaDesdeSpec(specRama, ruta);
+      nueva.rama = rama;
+      nueva.imagen = RAW + rama + "/" + ruta + "/bucle/hoja_ultima.png";
+      lista.push(nueva);
+    }
+    lista.sort(function (a, b) {
+      return (a.aprobado === b.aprobado) ? a.nombre.localeCompare(b.nombre) : (a.aprobado ? 1 : -1);
+    });
+    biblioteca = lista;
+    try { ls("alth_biblioteca_cache", JSON.stringify({ v: 2, lista: lista })); } catch (e) { /* sin espacio */ }
+    llenarSugerencias(lista);
+    return lista;
+  }
+  function escapar(t) {
+    return String(t || "").replace(/[&<>"]/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch];
+    });
+  }
+  function llenarSugerencias(lista) {
+    document.getElementById("assetList").innerHTML = lista.map(function (a) {
+      return '<option value="' + escapar(a.ruta) + '">';
+    }).join("");
+  }
+  function pintarBiblioteca(lista) {
+    var el = document.getElementById("bibliotecaLista");
+    if (!lista.length) { el.innerHTML = '<p class="empty">Todavía no hay ningún asset en el repo.</p>'; return; }
+    el.innerHTML = lista.map(function (a, i) {
+      var img = a.imagen
+        ? '<img class="run-thumb" src="' + escapar(a.imagen) + '" alt="" onerror="this.replaceWith(Object.assign(document.createElement(\'div\'),{className:\'run-thumb\',textContent:\'🧸\'}))">'
+        : '<div class="run-thumb">🧸</div>';
+      var estado = a.aprobado ? '<span class="pill good">✓ aprobado</span>' : '<span class="pill warn">◐ en proceso</span>';
+      var meta = (a.categoria || "sin categoría") + (a.rama ? " · " + a.rama.replace(/^bucle\//, "") : "");
+      return '<div class="run" data-i="' + i + '" role="button" tabindex="0" style="cursor:pointer">' + img +
+        '<div class="run-main"><div class="run-name">' + escapar(a.nombre) + '</div>' +
+        '<div class="run-meta">' + escapar(meta) + '</div></div>' + estado + '</div>';
+    }).join("");
+    Array.prototype.forEach.call(el.querySelectorAll(".run"), function (row) {
+      row.addEventListener("click", function () {
+        elegirAsset(lista[+row.dataset.i].ruta);
+        document.getElementById("cardLanzar").open = true;
+        document.getElementById("cardLanzar").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  }
+  async function buscarParecido(nombre, desc) {
+    var lista;
+    try { lista = await cargarBiblioteca(true); }            // siempre fresca para no duplicar
+    catch (e) { lista = await cargarBiblioteca(false); }     // sin red: la última copia guardada
+    var consulta = tokens(nombre.replace(/_/g, " ") + " " + desc);
+    var exacto = slug(nombre);
+    var mejor = null, mejorPuntos = 0;
+    for (var i = 0; i < lista.length; i++) {
+      var a = lista[i];
+      var puntos = puntajeTexto(consulta, a);
+      if (a.ruta.split("/").pop() === exacto) puntos += 10;
+      if (puntos > mejorPuntos) { mejorPuntos = puntos; mejor = a; }
+    }
+    if (!mejor || mejorPuntos < 2) return null;
+    return Object.assign({}, mejor, {
+      motivo: mejorPuntos >= 10 ? "ya hay uno con ese mismo nombre" : "el nombre o la descripción coinciden"
+    });
+  }
+  async function subirFoto(nombre, file) {
+    var b64 = await fileToBase64(file);
+    var path = "refs/pendientes/" + slug(nombre) + "-" + Date.now() + "." + extOf(file);
+    await gh("/contents/" + path.split("/").map(encodeURIComponent).join("/"), {
+      method: "PUT",
+      body: JSON.stringify({ message: "Referencia: " + nombre, content: b64, branch: "main" })
+    });
+    return path;
+  }
+  function fileToBase64(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(reader.result.split(",")[1]); };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function extOf(file) {
+    var m = /\.([a-zA-Z0-9]+)$/.exec(file.name || "");
+    if (m) return m[1].toLowerCase();
+    if (file.type === "image/png") return "png";
+    return "jpg";
+  }
+
+  function relTime(iso) {
+    var diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 60) return "hace instantes";
+    if (diff < 3600) return "hace " + Math.round(diff / 60) + " min";
+    if (diff < 86400) return "hace " + Math.round(diff / 3600) + " h";
+    return "hace " + Math.round(diff / 86400) + " d";
+  }
+
+  function pillFor(run) {
+    if (run.status !== "completed") return '<span class="pill warn"><span class="spin"></span>' + run.status + "</span>";
+    if (run.conclusion === "success") return '<span class="pill good">✓ éxito</span>';
+    if (run.conclusion === "failure") return '<span class="pill bad">✕ falló</span>';
+    return '<span class="pill">' + (run.conclusion || "—") + "</span>";
+  }
+
+  // ---- token ----
+  document.getElementById("tokenVence").value = ls("alth_gh_token_vence") || "";
+  document.getElementById("btnSaveToken").addEventListener("click", function () {
+    var v = document.getElementById("tokenInput").value.trim();
+    var vence = document.getElementById("tokenVence").value.trim();
+    if (!v && !vence) { setStatus("statusToken", "bad", "Pega un token primero."); return; }
+    if (vence && !/^\d{4}-\d{2}-\d{2}$/.test(vence)) {
+      setStatus("statusToken", "bad", "La fecha de vencimiento va como AAAA-MM-DD.");
+      return;
+    }
+    if (v) ls("alth_gh_token", v);
+    ls("alth_gh_token_vence", vence || null);
+    document.getElementById("tokenInput").value = "";
+    refreshTokenBadge();
+    setStatus("statusToken", "good", "Guardado.");
+  });
+  document.getElementById("btnClearToken").addEventListener("click", function () {
+    ls("alth_gh_token", null);
+    ls("alth_gh_token_vence", null);
+    document.getElementById("tokenVence").value = "";
+    refreshTokenBadge();
+    setStatus("statusToken", "info", "Token borrado de este teléfono.");
+  });
+
+  // ---- modelo preferido (compartido entre "Lanzar" y "Asset desde una foto") ----
+  var modeloPreferidoEl = document.getElementById("modeloPreferido");
+  modeloPreferidoEl.value = ls("alth_modelo_preferido") || "";
+  modeloPreferidoEl.addEventListener("change", function () {
+    ls("alth_modelo_preferido", modeloPreferidoEl.value.trim() || null);
+  });
+  function modeloElegido(campoPropio) {
+    var propio = (campoPropio || "").trim();
+    return propio || modeloPreferidoEl.value.trim();
+  }
+
+  // ---- asset elegido: uno solo para "Lanzar" y "Aprobar", recordado en este teléfono ----
+  var lzAssetEl = document.getElementById("lzAsset"), apAssetEl = document.getElementById("apAsset");
+  function elegirAsset(ruta) {
+    lzAssetEl.value = ruta; apAssetEl.value = ruta;
+    ls("alth_ultimo_asset", ruta || null);
+  }
+  lzAssetEl.value = apAssetEl.value = ls("alth_ultimo_asset") || "";
+  [lzAssetEl, apAssetEl].forEach(function (el) {
+    el.addEventListener("change", function () { elegirAsset(el.value.trim()); });
+  });
+  try {
+    var cacheInicial = JSON.parse(ls("alth_biblioteca_cache") || "null");
+    if (cacheInicial && cacheInicial.v === 2) llenarSugerencias(cacheInicial.lista);
+  } catch (e) { /* sin cache */ }
+
+  // ---- compuerta: ¿ya hecho o nuevo? ----
+  async function abrirBiblioteca(forzar) {
+    document.getElementById("cardBiblioteca").open = true;
+    document.getElementById("cardBiblioteca").scrollIntoView({ behavior: "smooth", block: "start" });
+    var el = document.getElementById("bibliotecaLista");
+    el.innerHTML = '<p class="empty"><span class="spin"></span> Cargando…</p>';
+    try {
+      pintarBiblioteca(await cargarBiblioteca(forzar));
+    } catch (e) {
+      el.innerHTML = '<p class="empty">' + e.message + '</p>';
+    }
+  }
+  document.getElementById("btnGateExistente").addEventListener("click", function () { abrirBiblioteca(false); });
+  document.getElementById("btnBibliotecaRefrescar").addEventListener("click", function () { abrirBiblioteca(true); });
+  document.getElementById("btnGateNuevo").addEventListener("click", function () {
+    document.getElementById("cardNuevo").open = true;
+    document.getElementById("cardNuevo").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  // ---- lanzar bucle ----
+  document.getElementById("btnLanzar").addEventListener("click", async function () {
+    var btn = this;
+    clearStatus("statusLanzar");
+    var inputs = {
+      asset: document.getElementById("lzAsset").value.trim(),
+      vueltas: String(document.getElementById("lzVueltas").value || "4"),
+      proveedor: document.getElementById("lzProveedor").value,
+      modelo: modeloElegido(document.getElementById("lzModelo").value),
+      rama_base: document.getElementById("lzRamaBase").value.trim() || "auto",
+      nota: document.getElementById("lzNota").value.trim(),
+      editables: document.getElementById("lzEditables").value.trim()
+    };
+    if (!inputs.asset) { setStatus("statusLanzar", "bad", "Escribe qué asset lanzar."); return; }
+    btn.disabled = true;
+    setStatus("statusLanzar", "info", '<span class="spin"></span> Lanzando…');
+    try {
+      await dispatch("bucle.yml", inputs);
+      setStatus("statusLanzar", "good",
+        "Lanzado. Revísalo en la pestaña Actions, o abre \"Corridas recientes\" abajo en un momento.");
+    } catch (e) {
+      setStatus("statusLanzar", "bad", e.message);
+    } finally { btn.disabled = false; }
+  });
+
+  // ---- aprobar ----
+  document.getElementById("btnAprobar").addEventListener("click", async function () {
+    var btn = this;
+    clearStatus("statusAprobar");
+    var inputs = {
+      asset: document.getElementById("apAsset").value.trim(),
+      rama_resultado: document.getElementById("apRamaResultado").value.trim() || "auto",
+      rama_destino: document.getElementById("apRamaDestino").value.trim() || "main"
+    };
+    if (!inputs.asset) { setStatus("statusAprobar", "bad", "Escribe qué asset aprobar."); return; }
+    btn.disabled = true;
+    setStatus("statusAprobar", "info", '<span class="spin"></span> Aprobando…');
+    try {
+      await dispatch("aprobar.yml", inputs);
+      setStatus("statusAprobar", "good", "Lanzado. El render final tarda un rato; revisa Corridas recientes.");
+    } catch (e) {
+      setStatus("statusAprobar", "bad", e.message);
+    } finally { btn.disabled = false; }
+  });
+
+  // ---- asset nuevo ----
+  var nvModoEl = document.getElementById("nvModo"), nvOpcionesEl = document.getElementById("nvArrancarOpciones");
+  function actualizarNvModo() { nvOpcionesEl.style.display = nvModoEl.value === "arrancar" ? "flex" : "none"; }
+  nvModoEl.addEventListener("change", actualizarNvModo);
+  actualizarNvModo();
+
+  var nvDecidido = null;   // null | "nuevo" (el usuario ya confirmó que es distinto)
+  var parecidoActual = null;
+
+  function ocultarParecido() {
+    document.getElementById("nvParecido").classList.remove("show");
+    parecidoActual = null;
+  }
+  function mostrarParecido(a) {
+    parecidoActual = a;
+    var imgP = document.getElementById("nvParecidoImg");
+    imgP.hidden = !a.imagen; imgP.src = a.imagen || "";
+    imgP.onerror = function () { imgP.hidden = true; };
+    document.getElementById("nvParecidoNombre").textContent =
+      "Ya existe: " + a.nombre + (a.aprobado ? " (aprobado)" : " (en proceso)");
+    document.getElementById("nvParecidoMotivo").textContent =
+      "Lo encontré porque " + (a.motivo || "se parece") + ". ¿Es lo que buscabas?";
+    document.getElementById("nvParecido").classList.add("show");
+    document.getElementById("nvParecido").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  document.getElementById("btnParecidoNuevo").addEventListener("click", function () {
+    nvDecidido = "nuevo";
+    ocultarParecido();
+    document.getElementById("btnNuevo").click();
+  });
+  document.getElementById("btnParecidoMismo").addEventListener("click", async function () {
+    var a = parecidoActual;
+    ocultarParecido();
+    if (!a) return;
+    var btn = document.getElementById("btnNuevo");
+    btn.disabled = true;
+    setStatus("statusNuevo", "info", '<span class="spin"></span> Subiendo tu foto y lanzando sobre ' + escapar(a.nombre) + '…');
+    try {
+      var fotoRef = "";
+      var fotoNueva = document.getElementById("nvFoto").files[0];
+      if (fotoNueva) fotoRef = await subirFoto(document.getElementById("nvNombre").value.trim() || a.nombre, fotoNueva);
+      elegirAsset(a.ruta);
+      await dispatch("bucle.yml", {
+        referencia: fotoRef,
+        asset: a.ruta, modo: "correr", rama_base: "auto",
+        vueltas: String(document.getElementById("nvVueltas").value || "4"),
+        proveedor: document.getElementById("nvProveedor").value,
+        modelo: modeloElegido(""),
+        nota: document.getElementById("nvDesc").value.trim()
+      });
+      setStatus("statusNuevo", "good",
+        "Lanzado sobre " + escapar(a.nombre) + " con tu foto y tu indicación. Revisa \"Corridas recientes\" en un momento.");
+      document.getElementById("nvNombre").value = "";
+      document.getElementById("nvDesc").value = "";
+      document.getElementById("nvFoto").value = "";
+    } catch (e) {
+      setStatus("statusNuevo", "bad", e.message);
+    } finally { btn.disabled = false; }
+  });
+
+  document.getElementById("btnNuevo").addEventListener("click", async function () {
+    var btn = this;
+    clearStatus("statusNuevo");
+    var nombre = document.getElementById("nvNombre").value.trim();
+    var desc = document.getElementById("nvDesc").value.trim();
+    var file = document.getElementById("nvFoto").files[0];
+    var modoArrancar = nvModoEl.value === "arrancar";
+    if (!nombre || !desc || !file) {
+      setStatus("statusNuevo", "bad", "Faltan el nombre, la descripción o la foto.");
+      return;
+    }
+    if (nvDecidido !== "nuevo") {
+      btn.disabled = true;
+      setStatus("statusNuevo", "info", '<span class="spin"></span> Revisando si ya existe algo así…');
+      try {
+        var parecido = await buscarParecido(nombre, desc);
+        if (parecido) {
+          clearStatus("statusNuevo");
+          mostrarParecido(parecido);
+          btn.disabled = false;
+          return;
+        }
+      } catch (e) {
+        // si la búsqueda falla (sin token, sin red), seguimos y creamos de todos modos
+      }
+    }
+    nvDecidido = null;
+    btn.disabled = true;
+    setStatus("statusNuevo", "info", '<span class="spin"></span> Subiendo…');
+    try {
+      var path = await subirFoto(nombre, file);
+      if (modoArrancar) {
+        await dispatch("bucle.yml", {
+          asset: slug(nombre),
+          modo: "arrancar",
+          descripcion: desc,
+          referencia: path,
+          vueltas: String(document.getElementById("nvVueltas").value || "4"),
+          proveedor: document.getElementById("nvProveedor").value,
+          modelo: modeloElegido("")
+        });
+        elegirAsset("assets/" + slug(nombre));
+        setStatus("statusNuevo", "good",
+          "Foto subida y bucle lanzado en modo arranque. Ya quedó elegido abajo como <code>assets/" + slug(nombre) + "</code>. La IA escribe el primer boceto sola — " +
+          "revisa \"Corridas recientes\" en un momento.");
+        document.getElementById("nvNombre").value = "";
+        document.getElementById("nvDesc").value = "";
+        document.getElementById("nvFoto").value = "";
+        btn.disabled = false;
+        return;
+      }
+      var rawUrl = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/main/" + path;
+      var body = "**Qué es:** " + desc + "\n\n![referencia](" + rawUrl + ")\n\n" +
+        "_Enviado desde el Taller ALTH-META._";
+      var issue = await gh("/issues", {
+        method: "POST",
+        body: JSON.stringify({
+          title: "Nuevo asset: " + nombre,
+          body: body,
+          labels: ["nuevo-asset"]
+        })
+      });
+      setStatus("statusNuevo", "good",
+        'Listo: <a href="' + issue.html_url + '" target="_blank" rel="noopener">Issue #' + issue.number +
+        "</a> creado. Avísame en el chat cuando quieras que arranque.");
+      document.getElementById("nvNombre").value = "";
+      document.getElementById("nvDesc").value = "";
+      document.getElementById("nvFoto").value = "";
+    } catch (e) {
+      setStatus("statusNuevo", "bad", e.message);
+    } finally { btn.disabled = false; }
+  });
+
+  // ---- corridas recientes ----
+  async function cargarCorridas() {
+    var list = document.getElementById("runsList");
+    if (!getToken()) {
+      list.innerHTML = '<p class="empty">Guarda tu token arriba y toca "Actualizar" para ver tus corridas.</p>';
+      return;
+    }
+    list.innerHTML = '<p class="empty"><span class="spin"></span> Cargando…</p>';
+    try {
+      var results = await Promise.all([
+        gh("/actions/workflows/bucle.yml/runs?per_page=6"),
+        gh("/actions/workflows/aprobar.yml/runs?per_page=6")
+      ]);
+      var runs = results[0].workflow_runs.concat(results[1].workflow_runs);
+      runs.sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+      runs = runs.slice(0, 8);
+      if (!runs.length) {
+        list.innerHTML = '<p class="empty">Todavía no hay corridas.</p>';
+        return;
+      }
+      list.innerHTML = runs.map(function (r) {
+        var nombre = r.name === "Bucle ALTH (cualquier IA)" ? "Bucle" : "Aprobar";
+        return '<div class="run">' +
+          '<div class="run-main"><div class="run-name">' + nombre + " #" + r.run_number + "</div>" +
+          '<div class="run-meta">' + r.head_branch + " · " + relTime(r.created_at) + "</div></div>" +
+          pillFor(r) +
+          '<a href="' + r.html_url + '" target="_blank" rel="noopener">Ver</a>' +
+          "</div>";
+      }).join("");
+    } catch (e) {
+      list.innerHTML = '<p class="empty">' + e.message + "</p>";
+    }
+  }
+  document.getElementById("btnRefrescar").addEventListener("click", cargarCorridas);
+
+  refreshTokenBadge();
+  if (getToken()) cargarCorridas();
+})();
+</script>
+</body></html>
