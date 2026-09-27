@@ -14,10 +14,9 @@ import bpy  # noqa: E402
 import alth  # noqa: E402
 from alth import pelo, personaje  # noqa: E402
 
-PIEL = "#FBC39C"
-RUBIO_ARENA = "#D2AE72"  # propuesto por la tarea; falta agregarlo a spec/alth_spec.json → paleta
-
 alth.nueva_escena()
+PIEL = "#FBC39C"
+RUBIO_ARENA = alth.SPEC["paleta"]["medidos"]["rubio_arena"]  # ya registrado en la paleta
 
 pl = personaje.plan("estandar")
 cabeza_pieza = pl["piezas"]["cabeza"]

@@ -9,6 +9,10 @@ problema de por sí). Ahora todo —la corona y las cuñas— es una única mall
    y solo baja de verdad hacia la nuca — así la cara queda libre sin tener que encoger el radio.
 3. Del borde cuelgan 8-12 cuñas anchas y facetadas (base 8-12 mm, remate romo, nunca una punta
    fina), cayendo hacia abajo y afuera; dos de ellas, a los lados del frente, enmarcan la cara.
+4. Aparte, 2-3 cuñas de "copete" nacen cerca de la PUNTA de la corona (no del borde) y apuntan
+   sobre todo hacia arriba y un poco hacia adelante —no radialmente—, más largas que las del
+   borde: son las que dan volumen ARRIBA y hacen que se lea "de punta" de frente, no como un
+   collar parejo alrededor de la cabeza.
 
 Al ser una sola malla, la verificación de "flotantes" (que compara OBJETOS entre sí) no aplica
 adentro: solo hace falta que esta malla, como conjunto, toque la cabeza — y la corona la abraza
@@ -91,17 +95,50 @@ def _cuna_spec(az_grados: float, corona: dict, largo_val: float, ancho_val: floa
     direccion = (math.cos(a) * lift_r, math.sin(a) * lift_r, lift_z)
     return {"pos": (x, y, z), "direccion": direccion, "arriba": (0.0, 0.0, 1.0),
             "largo": largo_val, "ancho": ancho_val, "caida": caida_val,
-            "azimut": az_grados, "es_marco": es_marco}
+            "azimut": az_grados, "es_marco": es_marco, "es_copete": False}
+
+
+def plan_copete(corona: dict, cantidad: int = 3, ancho_base=(9.0, 13.0), largo=(15.0, 22.0),
+                 caida=(1.0, 3.0), abanico: float = 12.0, semilla: int = 2) -> list[dict]:
+    """Cuñas centrales que nacen cerca de la PUNTA de la corona (no del borde) y apuntan sobre
+    todo hacia arriba (+Z) y un poco hacia adelante (−Y) — no radialmente, como las del borde —
+    para que el peinado tenga volumen ARRIBA de la coronilla y se lea "de punta" de frente, no
+    como un aro parejo alrededor de la cabeza. Más largas que las del borde (`plan_cunias`).
+    """
+    if cantidad < 1:
+        return []
+    rng = random.Random(semilla)
+    piezas = []
+    for i in range(cantidad):
+        frac = (i - (cantidad - 1) / 2) / max(1, cantidad - 1)  # -0.5 .. 0.5 (0 si cantidad==1)
+        lean = frac * abanico * 2  # abanico lateral entre ellas, para que no salgan pegadas
+        radio_frac = rng.uniform(0.10, 0.30)  # cerca del centro del techo, no del borde
+        az = math.radians(270.0 + lean)  # 270° = frente
+        x = corona["cx"] + corona["hw"] * radio_frac * math.cos(az)
+        y = corona["cy"] + corona["hd"] * radio_frac * math.sin(az)
+        z = corona["z_top"] - rng.uniform(0.3, 1.5)  # nace casi en la punta, no en el borde
+        dx = math.sin(math.radians(lean)) * 0.30
+        dy = -0.55 + rng.uniform(-0.05, 0.05)  # −Y: hacia adelante
+        dz = 0.85 + rng.uniform(-0.05, 0.05)   # +Z: sobre todo hacia arriba
+        norma = math.sqrt(dx * dx + dy * dy + dz * dz)
+        direccion = (dx / norma, dy / norma, dz / norma)
+        piezas.append({"pos": (x, y, z), "direccion": direccion, "arriba": (0.0, 0.0, 1.0),
+                        "largo": rng.uniform(*largo), "ancho": rng.uniform(*ancho_base),
+                        "caida": rng.uniform(*caida), "azimut": math.degrees(az),
+                        "es_marco": False, "es_copete": True})
+    return piezas
 
 
 def plan_pelo(cabeza: dict, escala: float = 1.3, sesgo_atras: float = 2.5, margen_arriba: float = 3.0,
               segmentos_corona: int = 12, cunias: int = 10, ancho_base=(8.0, 12.0), largo=(10.0, 17.0),
-              caida=(3.0, 8.0), semilla: int = 1) -> dict:
-    """Plan completo (corona + cuñas), pura. `construir_pelo` la pasa a una malla real."""
+              caida=(3.0, 8.0), copete: int = 3, semilla: int = 1) -> dict:
+    """Plan completo (corona + cuñas del borde + cuñas de copete arriba), pura.
+    `construir_pelo` la pasa a una malla real."""
     corona = plan_corona(cabeza, escala=escala, sesgo_atras=sesgo_atras, margen_arriba=margen_arriba,
                           segmentos=segmentos_corona)
     piezas = plan_cunias(corona, cunias=cunias, ancho_base=ancho_base, largo=largo, caida=caida,
                           semilla=semilla)
+    piezas += plan_copete(corona, cantidad=copete, semilla=semilla + 1)
     return {"corona": corona, "cunias": piezas}
 
 
@@ -165,14 +202,15 @@ def _agregar_cuna(bm, pos, direccion, largo, ancho, caida, grosor=None, arriba_r
 
 def construir_pelo(cabeza: dict, escala: float = 1.3, sesgo_atras: float = 2.5, margen_arriba: float = 3.0,
                     segmentos_corona: int = 12, cunias: int = 10, ancho_base=(8.0, 12.0), largo=(10.0, 17.0),
-                    caida=(3.0, 8.0), semilla: int = 1, color: str = "#D2AE72", nombre: str = "Pelo"):
-    """Corona + cuñas en UNA sola malla (un único objeto)."""
+                    caida=(3.0, 8.0), copete: int = 3, semilla: int = 1, color: str = "#D2AE72",
+                    nombre: str = "Pelo"):
+    """Corona + cuñas (borde + copete) en UNA sola malla (un único objeto)."""
     import bmesh
     from . import _asignar, _objeto
 
     plan = plan_pelo(cabeza, escala=escala, sesgo_atras=sesgo_atras, margen_arriba=margen_arriba,
                       segmentos_corona=segmentos_corona, cunias=cunias, ancho_base=ancho_base,
-                      largo=largo, caida=caida, semilla=semilla)
+                      largo=largo, caida=caida, copete=copete, semilla=semilla)
     bm = bmesh.new()
     _agregar_corona(bm, plan["corona"])
     for c in plan["cunias"]:

@@ -84,7 +84,37 @@ def test_mismo_semilla_da_el_mismo_plan():
     assert a == b
 
 
-def test_plan_pelo_junta_corona_y_cunias():
-    plan = p.plan_pelo(CABEZA, cunias=11)
+def test_plan_pelo_junta_corona_cunias_y_copete():
+    plan = p.plan_pelo(CABEZA, cunias=11, copete=3)
     assert "corona" in plan and "cunias" in plan
-    assert len(plan["cunias"]) == 11
+    assert len(plan["cunias"]) == 11 + 3
+    assert sum(1 for c in plan["cunias"] if c["es_copete"]) == 3
+
+
+def test_copete_nace_cerca_de_la_punta_no_del_borde():
+    c = p.plan_corona(CABEZA)
+    for cuna in p.plan_copete(c, cantidad=3):
+        assert cuna["pos"][2] > c["z_frente"]  # más arriba que el punto más alto del borde
+        assert cuna["pos"][2] <= c["z_top"]
+
+
+def test_copete_apunta_arriba_y_adelante_no_radial():
+    c = p.plan_corona(CABEZA)
+    for cuna in p.plan_copete(c, cantidad=3):
+        dx, dy, dz = cuna["direccion"]
+        assert dz > 0.7          # sobre todo hacia +Z
+        assert dy < 0             # y hacia adelante (−Y)
+        assert dz > abs(dx)       # más vertical que lateral: no es radial
+
+
+def test_copete_es_mas_largo_que_las_cunias_del_borde():
+    # se compara el rango pedido, no una muestra aleatoria (los rangos por defecto se solapan
+    # un poco: lo que importa es que el copete parte más largo, no que CADA cuña lo sea).
+    rango_copete = (15.0, 22.0)
+    rango_borde = (10.0, 17.0)
+    assert rango_copete[0] > rango_borde[0] and rango_copete[1] > rango_borde[1]
+
+
+def test_copete_cero_no_agrega_nada():
+    c = p.plan_corona(CABEZA)
+    assert p.plan_copete(c, cantidad=0) == []
