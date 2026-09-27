@@ -1,0 +1,119 @@
+name: Aprobar ALTH (cierra un asset)
+
+# El paso final que el bucle deja pendiente a propósito: renderiza en modo FINAL,
+# exporta el .glb y sube el resultado. Lo lanzas tú, a mano, cuando la hoja de una
+# corrida te convence: Actions → "Aprobar ALTH" → Run workflow.
+#
+# rama_resultado: la rama bucle/<asset>-N que quieres aprobar ("auto" = la más reciente de ese asset).
+# rama_destino: a dónde se sube ya aprobado (normalmente "main").
+#
+# Nota: no agrega la fila a data/medidas.csv por ti todavía — la spec de cada asset trae
+# formatos ligeramente distintos y eso conviene revisarlo a mano o pedírselo a Claude.
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset:
+        description: "Carpeta del asset (p. ej. assets/pruebas/joven_rubio_v1 o lata)"
+        required: true
+      rama_resultado:
+        description: "Rama bucle/<asset>-N a aprobar. 'auto' = la más reciente de este asset"
+        default: "auto"
+      rama_destino:
+        description: "Rama a la que se sube ya aprobado"
+        default: "main"
+
+permissions:
+  contents: write
+
+jobs:
+  aprobar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Elegir la rama de resultado
+        id: origen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IN_ASSET: ${{ inputs.asset }}
+          IN_RAMA: ${{ inputs.rama_resultado }}
+        run: |
+          nombre="$(basename "$IN_ASSET")"
+          if [ "$IN_RAMA" = "auto" ]; then
+            ultima="$(gh api "repos/${{ github.repository }}/branches?per_page=100" --paginate -q '.[].name' \
+              | grep -E "^bucle/${nombre}-[0-9]+$" | sort -t- -k3 -n | tail -1)"
+            [ -n "$ultima" ] || { echo "No encontré ninguna rama bucle/${nombre}-N. Revisa el nombre del asset."; exit 1; }
+            echo "ref=$ultima" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$IN_RAMA" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.rama_destino }}
+
+      - name: Traer los archivos de la rama de resultado
+        env:
+          IN_ASSET: ${{ inputs.asset }}
+        run: |
+          d="$IN_ASSET"; [ -d "$d" ] || d="assets/$IN_ASSET"
+          git fetch -q origin "${{ steps.origen.outputs.ref }}"
+          git checkout FETCH_HEAD -- "$d" alth/
+          echo "Traje $d/ y alth/ desde ${{ steps.origen.outputs.ref }}"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Librerías del sistema para Blender
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1
+
+      - name: Blender sin interfaz (bpy)
+        run: |
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          bash tools/ensure_blender.sh --strict
+
+      - name: Render final + exportar GLB
+        env:
+          IN_ASSET: ${{ inputs.asset }}
+        run: |
+          d="$IN_ASSET"; [ -d "$d" ] || d="assets/$IN_ASSET"
+          export ALTH_PYTHON="$(command -v alth-python)"
+          "$ALTH_PYTHON" "$d/build.py" final
+
+      - name: Subir a la rama destino
+        env:
+          IN_ASSET: ${{ inputs.asset }}
+        run: |
+          d="$IN_ASSET"; [ -d "$d" ] || d="assets/$IN_ASSET"
+          nombre="$(basename "$d")"
+          rm -rf "$d/bucle"   # metadata del bucle; no es parte del asset aprobado
+          git config user.name "bucle-alth"
+          git config user.email "bucle-alth@users.noreply.github.com"
+          git add "$d" alth/
+          git commit -m "Aprueba $nombre (desde ${{ steps.origen.outputs.ref }})" \
+                     -m "Falta agregar la fila a data/medidas.csv." \
+            || { echo "Nada que subir (¿ya estaba aprobado?)"; exit 0; }
+          git push origin "HEAD:${{ inputs.rama_destino }}"
+          {
+            echo "## Aprobado: $nombre"
+            echo
+            echo "De \`${{ steps.origen.outputs.ref }}\` → \`${{ inputs.rama_destino }}\`."
+            echo
+            echo "**Pendiente:** agregar la fila en \`data/medidas.csv\` (pídeselo a Claude o hazlo a mano)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Subir el .blend y el .glb como artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aprobado
+          path: |
+            assets/**/*.glb
+            assets/**/*.blend
+          if-no-files-found: ignore

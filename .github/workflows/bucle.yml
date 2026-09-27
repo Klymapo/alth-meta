@@ -33,8 +33,8 @@ on:
         description: "Archivos extra que puede reescribir, separados por coma (p. ej. alth/pelo.py)"
         default: ""
       rama_base:
-        description: "Rama de la que parte"
-        default: "main"
+        description: "Rama de la que parte. 'auto' = sigue desde la última corrida de ESTE asset (encadena vueltas)"
+        default: "auto"
 
 permissions:
   contents: write
@@ -44,9 +44,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 150
     steps:
+      - name: Elegir la rama de partida
+        id: rama
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IN_ASSET: ${{ inputs.asset }}
+          IN_RAMA_BASE: ${{ inputs.rama_base }}
+        run: |
+          nombre="$(basename "$IN_ASSET")"
+          if [ "$IN_RAMA_BASE" = "auto" ]; then
+            ultima="$(gh api "repos/${{ github.repository }}/branches?per_page=100" --paginate -q '.[].name' \
+              | grep -E "^bucle/${nombre}-[0-9]+$" | sort -t- -k3 -n | tail -1)"
+            if [ -n "$ultima" ]; then
+              echo "Encadenando desde la última corrida: $ultima"
+              echo "ref=$ultima" >> "$GITHUB_OUTPUT"
+            else
+              echo "No hay corridas previas de '$nombre'; empiezo desde main"
+              echo "ref=main" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "ref=$IN_RAMA_BASE" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.rama_base }}
+          ref: ${{ steps.rama.outputs.ref }}
 
       - uses: actions/setup-python@v5
         with:
@@ -112,6 +134,8 @@ jobs:
           git commit -m "bucle: $nombre (${{ inputs.proveedor }} ${{ inputs.modelo }}), corrida ${{ github.run_number }}" || exit 0
           git push origin "$rama"
           {
+            echo "_Partió de: \`${{ steps.rama.outputs.ref }}\`_"
+            echo
             cat "$d/bucle/resumen.md" 2>/dev/null
             if [ -f "$d/bucle/error.txt" ]; then echo; echo "### Error del modelo"; echo '```'; cat "$d/bucle/error.txt"; echo '```'; fi
             echo
