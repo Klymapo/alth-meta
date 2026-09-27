@@ -5,8 +5,10 @@ name: Bucle ALTH (cualquier IA)
 # desde la app de GitHub en el celular): Actions → "Bucle ALTH" → Run workflow.
 #
 # Claves: Settings → Secrets and variables → Actions → New repository secret.
-# Solo hace falta la del proveedor que uses: GEMINI_API_KEY, DEEPSEEK_API_KEY,
-# OPENROUTER_API_KEY o GROQ_API_KEY. (Ollama es local: no corre aquí.)
+# Con "proveedor: auto" (el de fábrica) basta con configurar GEMINI_API_KEY, GROQ_API_KEY,
+# o ambas: prueba Gemini y, si se topa con la cuota del día o falla, brinca solo a Groq.
+# Si eliges un proveedor específico, solo hace falta esa clave: GEMINI_API_KEY,
+# DEEPSEEK_API_KEY, OPENROUTER_API_KEY o GROQ_API_KEY. (Ollama es local: no corre aquí.)
 #
 # El resultado queda en una rama `bucle/<asset>-<n>` con el build.py nuevo, la última hoja
 # de contacto y el resumen. Nada se mezcla a main sin que tú lo apruebes.
@@ -21,8 +23,8 @@ on:
         description: "Vueltas máximas"
         default: "4"
       proveedor:
-        description: "gemini | deepseek | openrouter | groq | personalizado"
-        default: "gemini"
+        description: "auto = prueba Gemini y si se topa con cuota brinca solo a Groq (recomendado) | gemini | deepseek | openrouter | groq | personalizado"
+        default: "auto"
       modelo:
         description: "Modelo (vacío = el de fábrica del proveedor)"
         default: ""

@@ -3,7 +3,9 @@
 El ciclo es: correr build.py en Blender → leer hoja, verificación y silueta → pedirle al modelo el
 build.py corregido → repetir. Tres formas de usarlo:
 
-  # 1) Automático, con cualquier API compatible con OpenAI (Ollama local, DeepSeek, Gemini, OpenRouter, Groq…)
+  # 1) Automático. Por defecto usa --proveedor auto: prueba Gemini y, si se quedó sin cuota o falla,
+  #    brinca solo a Groq (ambos gratis). Cualquier otra API compatible con OpenAI también sirve:
+  python3 tools/bucle.py correr assets/pruebas/joven_rubio_v1 --vueltas 4
   python3 tools/bucle.py correr assets/pruebas/joven_rubio_v1 --proveedor ollama --vueltas 4
 
   # 2) Manual, sin API ni gasto: arma un paquete (prompt.md + imágenes) para pegar en cualquier chat gratis
@@ -24,8 +26,10 @@ Todo esto también se puede fijar en el spec.json del asset, en un bloque opcion
   "bucle": {"ref": "refs/…", "recorte": [0, 0, 0.5, 0.5], "vista": "frente", "editables": ["alth/pelo.py"], "nota": "…"}
 
 Configuración del modelo (argumentos o variables de entorno):
-  --proveedor / ALTH_PROVEEDOR   ollama | deepseek | gemini | openrouter | groq | personalizado
-  --modelo    / ALTH_MODELO      nombre del modelo (cada proveedor trae uno por defecto; revisa el vigente)
+  --proveedor / ALTH_PROVEEDOR   auto (por defecto, cadena Gemini→Groq) | ollama | deepseek | gemini |
+                                 openrouter | groq | personalizado
+  --modelo    / ALTH_MODELO      nombre del modelo (solo aplica si NO usas "auto"; cada proveedor
+                                 trae uno por defecto, revisa el vigente)
   ALTH_API_BASE, ALTH_API_KEY    para "personalizado" o para sobrescribir
   --sin-vision / ALTH_VISION=0   para modelos que no aceptan imágenes (reciben solo números y texto)
 
@@ -61,8 +65,23 @@ PROVEEDORES = {
                "modelo": "gemini-3.8-flash", "vision": True},
     "openrouter": {"base": "https://openrouter.ai/api/v1", "clave_env": "OPENROUTER_API_KEY",
                    "modelo": None, "vision": True},
-    "groq": {"base": "https://api.groq.com/openai/v1", "clave_env": "GROQ_API_KEY", "modelo": None, "vision": False},
+    "groq": {"base": "https://api.groq.com/openai/v1", "clave_env": "GROQ_API_KEY",
+             "modelo": "llama-3.3-70b-versatile", "vision": False},
     "personalizado": {"base": None, "clave_env": "ALTH_API_KEY", "modelo": None, "vision": True},
+}
+
+# "auto" (el modo por defecto de `correr`) intenta estos en orden y brinca al siguiente si el que
+# está probando se queda sin cuota, falla o no tiene clave configurada. Solo entran proveedores
+# gratis y con un modelo de fábrica confiable; deja fuera a OpenRouter porque sus modelos gratis
+# cambian de nombre muy seguido (agrégalo a mano con --proveedor openrouter --modelo … si quieres).
+CADENA_AUTO = ["gemini", "groq"]
+
+# Para avisar CUÁNDO reintentar cuando un proveedor se quedó sin cuota del día (no es exacto,
+# es la referencia pública de cada uno).
+CUANDO_SE_REINICIA = {
+    "gemini": "a medianoche hora del Pacífico (~2–3 am en CDMX)",
+    "groq": "a medianoche UTC (~6 pm en CDMX)",
+    "openrouter": "unas 24 h después de tu primer uso del día",
 }
 
 # Guardia, NO un sandbox: frena lo obvio. El aislamiento real es correr el bucle en GitHub Actions.
@@ -326,6 +345,40 @@ def config_modelo(args) -> dict:
     return p
 
 
+def _cfg_de_cadena(nombre: str) -> dict | None:
+    """Como config_modelo, pero para 'auto': si le falta la clave o el modelo, regresa None
+    en vez de terminar el programa (ese proveedor simplemente no entra a la cadena)."""
+    p = dict(PROVEEDORES[nombre])
+    p["nombre"] = nombre
+    p["base"] = os.environ.get("ALTH_API_BASE") or p["base"]
+    p["clave"] = os.environ.get(p["clave_env"]) if p["clave_env"] else None
+    if not p["base"] or not p["modelo"] or (p["clave_env"] and not p["clave"]):
+        return None
+    return p
+
+
+def config_cadena(args) -> list[dict]:
+    """La cadena de proveedores para 'correr'. 'auto' (por defecto) prueba, en orden, los de
+    CADENA_AUTO que sí tengan clave configurada. Cualquier otro nombre usa ese único proveedor,
+    igual que antes (falla de una vez si le falta la clave)."""
+    nombre = args.proveedor or os.environ.get("ALTH_PROVEEDOR", "auto")
+    if nombre != "auto":
+        return [config_modelo(args)]
+    cadena = [c for c in (_cfg_de_cadena(n) for n in CADENA_AUTO) if c]
+    if not cadena:
+        sys.exit("[bucle] proveedor 'auto': no encontré ninguna clave configurada de "
+                 f"{', '.join(CADENA_AUTO)}. Define al menos una (p. ej. GEMINI_API_KEY) "
+                 "o usa --proveedor para elegir uno directo.")
+    return cadena
+
+
+class _FalloProveedor(Exception):
+    """Un proveedor de la cadena no respondió tras sus reintentos. Uso interno de llamar_con_respaldo."""
+    def __init__(self, codigo, detalle):
+        self.codigo, self.detalle = codigo, detalle
+        super().__init__(f"{codigo}: {detalle}")
+
+
 def llamar_modelo(cfg: dict, sistema: str, texto: str, imagenes, temperatura=0.3, reintentos=3) -> str:
     contenido: list | str
     if cfg["vision"] and imagenes:
@@ -355,13 +408,36 @@ def llamar_modelo(cfg: dict, sistema: str, texto: str, imagenes, temperatura=0.3
                 print(f"[bucle] el proveedor respondió {e.code}; reintento en {espera} s")
                 time.sleep(espera)
                 continue
-            raise SystemExit(f"[bucle] el proveedor respondió {e.code}: {detalle}")
+            raise _FalloProveedor(e.code, detalle)
         except urllib.error.URLError as e:
             if intento < reintentos - 1:
                 time.sleep(10)
                 continue
-            raise SystemExit(f"[bucle] no pude conectar con {url}: {e.reason}")
-    raise SystemExit("[bucle] sin respuesta del modelo")
+            raise _FalloProveedor("conexión", str(e.reason))
+    raise _FalloProveedor("sin respuesta", "")
+
+
+def llamar_con_respaldo(cadena: list[dict], sistema: str, texto: str, imagenes,
+                        temperatura=0.3) -> tuple[str, dict]:
+    """Prueba cada proveedor de la cadena en orden; usa el primero que responda.
+    Si TODOS fallan, revienta con un SystemExit que junta el motivo de cada uno
+    (y cuándo se espera que se reinicie su cuota, si aplica)."""
+    errores = []
+    for i, cfg in enumerate(cadena):
+        imgs = imagenes if cfg["vision"] else []
+        try:
+            return llamar_modelo(cfg, sistema, texto, imgs, temperatura), cfg
+        except _FalloProveedor as e:
+            cuando = CUANDO_SE_REINICIA.get(cfg["nombre"])
+            pista = f" — se reinicia {cuando}" if cuando and str(e.codigo) in ("429", "402", "403") else ""
+            linea = f"{cfg['nombre']}/{cfg['modelo']}: {e.codigo}{pista} ({e.detalle[:200]})"
+            print(f"[bucle] {linea}")
+            if i < len(cadena) - 1:
+                print(f"[bucle] sigo con el siguiente proveedor de la cadena: {cadena[i + 1]['nombre']}…")
+            errores.append(linea)
+    mensaje = "Ningún proveedor de la cadena respondió:\n" + "\n".join(errores) if errores \
+        else "La cadena de proveedores está vacía (¿faltan claves de API?)."
+    raise SystemExit("[bucle] " + mensaje)
 
 
 # ---------------------------------------------------------------- aplicar respuesta
@@ -429,16 +505,16 @@ def registrar(asset: Asset, n: int, resultado: dict, sil, cambios="", modelo="")
 # ---------------------------------------------------------------- comandos
 def cmd_correr(args):
     asset = Asset(args.asset, args)
-    cfg = config_modelo(args)
+    cadena = config_cadena(args)
     sistema = texto_sistema()
-    print(f"[bucle] {asset.nombre} · {cfg['nombre']}/{cfg['modelo']} · visión {'sí' if cfg['vision'] else 'no'}"
-          f" · hasta {args.vueltas} vueltas")
+    nombres = " → ".join(f"{c['nombre']}/{c['modelo']}" for c in cadena)
+    print(f"[bucle] {asset.nombre} · cadena: {nombres} · hasta {args.vueltas} vueltas")
     n0 = (asset.historial[-1]["vuelta"] + 1) if asset.historial else 0
     resultado = correr_build(asset, args.timeout)
     sil = medir_silueta(asset, resultado, asset.trabajo / "superposicion.png")
     guardar_vuelta(asset, n0, resultado)
     if not asset.historial or not args.continuar:
-        registrar(asset, n0, resultado, sil, "punto de partida", cfg["modelo"])
+        registrar(asset, n0, resultado, sil, "punto de partida", "-")
     def _snapshot():
         return {e: (RAIZ / e).read_text(encoding="utf-8") for e in asset.editables}
 
@@ -453,10 +529,10 @@ def cmd_correr(args):
         texto = armar_prompt(asset, resultado, sil, i, args.vueltas)
         print(f"[bucle] vuelta {n}: pidiendo corrección al modelo…")
         try:
-            respuesta = llamar_modelo(cfg, sistema, texto, imagenes_para(asset, resultado, sil))
+            respuesta, cfg = llamar_con_respaldo(cadena, sistema, texto, imagenes_para(asset, resultado, sil))
         except SystemExit as e:
             # Deja el motivo a la vista (resumen de GitHub Actions, rama de resultado) y termina.
-            (asset.trabajo / "error.txt").write_text(f"{cfg['nombre']}/{cfg['modelo']}: {e}\n", encoding="utf-8")
+            (asset.trabajo / "error.txt").write_text(f"{e}\n", encoding="utf-8")
             raise
         cambios, estado = extraer_campo(respuesta, "CAMBIOS"), extraer_campo(respuesta, "ESTADO").upper()
         ok, msg, _ = aplicar(asset, respuesta)
@@ -469,10 +545,10 @@ def cmd_correr(args):
         resultado = correr_build(asset, args.timeout)
         sil = medir_silueta(asset, resultado, asset.trabajo / "superposicion.png")
         guardar_vuelta(asset, n, resultado, respuesta)
-        registrar(asset, n, resultado, sil, cambios, cfg["modelo"])
+        registrar(asset, n, resultado, sil, cambios, f"{cfg['nombre']}/{cfg['modelo']}")
         ver = (resultado.get("reporte") or {}).get("verificacion") or {}
-        print(f"[bucle] v{n}: build {'OK' if resultado['ok'] else 'FALLÓ'} · verificación "
-              f"{'OK' if ver.get('ok') else '—'} · IoU {(sil or {}).get('iou')} · {cambios}")
+        print(f"[bucle] v{n} ({cfg['nombre']}/{cfg['modelo']}): build {'OK' if resultado['ok'] else 'FALLÓ'} · "
+              f"verificación {'OK' if ver.get('ok') else '—'} · IoU {(sil or {}).get('iou')} · {cambios}")
         if resultado["ok"]:
             ultimo_bueno = _snapshot()
             fallos_seguidos = 0
@@ -580,7 +656,8 @@ def main(argv=None):
         s.add_argument("--sin-correr", action="store_true", help="paquete: usa el último render sin volver a correr")
         if nombre == "correr":
             s.add_argument("--vueltas", type=int, default=4)
-            s.add_argument("--proveedor")
+            s.add_argument("--proveedor", help="auto (por defecto) | ollama | deepseek | gemini | "
+                                               "openrouter | groq | personalizado")
             s.add_argument("--modelo")
             s.add_argument("--sin-vision", action="store_true")
             s.add_argument("--continuar", action="store_true", help="sigue el historial previo")
