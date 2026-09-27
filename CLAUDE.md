@@ -58,6 +58,8 @@ da la silueta contra la referencia en números: úsala también en tus propias v
 ## Ciclo por asset
 
 1. Escribe `assets/<nombre>/spec.json`: categoría, medidas reales, medidas ALTH, colores, módulos.
+   Si el usuario usa un apodo para el asset (p. ej. "Theo" para `joven_rubio`), agrégalo en
+   `"alias": [...]`: el Taller lo usa para reconocer que ya existe antes de crear uno nuevo.
 2. Escribe `assets/<nombre>/build.py` y córrelo con `alth-python`.
 3. Revisa **solo** `renders/<nombre>/iteracion/hoja.png` (una imagen con las 4 vistas) y `reporte.json`.
 4. Compara contra la referencia y la spec; corrige; repite.
