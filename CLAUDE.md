@@ -49,6 +49,12 @@ se sigue revisando contra la referencia. Lógica en `alth/verificacion.py`, prue
 
 `alth-python tools/escala.py` renderiza todos los assets aprobados junto al maniquí (foto de familia de escala).
 
+## Bucle con otros modelos
+
+`tools/bucle.py` repite el ciclo con cualquier IA (ver README). Si el usuario pide "córrelo con otro modelo",
+"arma el paquete" o "usa el bucle", usa esa herramienta en vez de iterar tú. `python3 tools/bucle.py medir <asset>`
+da la silueta contra la referencia en números: úsala también en tus propias vueltas antes de abrir imágenes.
+
 ## Ciclo por asset
 
 1. Escribe `assets/<nombre>/spec.json`: categoría, medidas reales, medidas ALTH, colores, módulos.
