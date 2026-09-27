@@ -30,7 +30,7 @@ on:
         description: "Solo para 'arrancar': qué es y su tamaño real, p. ej. \"espada larga medieval, 90 cm\""
         default: ""
       referencia:
-        description: "Solo para 'arrancar': ruta de la imagen de referencia ya subida al repo (p. ej. refs/pendientes/espada-123.jpg)"
+        description: "Ruta de una imagen de referencia ya subida al repo (p. ej. refs/pendientes/espada-123.jpg). Obligatoria en 'arrancar'; en 'correr' reemplaza la referencia de esa corrida"
         default: ""
       vueltas:
         description: "Vueltas máximas"
@@ -69,7 +69,7 @@ jobs:
           nombre="$(basename "$IN_ASSET")"
           if [ "$IN_RAMA_BASE" = "auto" ]; then
             ultima="$(gh api "repos/${{ github.repository }}/branches?per_page=100" --paginate -q '.[].name' \
-              | grep -E "^bucle/${nombre}-[0-9]+$" | sort -t- -k3 -n | tail -1)"
+              | grep -E "^bucle/${nombre}-[0-9]+$" | sort -V | tail -1)"
             if [ -n "$ultima" ]; then
               echo "Encadenando desde la última corrida: $ultima"
               echo "ref=$ultima" >> "$GITHUB_OUTPUT"
@@ -132,6 +132,11 @@ jobs:
             args=(correr "$IN_ASSET" --vueltas "$IN_VUELTAS" --proveedor "$IN_PROVEEDOR")
             [ -n "$IN_MODELO" ] && args+=(--modelo "$IN_MODELO")
             [ -n "$IN_NOTA" ] && args+=(--nota "$IN_NOTA")
+            if [ -n "$IN_REFERENCIA" ]; then
+              # foto nueva subida a main desde el Taller: tráela aunque partamos de una rama bucle/*
+              [ -f "$IN_REFERENCIA" ] || { git fetch -q origin main && git checkout origin/main -- "$IN_REFERENCIA"; }
+              args+=(--ref "$IN_REFERENCIA")
+            fi
             IFS=',' read -ra EXTRA <<< "$IN_EDITABLES"
             for e in "${EXTRA[@]}"; do e="$(echo "$e" | xargs)"; [ -n "$e" ] && args+=(--editable "$e"); done
           fi

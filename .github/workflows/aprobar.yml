@@ -41,7 +41,7 @@ jobs:
           nombre="$(basename "$IN_ASSET")"
           if [ "$IN_RAMA" = "auto" ]; then
             ultima="$(gh api "repos/${{ github.repository }}/branches?per_page=100" --paginate -q '.[].name' \
-              | grep -E "^bucle/${nombre}-[0-9]+$" | sort -t- -k3 -n | tail -1)"
+              | grep -E "^bucle/${nombre}-[0-9]+$" | sort -V | tail -1)"
             [ -n "$ultima" ] || { echo "No encontré ninguna rama bucle/${nombre}-N. Revisa el nombre del asset."; exit 1; }
             echo "ref=$ultima" >> "$GITHUB_OUTPUT"
           else
