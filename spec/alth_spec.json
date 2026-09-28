@@ -120,15 +120,15 @@
     ],
     "alturas_ancla": {
       "rodilla": 21.0,
-      "cadera": 33.0,
+      "cadera": 28.5,
       "muneca": 35.5,
-      "cintura": 38.8,
+      "cintura": 34.2,
       "cuello": 60.5,
       "tobillo": 9.0,
       "hombro": 56.0,
       "punta_mano": 28.1
     },
-    "alturas_ancla_nota": "Calculadas por alth/cuerpo.py con las cotas del PDF (zapato 9, pierna 24, pelvis 5.8, cabeza 34.5, brazo 11+10, palma 7.5). Antes: muñeca ≈37 y cintura ≈38 eran estimadas."
+    "alturas_ancla_nota": "Calculadas por alth/cuerpo.py con las cotas del PDF (zapato 9, pierna 24, pelvis 5.8, cabeza 34.5, brazo 11+10, palma 7.5). Antes: muñeca ≈37 y cintura ≈38 eran estimadas. Actualización 2026-09-27: cadera (33.0→28.5) y cintura (38.8→34.2) tomadas de alturas_ancla_sam3d_candidato por decisión del usuario, al ser los valores mejor respaldados (<2mm de variación entre 4 modelos SAM 3D limpios). Rodilla, muñeca, cuello, tobillo y hombro se mantienen del PDF; la unión cuello/hombro sigue sin resolver (marcada ROJO en el PDF)."
   },
   "alturas_ancla_sam3d_candidato": {
     "estado": "AMARILLO - candidato, no reemplaza alturas_ancla hasta validarse en Blender",
