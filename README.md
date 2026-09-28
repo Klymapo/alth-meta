@@ -37,6 +37,7 @@ OpenAI, o a mano copiando y pegando en un chat gratis. No corre el modo final ni
 - Modelos sin visión reciben números en vez de imágenes: la verificación y la **silueta**
   (`alth/silueta.py`: IoU y ancho por bandas contra la referencia, p. ej. "arriba: 40 % más angosto").
 - Opciones por asset en su `spec.json` → `"bucle": {"ref": "refs/…", "recorte": [0,0,0.5,0.5], "vista": "frente", "editables": ["alth/pelo.py"], "nota": "…"}`.
+- Si existe `assets/<asset>/brief_final.md`, el bucle lo agrega automáticamente al prompt. También puede indicarse otra ruta con `"bucle": {"brief": "docs/briefs/…md"}`. CHSP-X hereda este comportamiento sin configuración adicional.
 - Cada vuelta queda en `renders/<asset>/bucle/vNN/` y el resumen en `renders/<asset>/bucle/resumen.md`.
 - Las reglas que recibe el modelo están en `tools/bucle_sistema.md` + la sección *Convenciones* de `CLAUDE.md`.
 - `--unico` (solo en `paquete`) pide **todas** las correcciones en una sola respuesta, cada una con su cota
