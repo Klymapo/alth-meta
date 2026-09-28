@@ -130,6 +130,27 @@
     },
     "alturas_ancla_nota": "Calculadas por alth/cuerpo.py con las cotas del PDF (zapato 9, pierna 24, pelvis 5.8, cabeza 34.5, brazo 11+10, palma 7.5). Antes: muñeca ≈37 y cintura ≈38 eran estimadas."
   },
+  "alturas_ancla_sam3d_candidato": {
+    "estado": "AMARILLO - candidato, no reemplaza alturas_ancla hasta validarse en Blender",
+    "fecha": "2026-09-27",
+    "fuente": "5 reconstrucciones SAM 3D Objects de Theo (joven_rubio), pose relajada con brazos abajo (no T-pose), ignorando las cotas del PDF por instrucción del usuario",
+    "metodo": "perfil de ancho/profundidad por altura normalizada (0-1) más lectura visual cruzada con rejilla cada 0.02 en 4 de los 5 modelos; 2 de los 7 GLB recibidos se descartaron por proporciones/geometría degradadas",
+    "valores_mm_base_95": {
+      "tobillo": 11.5,
+      "cadera": 28.5,
+      "cintura": 34.2,
+      "hombro": 54.2,
+      "cuello": 56.1,
+      "rodilla": null
+    },
+    "notas": [
+      "hombro y cuello casi se funden (54.2 vs 56.1mm, solo ~2mm de separación): el pelo largo y el cuello de camisa de Theo tapan la transición real en las 5 reconstrucciones; no hay una separación tan clara como en alturas_ancla actual (56 vs 60.5). Tratar como una sola unión hombro-cuello hasta tener una referencia con el cuello despejado.",
+      "rodilla: sin dato, y no se puede sacar de Theo. El arte original dibuja la pierna como un tubo liso sin quiebre de rodilla; SAM no puede inventar un detalle ausente en la imagen de entrada. Se necesitaria una referencia humana real de perfil para esa proporción.",
+      "tobillo: dispersión alta entre modelos (9.1mm a 15.4mm) por el diseño de bota alta que tapa el tobillo real; tomar con reserva.",
+      "cadera y cintura: las más consistentes, variación menor a 2mm entre los 4 modelos limpios.",
+      "cabeza con pelo (mentón hasta la punta del peinado) mide ~39mm de los 95mm totales (41% de la altura). No es directamente comparable a cabeza_WHD del PDF (34.5mm), que probablemente no incluye el volumen del peinado alto de estas reconstrucciones."
+    ]
+  },
   "conversion_k": {
     "de_mano": {
       "max_real_cm": 20,
