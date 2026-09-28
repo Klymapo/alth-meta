@@ -525,13 +525,13 @@ def elegir_alternos(ids: list[str], actual: str, maximo: int = ALTERNOS_MAX) -> 
     return sorted(buenos, key=clave)[:maximo]
 
 
-# ---------------------------------------------------------------- progreso en vivo (Taller)
+# ---------------------------------------------------------------- progreso en vivo (CHSP-X)
 class Progreso:
-    """Publica el avance de la corrida para que el Taller muestre la barra de %.
+    """Publica el avance de la corrida para que CHSP-X muestre la barra de %.
 
     Solo actúa dentro de GitHub Actions (necesita ALTH_PROGRESO_TOKEN, GITHUB_REPOSITORY y
     GITHUB_RUN_ID): escribe `bucle-<run_id>.json` en la rama `progreso` con la API de Contents,
-    que el Taller ya puede leer con su token. Si algo falla, avisa una vez y sigue: el progreso
+    que CHSP-X ya puede leer con su token. Si algo falla, avisa una vez y sigue: el progreso
     nunca debe tumbar una corrida."""
     RAMA = "progreso"
 
@@ -596,7 +596,7 @@ class Progreso:
 
     def _fallo(self, motivo):
         if not self._avisado:
-            print(f"[bucle] (aviso) no pude publicar el progreso para el Taller: {motivo}. Sigo igual.")
+            print(f"[bucle] (aviso) no pude publicar el progreso para CHSP-X: {motivo}. Sigo igual.")
             self._avisado = True
 
 
@@ -869,6 +869,9 @@ def cmd_correr(args):
 
 def cmd_paquete(args, asset: Asset | None = None, resultado: dict | None = None):
     asset = asset or Asset(args.asset, args)
+    if getattr(args, "unico", False):
+        asset.nota = ("RONDA ÚNICA: aplica todas las correcciones en esta respuesta "
+                      "(ver la sección RONDA ÚNICA de las reglas).\n" + (asset.nota or "")).strip()
     if resultado is None:
         resultado = correr_build(asset, args.timeout) if not args.sin_correr else _ultimo_resultado(asset)
     paq = asset.trabajo / "paquete"
@@ -947,6 +950,9 @@ def main(argv=None):
         s.add_argument("--nota")
         s.add_argument("--timeout", type=int, default=900)
         s.add_argument("--sin-correr", action="store_true", help="paquete: usa el último render sin volver a correr")
+        if nombre == "paquete":
+            s.add_argument("--unico", action="store_true",
+                           help="ronda única: pide TODAS las correcciones en una sola respuesta (para copiar y pegar)")
         if nombre == "arrancar":
             s.add_argument("--descripcion", required=True, help='qué es y su tamaño real, p. ej. "espada larga medieval, 90 cm"')
             s.add_argument("--tipo", choices=tuple(PRESUPUESTO_MAX),

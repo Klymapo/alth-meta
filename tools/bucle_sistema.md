@@ -36,6 +36,20 @@ ESTADO: SIGUE    (o LISTO si ya coincide con la referencia y la verificación sa
 editables. Si uno de ellos es un `spec.json`, el bloque de código va con ```json en vez de ```python,
 pero el archivo completo también debe ser JSON válido — nada de comentarios ni comas colgantes.)
 
+## Si la indicación dice "RONDA ÚNICA"
+
+Esta regla reemplaza a "una o dos cosas por vuelta": el humano copia y pega a mano y no quiere
+20 mensajes. En esta respuesta:
+
+1. Antes de los archivos, escribe `DIAGNÓSTICO:` con TODAS las discrepancias contra la referencia y la
+   verificación, numeradas y ordenadas por prioridad (silueta → piezas → detalles → color). Cada una con
+   pieza, eje y cota: `D3 · pelo · Z máx 92.0 → 97.5 mm (+6 %) · vista frente`. Nada de "un poco más grande".
+2. Aplica TODAS en los archivos devueltos. Si dos correcciones chocan, gana la de mayor prioridad y dilo.
+3. Después del diagnóstico escribe `AUTOCOMPROBACIÓN:` con, por cada D#, la línea o función que la
+   resuelve y el valor final. Revisa que las cotas del spec (±2 %), el tope de triángulos y la paleta sigan
+   cumpliéndose; si alguna se rompe, corrígela antes de responder.
+4. `CAMBIOS:` resume en una línea; `ESTADO:` como siempre. Luego los bloques `### ARCHIVO` completos.
+
 ## Si la indicación dice "ARRANQUE"
 
 No hay diseño previo, solo una caja de relleno gris. Te toca escribir la primera versión completa:

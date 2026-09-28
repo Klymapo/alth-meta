@@ -7,7 +7,8 @@ Se modelan con scripts de Blender que corren sin interfaz en sesiones de Claude 
 |---|---|
 | `spec/alth_spec.json` | Estándar: escala, arquetipos, cotas, conversión real→ALTH, paleta, luz, presupuesto |
 | `alth/` | Librería de Blender: escena en mm, materiales, estudio de luz, renders de revisión, exportación GLB |
-| `tools/` | `ensure_blender.sh` (instala Blender como módulo de Python) y `fase0_cubo.py` (prueba del pipeline) |
+| `tools/` | `ensure_blender.sh` (instala Blender como módulo de Python), `fase0_cubo.py` (prueba del pipeline), `bucle.py` (ciclo con cualquier IA), `verificar_revision.py` (huellas antes de aprobar), `escala.py` (foto de familia) |
+| `chsp-x/` | **CHSP-X**: página de revisión y aprobación de assets (antes "El Taller"). Ver `docs/CHSP-X.md` |
 | `assets/<nombre>/` | Especificación, script, .blend, GLB y render final de cada asset aprobado |
 | `refs/` | Referencias visuales: personajes, escenas e infografías |
 | `data/medidas.csv` | Registro que recalibra los factores de conversión |
@@ -28,7 +29,7 @@ OpenAI, o a mano copiando y pegando en un chat gratis. No corre el modo final ni
 
 | Forma | Comando | Costo |
 |---|---|---|
-| Manual (cualquier chat web) | `python3 tools/bucle.py paquete <asset>` → pegar `prompt.md` + imágenes → `python3 tools/bucle.py aplicar <asset> respuesta.md` | cero |
+| Manual (cualquier chat web) | `python3 tools/bucle.py paquete <asset> --unico` → pegar `prompt.md` + imágenes → `python3 tools/bucle.py aplicar <asset> respuesta.md` | cero |
 | Local con Ollama | `python3 tools/bucle.py correr <asset> --proveedor ollama --modelo qwen2.5vl:7b` | cero (tu GPU) |
 | API (Gemini, DeepSeek, OpenRouter, Groq) | `GEMINI_API_KEY=… python3 tools/bucle.py correr <asset> --proveedor gemini` | capa gratis o centavos |
 | En la nube de GitHub | Actions → **Bucle ALTH** → Run workflow (también desde la app del celular) | cero (repo público) |
@@ -38,3 +39,6 @@ OpenAI, o a mano copiando y pegando en un chat gratis. No corre el modo final ni
 - Opciones por asset en su `spec.json` → `"bucle": {"ref": "refs/…", "recorte": [0,0,0.5,0.5], "vista": "frente", "editables": ["alth/pelo.py"], "nota": "…"}`.
 - Cada vuelta queda en `renders/<asset>/bucle/vNN/` y el resumen en `renders/<asset>/bucle/resumen.md`.
 - Las reglas que recibe el modelo están en `tools/bucle_sistema.md` + la sección *Convenciones* de `CLAUDE.md`.
+- `--unico` (solo en `paquete`) pide **todas** las correcciones en una sola respuesta, cada una con su cota
+  numérica y una autocomprobación: pensado para copiar y pegar a mano sin gastar 20 mensajes.
+- Aprobar un resultado: CHSP-X o Actions → **Aprobar ALTH** (render final + GLB → `main`).

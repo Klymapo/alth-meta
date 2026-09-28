@@ -54,12 +54,19 @@ se sigue revisando contra la referencia. Lógica en `alth/verificacion.py`, prue
 `tools/bucle.py` repite el ciclo con cualquier IA (ver README). Si el usuario pide "córrelo con otro modelo",
 "arma el paquete" o "usa el bucle", usa esa herramienta en vez de iterar tú. `python3 tools/bucle.py medir <asset>`
 da la silueta contra la referencia en números: úsala también en tus propias vueltas antes de abrir imágenes.
+Si el usuario va a copiar y pegar en un chat, arma el paquete con `--unico`: una sola respuesta con todas las
+correcciones (ver `docs/CHSP-X.md`).
+
+## CHSP-X
+
+La página de revisión y aprobación (antes "El Taller") está en `chsp-x/index.html`; detalles en `docs/CHSP-X.md`.
+`joven_rubio` (Theo) no es la versión objetivo del personaje: no lo apruebes ni lo exportes sin que el usuario lo pida.
 
 ## Ciclo por asset
 
 1. Escribe `assets/<nombre>/spec.json`: categoría, medidas reales, medidas ALTH, colores, módulos.
    Si el usuario usa un apodo para el asset (p. ej. "Theo" para `joven_rubio`), agrégalo en
-   `"alias": [...]`: el Taller lo usa para reconocer que ya existe antes de crear uno nuevo.
+   `"alias": [...]`: CHSP-X lo usa para reconocer que ya existe antes de crear uno nuevo.
 2. Escribe `assets/<nombre>/build.py` y córrelo con `alth-python`.
 3. Revisa **solo** `renders/<nombre>/iteracion/hoja.png` (una imagen con las 4 vistas) y `reporte.json`.
 4. Compara contra la referencia y la spec; corrige; repite.
@@ -88,7 +95,12 @@ El usuario acepta gastar límite de uso, pero **un asset simple nunca debe consu
 - Commits pequeños y descriptivos en español.
 - Las sesiones en la nube arrancan en una rama `claude/...` sin upstream. Para traer lo último de `main`:
   `git pull --ff-only origin main` (un `git pull` a secas no trae nada).
-- Un asset aprobado por el usuario se sube directo a `main`: `git push origin HEAD:main`. Sin PR, salvo que el usuario lo pida.
+- Un asset llega a `main` solo por aprobación del usuario. La vía normal es CHSP-X (o Actions → Aprobar ALTH),
+  que verifica el SHA revisado, renderiza en modo final y exporta el GLB. Si el usuario aprueba en la conversación,
+  puedes hacerlo tú con el mismo resultado (render `final`, GLB y la fila en `data/medidas.csv`) y
+  `git push origin HEAD:main`. Sin PR, salvo que el usuario lo pida.
+- Las ramas `propuesta-*` son para revisar herramientas: no se fusionan a `main` hasta que su prueba real
+  (Actions/Blender) haya pasado y el usuario lo diga.
 - Tras actualizar desde `main`, corre `bash tools/ensure_blender.sh` para regenerar `alth-python` con la versión nueva.
 
 ## Referencias

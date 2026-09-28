@@ -21,11 +21,11 @@ on:
         description: "Rama bucle/<asset>-N a aprobar. 'auto' = la más reciente de este asset"
         default: "auto"
       commit_revision:
-        description: "SHA exacto de la rama revisada (obligatorio desde El Taller)"
+        description: "SHA exacto de la rama revisada (obligatorio desde CHSP-X)"
         default: ""
       rama_destino:
         description: "Rama a la que se sube ya aprobado"
-        default: "propuesta-taller-ux-flujo"
+        default: "main"
 
 permissions:
   contents: write
