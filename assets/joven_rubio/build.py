@@ -91,9 +91,9 @@ objs += ropa_objs
 # ---------------------------------------------------------------- pelo: corona + cuñas (alth/pelo.py)
 # Ronda de cierre: más cuñas, más anchas y más largas que las de la vuelta 6, para que se lean
 # como mechones anchos y superpuestos (referencia) en vez de púas delgadas y separadas.
-objs.append(pelo.construir_pelo(cabeza, escala=1.45, margen_arriba=4.0, cunias=18,
-                                 ancho_base=(11.0, 16.0), largo=(12.0, 19.0), caida=(4.0, 9.0),
-                                 copete=4, color=RUBIO, nombre="Joven_pelo"))
+objs.append(pelo.construir_pelo(cabeza, escala=1.2, margen_arriba=3.5, cunias=16,
+                                 ancho_base=(9.0, 13.0), largo=(11.0, 17.0), caida=(4.0, 9.0),
+                                 copete=5, color=RUBIO, nombre="Joven_pelo"))
 
 
 alth.estudio()

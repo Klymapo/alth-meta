@@ -52,22 +52,36 @@ def plan_corona(cabeza: dict, escala: float = 1.3, sesgo_atras: float = 2.5,
         "cx": cabeza["pos"][0], "cy": cabeza["pos"][1] + sesgo_atras,
         "hw": cabeza["w_arriba"] / 2 * escala, "hd": cabeza["d_arriba"] / 2 * escala,
         "z_top": cabeza["pos"][2] + cabeza["h"] + margen_arriba,
-        "z_frente": cabeza["pos"][2] + cabeza["h"] * 0.80,  # altura de ceja: no baja de ahí
-        "z_lado": cabeza["pos"][2] + cabeza["h"] * 0.64,    # altura de oreja
+        "z_frente": cabeza["pos"][2] + cabeza["h"] * 0.90,  # casi no baja del nacimiento del pelo
+        "z_lado": cabeza["pos"][2] + cabeza["h"] * 0.72,    # más alto que la oreja: la deja libre
         "z_atras": cabeza["pos"][2] + cabeza["h"] * 0.28,   # nuca: sí baja bastante
         "segmentos": segmentos,
     }
 
 
 MARCO_AZIMUT = (248.0, 292.0)  # a los dos lados del frente (270°), a la altura de la sien
+LADOS_AZIMUT = (0.0, 180.0)  # los lados puros: por ahí mira la cámara "lateral" (perfil)
+
+
+def _factor_lateral(azimut_grados: float, ventana: float = 42.0, minimo: float = 0.05) -> float:
+    """1.0 lejos de los lados puros (nuca, marco frontal); baja hasta `minimo` justo en el lado
+    (0°/180°). Se usa para que las cuñas de esa franja caigan poco y queden cortas, y así el
+    perfil de la cabeza (oreja, sien, mandíbula) se siga viendo de lateral en vez de taparse con
+    una sola masa de pelo — el ancho de la cuña no se toca (eso rompería el mínimo de la tarea)."""
+    d = min(abs(((azimut_grados - lado) + 180) % 360 - 180) for lado in LADOS_AZIMUT)
+    return minimo + (1.0 - minimo) * min(1.0, d / ventana)
 
 
 def plan_cunias(corona: dict, cunias: int = 10, ancho_base=(8.0, 12.0), largo=(10.0, 17.0),
-                 caida=(3.0, 8.0), largo_marco: float = 20.0, ancho_marco: float = 9.0,
-                 caida_marco: float = 13.0, semilla: int = 1) -> list[dict]:
+                 caida=(3.0, 8.0), largo_marco: float = 18.0, ancho_marco: float = 9.0,
+                 caida_marco: float = 8.0, semilla: int = 1) -> list[dict]:
     """`cunias` (8-12) repartidas por la corona: 2 fijas de marco (enmarcan la cara, más largas y
     con más caída) y el resto en el arco largo que no es la cara (lados + nuca). Ninguna con base
     menor a `ancho_base[0]` (por la propia tarea, nunca < 6 mm). Puro: no toca Blender.
+
+    Las del tramo de los lados puros (`LADOS_AZIMUT`) caen menos y llegan menos lejos
+    (`_factor_lateral`) para dejar ver la oreja y el perfil de la cara de lateral; el ancho no se
+    escala con ese factor, solo largo y caída.
     """
     if cunias < 3:
         raise ValueError("cunias necesita al menos 1 de cada lado del marco más una atrás")
@@ -81,8 +95,11 @@ def plan_cunias(corona: dict, cunias: int = 10, ancho_base=(8.0, 12.0), largo=(1
     for i in range(n_otras):
         t = (i + 0.5) / n_otras
         az = (ini + (fin - ini) * t + rng.uniform(-6.0, 6.0)) % 360.0
-        piezas.append(_cuna_spec(az, corona, rng.uniform(*largo), rng.uniform(*ancho_base),
-                                  rng.uniform(*caida), es_marco=False))
+        factor = _factor_lateral(az)
+        largo_val = rng.uniform(*largo) * (0.25 + 0.75 * factor)
+        caida_val = rng.uniform(*caida) * factor
+        ancho_val = max(6.0, rng.uniform(*ancho_base) * (0.5 + 0.5 * factor))
+        piezas.append(_cuna_spec(az, corona, largo_val, ancho_val, caida_val, es_marco=False))
     return piezas
 
 
@@ -90,7 +107,8 @@ def _cuna_spec(az_grados: float, corona: dict, largo_val: float, ancho_val: floa
                es_marco: bool) -> dict:
     x, y, z = _punto_corona(az_grados, corona)
     a = math.radians(az_grados)
-    inclinacion = math.radians(34.0 if es_marco else 16.0)  # las de marco caen más desde la raíz
+    inclinacion = math.radians(18.0 if es_marco else 16.0)  # las de marco casi no bajan: enmarcan
+    # hacia adelante/afuera sin cruzar sobre el ojo ni la mejilla al verlas de lateral
     lift_r, lift_z = math.cos(inclinacion), -math.sin(inclinacion)  # hacia afuera y hacia ABAJO
     direccion = (math.cos(a) * lift_r, math.sin(a) * lift_r, lift_z)
     return {"pos": (x, y, z), "direccion": direccion, "arriba": (0.0, 0.0, 1.0),
@@ -98,12 +116,15 @@ def _cuna_spec(az_grados: float, corona: dict, largo_val: float, ancho_val: floa
             "azimut": az_grados, "es_marco": es_marco, "es_copete": False}
 
 
-def plan_copete(corona: dict, cantidad: int = 3, ancho_base=(9.0, 13.0), largo=(15.0, 22.0),
-                 caida=(1.0, 3.0), abanico: float = 12.0, semilla: int = 2) -> list[dict]:
+def plan_copete(corona: dict, cantidad: int = 3, ancho_base=(11.0, 16.0), largo=(15.0, 22.0),
+                 caida=(1.0, 3.0), abanico: float = 26.0, semilla: int = 2) -> list[dict]:
     """Cuñas centrales que nacen cerca de la PUNTA de la corona (no del borde) y apuntan sobre
     todo hacia arriba (+Z) y un poco hacia adelante (−Y) — no radialmente, como las del borde —
     para que el peinado tenga volumen ARRIBA de la coronilla y se lea "de punta" de frente, no
     como un aro parejo alrededor de la cabeza. Más largas que las del borde (`plan_cunias`).
+
+    `abanico` más ancho y orígenes repartidos en un radio mayor (no todas pegadas al centro) para
+    que el conjunto se lea como un mechón alto que se abre, no como una sola púa aislada.
     """
     if cantidad < 1:
         return []
@@ -112,13 +133,13 @@ def plan_copete(corona: dict, cantidad: int = 3, ancho_base=(9.0, 13.0), largo=(
     for i in range(cantidad):
         frac = (i - (cantidad - 1) / 2) / max(1, cantidad - 1)  # -0.5 .. 0.5 (0 si cantidad==1)
         lean = frac * abanico * 2  # abanico lateral entre ellas, para que no salgan pegadas
-        radio_frac = rng.uniform(0.10, 0.30)  # cerca del centro del techo, no del borde
+        radio_frac = rng.uniform(0.08, 0.42)  # cerca del techo, con más dispersión que el centro puro
         az = math.radians(270.0 + lean)  # 270° = frente
         x = corona["cx"] + corona["hw"] * radio_frac * math.cos(az)
         y = corona["cy"] + corona["hd"] * radio_frac * math.sin(az)
         z = corona["z_top"] - rng.uniform(0.3, 1.5)  # nace casi en la punta, no en el borde
         dx = math.sin(math.radians(lean)) * 0.30
-        dy = -0.55 + rng.uniform(-0.05, 0.05)  # −Y: hacia adelante
+        dy = -0.22 + rng.uniform(-0.05, 0.05)  # −Y: hacia adelante, menos que antes (menos "cuerno")
         dz = 0.85 + rng.uniform(-0.05, 0.05)   # +Z: sobre todo hacia arriba
         norma = math.sqrt(dx * dx + dy * dy + dz * dz)
         direccion = (dx / norma, dy / norma, dz / norma)
