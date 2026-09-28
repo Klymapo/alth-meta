@@ -108,4 +108,9 @@ El usuario acepta gastar límite de uso, pero **un asset simple nunca debe consu
 - `refs/personajes/`: renders de estudio de los personajes.
 - `refs/escenas/`: los mismos personajes en escenas con luz ambiental (sirven para escala relativa, no para color).
 - `refs/infografias/`: comparativas antiguas. **No** usar sus medidas en "u"; la spec las reemplaza.
-- `docs/ALTH_META_Modelado.pdf`: cotas originales del cuerpo base (v0.8.4b).
+- `docs/ALTH_META_Modelado.pdf`: cotas originales del **esqueleto** (v0.8.4b) — anchos y largos en mm de cabeza,
+  torso, brazos y piernas. Es una referencia de partida, no la fuente única: no define volumen de ropa,
+  densidad de pelo ni lectura general del personaje. Esas decisiones se toman comparando `refs/personajes/`
+  (las cuatro vistas y la referencia de identidad), no inventando ni extrapolando del PDF. Ver
+  `docs/diagnostico-theo-28sep.md` para un caso donde apoyarse solo en las cotas del PDF produjo un
+  personaje correcto en mm pero irreconocible visualmente.
