@@ -195,6 +195,14 @@ class Asset:
         self.recorte = tuple(float(x) for x in rec.split(",")) if isinstance(rec, str) else (tuple(rec) if rec else None)
         self.vista = args.vista or conf.get("vista", "frente")
         self.nota = args.nota or conf.get("nota", "")
+        brief_config = conf.get("brief")
+        if brief_config:
+            brief_path = Path(brief_config)
+            self.brief_path = brief_path if brief_path.is_absolute() else RAIZ / brief_path
+        else:
+            self.brief_path = self.dir / "brief_final.md"
+        self.brief = (self.brief_path.read_text(encoding="utf-8").strip()
+                      if self.brief_path.exists() else "")
         extra = list(args.editable or []) + list(conf.get("editables", []))
         self.editables = [self.rel(self.build)] + [e for e in dict.fromkeys(extra) if e != self.rel(self.build)]
         self.trabajo = RAIZ / "renders" / self.nombre / "bucle"
@@ -302,6 +310,8 @@ def armar_prompt(asset: Asset, resultado: dict, sil: dict | None, vuelta: int, t
     partes = [f"# Vuelta {vuelta}{f' de {total}' if total else ''} · asset `{asset.rel(asset.dir)}`"]
     if asset.nota:
         partes.append(f"## Indicación del humano\n{asset.nota}")
+    if asset.brief:
+        partes.append(f"## Brief final versionado · `{asset.rel(asset.brief_path)}`\n{asset.brief}")
     partes.append("## Objetivo (spec.json del asset)\n```json\n"
                   + json.dumps(asset.spec, indent=1, ensure_ascii=False) + "\n```")
     partes.append(f"## Referencia\n{asset.ref or 'sin imagen de referencia'}"

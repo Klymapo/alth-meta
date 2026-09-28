@@ -116,6 +116,49 @@ def test_seccion_convenciones():
     assert "1 unidad de Blender = 1 mm" in txt
 
 
+def test_brief_final_se_carga_solo_y_entra_al_prompt(tmp_path, monkeypatch):
+    import argparse
+
+    asset_dir = tmp_path / "assets" / "theo"
+    asset_dir.mkdir(parents=True)
+    (asset_dir / "build.py").write_text("print('theo')\n", encoding="utf-8")
+    (asset_dir / "spec.json").write_text('{"nombre": "theo"}\n', encoding="utf-8")
+    (asset_dir / "brief_final.md").write_text("RONDA ÚNICA: conserva la identidad.\n", encoding="utf-8")
+    (tmp_path / "spec").mkdir()
+    (tmp_path / "spec" / "alth_spec.json").write_text('{"paleta": {}}\n', encoding="utf-8")
+    (tmp_path / "alth").mkdir()
+    (tmp_path / "alth" / "__init__.py").write_text(
+        "def revisar(objetos, destino, asset=None):\n    return {}\n", encoding="utf-8")
+    monkeypatch.setattr(b, "RAIZ", tmp_path)
+    args = argparse.Namespace(ref=None, recorte=None, vista=None, nota=None, editable=None)
+
+    asset = b.Asset("theo", args)
+    prompt = b.armar_prompt(asset, {"ok": False, "salida": "sin render"}, None, 1, 1)
+
+    assert asset.brief_path == asset_dir / "brief_final.md"
+    assert "Brief final versionado" in prompt
+    assert "RONDA ÚNICA: conserva la identidad." in prompt
+
+
+def test_brief_configurado_puede_vivir_fuera_del_asset(tmp_path, monkeypatch):
+    import argparse
+
+    asset_dir = tmp_path / "assets" / "theo"
+    asset_dir.mkdir(parents=True)
+    (asset_dir / "build.py").write_text("print('theo')\n", encoding="utf-8")
+    (asset_dir / "spec.json").write_text(
+        '{"bucle": {"brief": "docs/briefs/theo.md"}}\n', encoding="utf-8")
+    brief = tmp_path / "docs" / "briefs" / "theo.md"
+    brief.parent.mkdir(parents=True)
+    brief.write_text("brief externo\n", encoding="utf-8")
+    monkeypatch.setattr(b, "RAIZ", tmp_path)
+    args = argparse.Namespace(ref=None, recorte=None, vista=None, nota=None, editable=None)
+
+    asset = b.Asset("theo", args)
+
+    assert asset.brief == "brief externo"
+
+
 # ---------------------------------------------------------------- saturación de proveedores (503)
 import io as _io  # noqa: E402
 import json as _json  # noqa: E402
