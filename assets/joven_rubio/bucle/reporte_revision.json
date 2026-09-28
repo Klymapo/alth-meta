@@ -1,0 +1,512 @@
+{
+  "blender": "5.2.2 LTS",
+  "modo": "iteracion",
+  "px": 400,
+  "muestras": 16,
+  "segundos_por_vista": {
+    "frente": 2.8,
+    "lateral": 2.6,
+    "espalda": 2.7,
+    "tres_cuartos": 4.5
+  },
+  "segundos_total": 12.6,
+  "hoja": "/home/runner/work/alth-meta/alth-meta/renders/joven_rubio/iteracion/hoja.png",
+  "vistas": {
+    "frente": "/home/runner/work/alth-meta/alth-meta/renders/joven_rubio/iteracion/frente.png",
+    "lateral": "/home/runner/work/alth-meta/alth-meta/renders/joven_rubio/iteracion/lateral.png",
+    "espalda": "/home/runner/work/alth-meta/alth-meta/renders/joven_rubio/iteracion/espalda.png",
+    "tres_cuartos": "/home/runner/work/alth-meta/alth-meta/renders/joven_rubio/iteracion/tres_cuartos.png"
+  },
+  "medidas_mm": {
+    "Cuerpo_torso": {
+      "W": 30.5,
+      "D": 17.8,
+      "H": 21.7,
+      "z_min": 38.8,
+      "tris_sin_modificadores": 96
+    },
+    "Cuerpo_pelvis": {
+      "W": 25.0,
+      "D": 17.0,
+      "H": 5.8,
+      "z_min": 33.0,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_cabeza": {
+      "W": 39.76,
+      "D": 29.74,
+      "H": 34.5,
+      "z_min": 60.5,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_nariz": {
+      "W": 3.8,
+      "D": 1.8,
+      "H": 2.7,
+      "z_min": 75.75,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_pierna_izq": {
+      "W": 13.75,
+      "D": 11.12,
+      "H": 24.0,
+      "z_min": 9.0,
+      "tris_sin_modificadores": 120
+    },
+    "Cuerpo_zapato_izq": {
+      "W": 11.9,
+      "D": 18.0,
+      "H": 9.0,
+      "z_min": 0.0,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_oreja_izq": {
+      "W": 3.8,
+      "D": 6.5,
+      "H": 8.4,
+      "z_min": 74.72,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_brazo_izq": {
+      "W": 11.0,
+      "D": 11.04,
+      "H": 12.75,
+      "z_min": 49.62,
+      "tris_sin_modificadores": 24
+    },
+    "Cuerpo_antebrazo_izq": {
+      "W": 10.0,
+      "D": 9.53,
+      "H": 11.0,
+      "z_min": 50.5,
+      "tris_sin_modificadores": 24
+    },
+    "Cuerpo_mano_izq_palma": {
+      "W": 7.5,
+      "D": 7.0,
+      "H": 4.34,
+      "z_min": 53.83,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_mano_izq_indice": {
+      "W": 5.5,
+      "D": 1.9,
+      "H": 1.61,
+      "z_min": 57.9,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_mano_izq_medio": {
+      "W": 6.0,
+      "D": 2.0,
+      "H": 1.7,
+      "z_min": 56.1,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_mano_izq_anular": {
+      "W": 5.5,
+      "D": 1.9,
+      "H": 1.61,
+      "z_min": 54.29,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_mano_izq_menique": {
+      "W": 4.7,
+      "D": 1.7,
+      "H": 1.44,
+      "z_min": 52.85,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_mano_izq_pulgar": {
+      "W": 2.1,
+      "D": 5.1,
+      "H": 1.89,
+      "z_min": 53.65,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_pierna_der": {
+      "W": 13.75,
+      "D": 11.12,
+      "H": 24.0,
+      "z_min": 9.0,
+      "tris_sin_modificadores": 120
+    },
+    "Cuerpo_zapato_der": {
+      "W": 11.9,
+      "D": 18.0,
+      "H": 9.0,
+      "z_min": 0.0,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_oreja_der": {
+      "W": 3.8,
+      "D": 6.5,
+      "H": 8.4,
+      "z_min": 74.72,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_brazo_der": {
+      "W": 11.0,
+      "D": 11.04,
+      "H": 12.75,
+      "z_min": 49.62,
+      "tris_sin_modificadores": 24
+    },
+    "Cuerpo_antebrazo_der": {
+      "W": 10.0,
+      "D": 9.53,
+      "H": 11.0,
+      "z_min": 50.5,
+      "tris_sin_modificadores": 24
+    },
+    "Cuerpo_mano_der_palma": {
+      "W": 7.5,
+      "D": 7.0,
+      "H": 4.34,
+      "z_min": 53.83,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_mano_der_indice": {
+      "W": 5.5,
+      "D": 1.9,
+      "H": 1.61,
+      "z_min": 57.9,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_mano_der_medio": {
+      "W": 6.0,
+      "D": 2.0,
+      "H": 1.7,
+      "z_min": 56.1,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_mano_der_anular": {
+      "W": 5.5,
+      "D": 1.9,
+      "H": 1.61,
+      "z_min": 54.29,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_mano_der_menique": {
+      "W": 4.7,
+      "D": 1.7,
+      "H": 1.44,
+      "z_min": 52.85,
+      "tris_sin_modificadores": 12
+    },
+    "Cuerpo_mano_der_pulgar": {
+      "W": 2.1,
+      "D": 5.1,
+      "H": 1.89,
+      "z_min": 53.65,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_ojo_blanco_izq": {
+      "W": 8.4,
+      "D": 0.35,
+      "H": 9.7,
+      "z_min": 73.65,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_iris_izq": {
+      "W": 3.9,
+      "D": 0.35,
+      "H": 6.3,
+      "z_min": 75.05,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_ceja_izq": {
+      "W": 8.4,
+      "D": 0.5,
+      "H": 1.6,
+      "z_min": 85.35,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_ojo_blanco_der": {
+      "W": 8.4,
+      "D": 0.35,
+      "H": 9.7,
+      "z_min": 73.65,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_iris_der": {
+      "W": 3.9,
+      "D": 0.35,
+      "H": 6.3,
+      "z_min": 75.05,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_ceja_der": {
+      "W": 8.4,
+      "D": 0.5,
+      "H": 1.6,
+      "z_min": 85.35,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_boca": {
+      "W": 6.02,
+      "D": 0.92,
+      "H": 0.9,
+      "z_min": 71.45,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_collar": {
+      "W": 28.4,
+      "D": 27.01,
+      "H": 1.6,
+      "z_min": 59.0,
+      "tris_sin_modificadores": 60
+    },
+    "Joven_chaleco": {
+      "W": 31.2,
+      "D": 18.21,
+      "H": 21.7,
+      "z_min": 38.8,
+      "tris_sin_modificadores": 96
+    },
+    "Joven_camisa_v_0": {
+      "W": 9.5,
+      "D": 0.3,
+      "H": 4.34,
+      "z_min": 56.13,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_camisa_v_1": {
+      "W": 8.2,
+      "D": 0.3,
+      "H": 4.34,
+      "z_min": 52.39,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_camisa_v_2": {
+      "W": 6.8,
+      "D": 0.3,
+      "H": 4.34,
+      "z_min": 48.65,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_camisa_v_3": {
+      "W": 5.2,
+      "D": 0.3,
+      "H": 4.34,
+      "z_min": 44.91,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_camisa_v_4": {
+      "W": 3.6,
+      "D": 0.3,
+      "H": 4.34,
+      "z_min": 41.17,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_camisa_v_5": {
+      "W": 2.4,
+      "D": 0.3,
+      "H": 4.34,
+      "z_min": 37.43,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_solapa_izq": {
+      "W": 4.03,
+      "D": 1.9,
+      "H": 6.5,
+      "z_min": 56.05,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_solapa_der": {
+      "W": 4.03,
+      "D": 1.9,
+      "H": 6.5,
+      "z_min": 56.05,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_corbata": {
+      "W": 2.6,
+      "D": 0.35,
+      "H": 20.2,
+      "z_min": 38.85,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_boton_0": {
+      "W": 1.3,
+      "D": 0.4,
+      "H": 1.3,
+      "z_min": 49.23,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_boton_1": {
+      "W": 1.3,
+      "D": 0.4,
+      "H": 1.3,
+      "z_min": 45.49,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_boton_2": {
+      "W": 1.3,
+      "D": 0.4,
+      "H": 1.3,
+      "z_min": 41.75,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_manga_izq": {
+      "W": 11.0,
+      "D": 14.55,
+      "H": 14.55,
+      "z_min": 48.72,
+      "tris_sin_modificadores": 32
+    },
+    "Joven_puno_izq": {
+      "W": 2.0,
+      "D": 13.47,
+      "H": 14.16,
+      "z_min": 48.92,
+      "tris_sin_modificadores": 80
+    },
+    "Joven_manga_der": {
+      "W": 11.0,
+      "D": 14.55,
+      "H": 14.55,
+      "z_min": 48.72,
+      "tris_sin_modificadores": 32
+    },
+    "Joven_puno_der": {
+      "W": 2.0,
+      "D": 13.47,
+      "H": 14.16,
+      "z_min": 48.92,
+      "tris_sin_modificadores": 80
+    },
+    "Joven_pantalon_izq": {
+      "W": 15.55,
+      "D": 11.97,
+      "H": 25.5,
+      "z_min": 7.5,
+      "tris_sin_modificadores": 120
+    },
+    "Joven_dobladillo_izq": {
+      "W": 14.66,
+      "D": 11.28,
+      "H": 2.4,
+      "z_min": 9.4,
+      "tris_sin_modificadores": 80
+    },
+    "Joven_pantalon_der": {
+      "W": 15.55,
+      "D": 11.97,
+      "H": 25.5,
+      "z_min": 7.5,
+      "tris_sin_modificadores": 120
+    },
+    "Joven_dobladillo_der": {
+      "W": 14.66,
+      "D": 11.28,
+      "H": 2.4,
+      "z_min": 9.4,
+      "tris_sin_modificadores": 80
+    },
+    "Joven_pantalon_cadera": {
+      "W": 26.8,
+      "D": 18.8,
+      "H": 5.8,
+      "z_min": 33.0,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_corbata_nudo": {
+      "W": 3.4,
+      "D": 0.55,
+      "H": 2.6,
+      "z_min": 56.7,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_chaleco_pico_izq": {
+      "W": 4.25,
+      "D": 2.26,
+      "H": 3.2,
+      "z_min": 36.8,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_chaleco_pico_der": {
+      "W": 4.25,
+      "D": 2.26,
+      "H": 3.2,
+      "z_min": 36.8,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_chaleco_trabilla": {
+      "W": 12.0,
+      "D": 0.6,
+      "H": 2.2,
+      "z_min": 40.7,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_chaleco_hebilla": {
+      "W": 2.4,
+      "D": 0.6,
+      "H": 2.6,
+      "z_min": 40.5,
+      "tris_sin_modificadores": 12
+    },
+    "Joven_pelo": {
+      "W": 55.68,
+      "D": 45.65,
+      "H": 42.84,
+      "z_min": 67.85,
+      "tris_sin_modificadores": 430
+    }
+  },
+  "verificacion": {
+    "ok": true,
+    "triangulos": 2858,
+    "checks": [
+      {
+        "check": "cota Cuerpo_cabeza.W",
+        "ok": true,
+        "detalle": "39.76 mm vs 40.00 mm (-0.6%)"
+      },
+      {
+        "check": "cota Cuerpo_cabeza.H",
+        "ok": true,
+        "detalle": "34.50 mm vs 34.50 mm (+0.0%)"
+      },
+      {
+        "check": "cota Cuerpo_pierna_der.H",
+        "ok": true,
+        "detalle": "24.00 mm vs 24.00 mm (+0.0%)"
+      },
+      {
+        "check": "cota Cuerpo_zapato_der.D",
+        "ok": true,
+        "detalle": "18.00 mm vs 18.00 mm (+0.0%)"
+      },
+      {
+        "check": "cota Cuerpo_torso.D",
+        "ok": true,
+        "detalle": "17.80 mm vs 17.80 mm (-0.0%)"
+      },
+      {
+        "check": "cota Cuerpo_pierna_der.D",
+        "ok": true,
+        "detalle": "11.12 mm vs 11.13 mm (-0.0%)"
+      },
+      {
+        "check": "triangulos",
+        "ok": true,
+        "detalle": "2858 de 6000"
+      },
+      {
+        "check": "paleta",
+        "ok": true,
+        "detalle": "todos los colores están en la paleta"
+      },
+      {
+        "check": "flotantes",
+        "ok": true,
+        "detalle": "todas las piezas están unidas al piso"
+      },
+      {
+        "check": "apoyo",
+        "ok": true,
+        "detalle": "z mínimo del asset: +0.00 mm"
+      }
+    ]
+  }
+}

@@ -152,8 +152,9 @@ def _agregar_bloque(bm, puntos, anchos, grosores, normales_arriba=None):
 
 
 def construir_cabello_theo(cabeza_pieza, color=RUBIO, nombre="Joven_pelo"):
-    """Pelo completo de Theo en una sola malla facetada: casquete base ancho envolvente y
-    mechones gruesos en bloque que coinciden con las 4 vistas de la referencia."""
+    """Pelo completo de Theo en una sola malla facetada: casquete base envolvente y
+    mechones gruesos en bloque alineados con las 4 vistas de la referencia (copete principal
+    hacia -X / izquierda en pantalla de frente, mechón largo frontal hacia +X / derecha)."""
     import bmesh
 
     bm = bmesh.new()
@@ -163,9 +164,9 @@ def construir_cabello_theo(cabeza_pieza, color=RUBIO, nombre="Joven_pelo"):
     cx, cy = cabeza_pieza["pos"][0], cabeza_pieza["pos"][1] + 1.2
     anillos_spec = [
         # (z, rx, ry, cy_offset)
-        (102.5, 14.0, 13.0, 0.0),   # domo superior
-        (98.5, 23.0, 19.5, 0.4),    # bóveda alta
-        (92.0, 25.5, 21.0, 0.8),    # sienes y lados
+        (102.0, 14.5, 13.5, 0.0),   # domo superior
+        (98.0, 23.5, 19.5, 0.4),    # bóveda alta
+        (91.5, 25.5, 21.0, 0.8),    # sienes y lados
         (85.5, 25.0, 21.0, 1.2),    # encima y tras orejas
     ]
     anillos_verts = []
@@ -204,81 +205,81 @@ def construir_cabello_theo(cabeza_pieza, color=RUBIO, nombre="Joven_pelo"):
             k = (s + 1) % seg
             bm.faces.new((a[s], a[k], b[k], b[s]))
 
-    # 2. Crestas superiores facetadas (coronilla con volumen y mechones angulados)
-    # Cresta alta central inclinada hacia la derecha del modelo (+X):
+    # 2. Crestas superiores facetadas (coronilla con volumen hacia -X / izquierda del espectador)
+    # Cresta alta central dominante inclinada hacia -X (nuestra izquierda en vista frente):
     _agregar_bloque(bm,
-                    [(-2.0, -3.0, 99.0), (3.0, -2.0, 104.5), (6.0, 1.0, 107.5), (5.5, 4.5, 103.5)],
-                    [13.0, 14.0, 11.5, 8.0],
-                    [8.5, 9.0, 7.5, 5.5])
+                    [(2.0, -3.0, 99.0), (-3.5, -2.0, 104.5), (-7.0, 1.0, 108.0), (-6.0, 4.5, 104.0)],
+                    [13.5, 14.5, 12.0, 8.5],
+                    [9.0, 9.5, 8.0, 6.0])
 
-    # Cresta alta izquierda del modelo (-X):
+    # Cresta lateral izquierda secundaria (-X):
     _agregar_bloque(bm,
-                    [(-4.0, -2.5, 99.0), (-10.5, -2.0, 104.0), (-14.0, 2.0, 106.0), (-13.0, 5.5, 102.5)],
-                    [11.5, 12.5, 10.5, 7.0],
-                    [8.0, 8.5, 7.0, 5.0])
+                    [(3.0, -2.0, 99.0), (10.0, -1.5, 103.5), (13.5, 2.5, 105.0), (12.0, 6.0, 101.5)],
+                    [11.5, 12.0, 10.0, 7.0],
+                    [7.5, 8.0, 6.5, 5.0])
 
     # Cresta trasera alta:
     _agregar_bloque(bm,
-                    [(0.0, 6.0, 100.0), (1.0, 12.0, 103.5), (1.0, 17.0, 100.5)],
-                    [12.0, 13.0, 8.5],
-                    [7.5, 8.0, 6.0])
+                    [(-1.0, 6.0, 100.5), (-1.5, 12.0, 104.0), (-1.0, 17.0, 101.0)],
+                    [12.5, 13.5, 9.0],
+                    [8.0, 8.5, 6.5])
 
-    # 3. Mechones frontales principales (enmarcan la cara en bloque grueso)
-    # Gran mechón frontal derecho (+X) que cae largo junto al ojo:
+    # 3. Mechones frontales principales (enmarcan la cara en bloque grueso según la referencia)
+    # Gran mechón frontal largo a la derecha (+X / nuestra derecha de frente), baja hasta la mandíbula:
     _agregar_bloque(bm,
-                    [(3.5, -11.0, 97.0), (8.5, -15.5, 90.0), (12.5, -15.5, 81.0), (13.5, -13.0, 73.0)],
-                    [11.5, 12.5, 10.0, 6.5],
-                    [7.0, 7.5, 6.5, 5.0])
+                    [(3.5, -11.0, 97.5), (8.5, -15.5, 90.5), (12.5, -15.5, 81.5), (12.0, -13.0, 74.0)],
+                    [11.5, 13.0, 10.5, 7.0],
+                    [7.5, 8.0, 7.0, 5.5])
 
-    # Mechón frontal izquierdo (-X) que cae sobre la sien izquierda:
+    # Mechón frontal izquierdo (-X / nuestra izquierda de frente), más corto que el derecho:
     _agregar_bloque(bm,
-                    [(-2.5, -11.0, 97.0), (-7.5, -15.0, 90.5), (-11.5, -15.0, 82.5), (-12.0, -13.0, 75.5)],
+                    [(-3.0, -11.0, 97.0), (-8.5, -15.0, 90.0), (-12.0, -14.5, 82.5), (-12.0, -12.5, 77.0)],
                     [11.0, 12.0, 9.5, 6.5],
                     [7.0, 7.5, 6.5, 5.0])
 
-    # Pico central del flequillo en la raya de la frente:
+    # Pico central del flequillo en la raya de la frente (inclinado levemente a -X):
     _agregar_bloque(bm,
-                    [(0.5, -12.0, 96.0), (1.0, -15.5, 90.5), (0.8, -14.5, 85.0)],
-                    [7.5, 8.0, 5.5],
-                    [5.5, 6.0, 4.0])
+                    [(-0.5, -12.0, 96.0), (-1.5, -15.5, 90.5), (-1.5, -14.5, 85.5)],
+                    [8.0, 8.5, 6.0],
+                    [6.0, 6.5, 4.5])
 
-    # 4. Mechones laterales (volumen compacto que baja hacia las orejas, sin abrirse horizontalmente)
+    # 4. Mechones laterales (volumen compacto sobre y tras las orejas)
     # Bloque lateral derecho (+X):
     _agregar_bloque(bm,
-                    [(16.0, -4.0, 93.0), (22.5, -2.5, 87.0), (24.0, 0.0, 79.0), (22.0, 2.0, 73.0)],
-                    [10.0, 11.0, 9.5, 7.0],
+                    [(16.0, -3.0, 93.0), (22.5, -1.5, 87.0), (23.5, 1.0, 79.0), (21.5, 3.0, 73.0)],
+                    [10.5, 11.5, 9.5, 7.0],
                     [7.0, 7.5, 6.5, 5.0])
 
     # Bloque lateral izquierdo (-X):
     _agregar_bloque(bm,
-                    [(-16.0, -4.0, 93.0), (-22.5, -2.5, 87.0), (-24.0, 0.0, 79.0), (-22.0, 2.0, 73.0)],
-                    [10.0, 11.0, 9.5, 7.0],
+                    [(-16.0, -3.0, 93.0), (-22.5, -1.5, 87.0), (-23.5, 1.0, 79.0), (-21.5, 3.0, 73.0)],
+                    [10.5, 11.5, 9.5, 7.0],
                     [7.0, 7.5, 6.5, 5.0])
 
-    # 5. Mechones de la espalda (capas facetadas en bloque escalonado)
+    # 5. Mechones de la espalda (capas facetadas en bloque escalonado, vistas en espalda y 3/4)
     # Fila superior trasera (+X y -X):
     _agregar_bloque(bm,
-                    [(9.0, 14.0, 95.0), (13.5, 19.5, 88.0), (13.0, 19.5, 80.0), (11.0, 17.5, 73.0)],
-                    [10.5, 11.5, 9.5, 7.0],
-                    [7.0, 7.5, 6.5, 5.0])
+                    [(8.5, 14.0, 95.0), (13.0, 19.5, 88.0), (12.5, 19.5, 80.0), (10.5, 17.5, 73.0)],
+                    [11.0, 12.0, 10.0, 7.5],
+                    [7.5, 8.0, 6.5, 5.0])
     _agregar_bloque(bm,
-                    [(-9.0, 14.0, 95.0), (-13.5, 19.5, 88.0), (-13.0, 19.5, 80.0), (-11.0, 17.5, 73.0)],
-                    [10.5, 11.5, 9.5, 7.0],
-                    [7.0, 7.5, 6.5, 5.0])
+                    [(-8.5, 14.0, 95.0), (-13.0, 19.5, 88.0), (-12.5, 19.5, 80.0), (-10.5, 17.5, 73.0)],
+                    [11.0, 12.0, 10.0, 7.5],
+                    [7.5, 8.0, 6.5, 5.0])
 
-    # Fila baja trasera central y laterales (cubren la nuca):
+    # Fila baja trasera central y laterales (cubren la nuca en la silueta posterior):
     _agregar_bloque(bm,
-                    [(0.0, 16.0, 86.0), (0.0, 19.5, 78.0), (0.0, 17.5, 70.0)],
-                    [11.5, 11.0, 8.0],
+                    [(0.0, 16.0, 86.5), (0.0, 19.5, 78.5), (0.0, 17.5, 70.0)],
+                    [12.0, 11.5, 8.5],
+                    [7.5, 7.0, 5.5])
+    _agregar_bloque(bm,
+                    [(7.5, 15.0, 84.5), (9.0, 18.0, 77.0), (7.5, 16.0, 68.5)],
+                    [10.0, 10.0, 7.5],
                     [7.0, 6.5, 5.0])
     _agregar_bloque(bm,
-                    [(8.0, 15.0, 84.0), (9.5, 18.0, 76.5), (8.0, 16.0, 68.5)],
-                    [9.5, 9.5, 7.0],
-                    [6.5, 6.0, 4.5])
-    _agregar_bloque(bm,
-                    [(-8.0, 15.0, 84.0), (-9.5, 18.0, 76.5), (-8.0, 16.0, 68.5)],
-                    [9.5, 9.5, 7.0],
-                    [6.5, 6.0, 4.5])
+                    [(-7.5, 15.0, 84.5), (-9.0, 18.0, 77.0), (-7.5, 16.0, 68.5)],
+                    [10.0, 10.0, 7.5],
+                    [7.0, 6.5, 5.0])
 
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     obj = alth._objeto(nombre, bm)

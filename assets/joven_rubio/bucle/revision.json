@@ -1,0 +1,12 @@
+{
+  "asset": "assets/joven_rubio",
+  "vuelta_origen": 1,
+  "motivo": "mejor versión verificada",
+  "archivos_sha256": {
+    "assets/joven_rubio/build.py": "f4f7d14585ddf6a1e8258ede8f811f15f624e217a7d56c34e674bffd6fed700b",
+    "assets/joven_rubio/spec.json": "f3a3f91efb216777b85c4f6a2499b0f9950b8677d04accb31b85c1897485ca17"
+  },
+  "hoja_sha256": "30d89419a9b4ad326dbd40e8faa9b9c0c9cf9eec3465c0b6e4bd8604d0ddd84d",
+  "reporte_sha256": "306cc78102c99089972ece76d40756c2869073f54670eb484304e22875178b6e",
+  "verificacion_ok": true
+}
