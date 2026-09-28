@@ -252,7 +252,7 @@ def test_se_queda_con_la_verificada_aunque_otra_tenga_mejor_silueta(tmp_path, mo
     assert (trabajo / "revision" / "hoja.png").read_bytes() == b"hoja-v1"
 
 
-# ---------------------------------------------------------------- progreso para el Taller
+# ---------------------------------------------------------------- progreso para CHSP-X
 def test_progreso_crea_rama_y_actualiza_archivo(monkeypatch):
     monkeypatch.setenv("GITHUB_REPOSITORY", "yo/repo")
     monkeypatch.setenv("GITHUB_RUN_ID", "99")
@@ -290,3 +290,27 @@ def test_progreso_inactivo_fuera_de_actions(monkeypatch):
     monkeypatch.delenv("ALTH_PROGRESO_TOKEN", raising=False)
     monkeypatch.setattr(b.urllib.request, "urlopen", lambda *a, **k: (_ for _ in ()).throw(AssertionError("red")))
     b.Progreso("x", 3).publicar(10, "algo")
+
+
+# ---------------------------------------------------------------- ronda única (copiar y pegar)
+def test_ronda_unica_respuesta_se_extrae():
+    resp = ("DIAGNÓSTICO:\nD1 · pelo · Z máx 92.0 → 97.5 mm (+6 %) · vista frente\n"
+            "AUTOCOMPROBACIÓN:\nD1 → construir_pelo(alto=97.5)\n"
+            "CAMBIOS: pelo más alto\nESTADO: SIGUE\n\n"
+            "### ARCHIVO: alth/pelo.py\n```python\nALTO = 97.5\n```\n")
+    assert b.extraer_archivos(resp) == {"alth/pelo.py": "ALTO = 97.5\n"}
+    assert b.extraer_campo(resp, "ESTADO") == "SIGUE"
+
+
+def test_ronda_unica_reglas_y_bandera():
+    reglas = (RAIZ / "tools" / "bucle_sistema.md").read_text(encoding="utf-8")
+    assert "RONDA ÚNICA" in reglas and "AUTOCOMPROBACIÓN" in reglas
+    import argparse
+    capturado = {}
+    original = b.cmd_paquete
+    b.cmd_paquete = lambda a: capturado.setdefault("a", a)
+    try:
+        b.main(["paquete", "lata", "--unico", "--sin-correr"])
+    finally:
+        b.cmd_paquete = original
+    assert isinstance(capturado["a"], argparse.Namespace) and capturado["a"].unico is True
