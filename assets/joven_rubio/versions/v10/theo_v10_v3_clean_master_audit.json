@@ -1,0 +1,59 @@
+{
+  "source": "theo_v3_facetado_textura.glb",
+  "policy": "preserve V3 likeness, geometry, UVs, texture and head-detail shell; technical cleanup only",
+  "geometries": {
+    "theo_v3": {
+      "vertices_before": 15150,
+      "faces_before": 25624,
+      "vertices_after": 15150,
+      "faces_after": 25624,
+      "removed_faces": 0,
+      "visual_kind": "texture",
+      "uv_preserved": true,
+      "material_type": "PBRMaterial",
+      "texture_size": [
+        2048,
+        2048
+      ]
+    },
+    "theo_v3_1": {
+      "vertices_before": 2157,
+      "faces_before": 719,
+      "vertices_after": 2157,
+      "faces_after": 719,
+      "removed_faces": 0,
+      "visual_kind": "texture",
+      "uv_preserved": true,
+      "material_type": "PBRMaterial",
+      "texture_size": [
+        2048,
+        2048
+      ]
+    }
+  },
+  "removed_faces_total": 0,
+  "vertices_removed_total": 0,
+  "output": "theo_v10_v3_clean_master.glb",
+  "global_scaling": false,
+  "vertex_position_edits": false,
+  "uv_or_texture_rebake": false,
+  "head_detail_shell_preserved": true,
+  "scene_bounds": [
+    [
+      -0.0478336861074769,
+      -0.024444883262935896,
+      -0.00036745243951891415
+    ],
+    [
+      0.047992286285592885,
+      0.024224571580209207,
+      0.09543423630528951
+    ]
+  ],
+  "scene_extents": [
+    0.09582597239306978,
+    0.0486694548431451,
+    0.09580168874480842
+  ],
+  "output_size_bytes": 936268
+}
