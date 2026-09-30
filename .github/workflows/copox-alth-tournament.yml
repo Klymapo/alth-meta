@@ -1,9 +1,6 @@
 name: COPOX · ALTH tournament validation
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/copox-alth-tournament.yml"
   workflow_dispatch:
 
 permissions:
@@ -69,7 +66,6 @@ jobs:
                   applicable = [a for a in candidate['audit'] if a['status'] != 'N-A']
                   assert applicable and all(a['status'] == 'PASS' for a in applicable), candidate
               else:
-                  # Cualquier FAIL aplicable debe impedir elegibilidad.
                   audit = candidate.get('audit', [])
                   if audit:
                       assert any(a['status'] == 'FAIL' for a in audit if a['status'] != 'N-A'), candidate
