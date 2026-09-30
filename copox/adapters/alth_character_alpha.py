@@ -10,7 +10,6 @@ from copox.adapters.alth_character import cmd_capture as legacy_capture
 from copox.adapters.alth_character import cmd_learn as legacy_learn
 from copox.adapters.alth_character import cmd_mutate as legacy_mutate
 from copox.adapters.alth_character import ensure_runtime, read_json, write_json
-from copox.adapters.alth_glb_character import apply_structured_hair
 from copox.state_bundle import load_bundle, save_bundle
 
 
@@ -63,6 +62,9 @@ def _render(repo: Path, model: Path, candidate: Path):
 
 def cmd_execute(args: argparse.Namespace) -> int:
     repo = Path(args.repo_root).resolve()
+    ensure_runtime(repo)
+    from copox.adapters.alth_glb_character import apply_structured_hair
+
     candidate = Path(args.candidate_dir).resolve()
     baseline_model = Path(args.baseline_model).resolve()
     config = (repo / args.edit_config).resolve() if not Path(args.edit_config).is_absolute() else Path(args.edit_config)
