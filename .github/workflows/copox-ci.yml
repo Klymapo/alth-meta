@@ -4,8 +4,8 @@ on:
   pull_request:
     paths:
       - "copox/**"
-      - "tests/test_copox_contract.py"
-      - "docs/COPOX_LOOP_ENGINE.md"
+      - "tests/test_copox_*.py"
+      - "docs/COPOX_*.md"
       - ".github/workflows/copox-*.yml"
   workflow_dispatch:
 
@@ -35,8 +35,20 @@ jobs:
               print('OK', p)
           PY
 
-      - name: Unit tests del contrato
-        run: python3 -m unittest tests.test_copox_contract -v
+      - name: Unit tests COPOX
+        run: python3 -m unittest tests.test_copox_contract tests.test_copox_maturity -v
+
+      - name: Verificar reporte de madurez de Theo
+        run: |
+          set +e
+          python3 -m copox.maturity copox/maturity/theo.json --min-level M4 --check --output .copox/theo-maturity.md
+          code=$?
+          set -e
+          test "$code" -eq 4
+          grep -q "Orejas" .copox/theo-maturity.md
+          grep -q "Dedos / pulgar" .copox/theo-maturity.md
+          grep -q "Preparación para rig" .copox/theo-maturity.md
+          echo "PASS: cobertura completa registrada y loop general correctamente bloqueado"
 
       - name: Ejecutar smoke end-to-end
         run: |
