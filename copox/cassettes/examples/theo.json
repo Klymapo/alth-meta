@@ -1,0 +1,43 @@
+{
+  "id": "theo-character",
+  "kind": "alth_character",
+  "profile": "copox/profiles/alth_character.json",
+  "target": "joven_rubio",
+  "baseline": "copox/baselines/joven_rubio.json",
+  "variables": {
+    "asset_dir": "assets/joven_rubio",
+    "baseline_params": "copox/baselines/joven_rubio.json",
+    "search_space": "copox/search_spaces/joven_rubio.json",
+    "reference": "refs/personajes/joven-rubio-4-vistas.jpg",
+    "audit_config": "copox/reference_configs/joven_rubio.json",
+    "focus": "head,face,hair"
+  },
+  "strategy": {
+    "tournament_size": 3,
+    "max_candidates": 6
+  },
+  "commands": {
+    "prepare": ["python3", "-m", "copox.adapters.alth_character", "prepare", "--repo-root", "{repo_root}", "--asset-dir", "{asset_dir}", "--baseline-params", "{baseline_params}", "--run-dir", "{run_dir}"],
+    "mutate": ["python3", "-m", "copox.adapters.alth_character", "mutate", "--baseline-params", "{baseline_params}", "--search-space", "{search_space}", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--candidate-id", "{candidate_id}"],
+    "execute": ["python3", "-m", "copox.adapters.alth_character", "execute", "--repo-root", "{repo_root}", "--asset-dir", "{asset_dir}", "--candidate-dir", "{candidate_dir}"],
+    "capture": ["python3", "-m", "copox.adapters.alth_character", "capture", "--candidate-dir", "{candidate_dir}", "--evidence-dir", "{evidence_dir}", "--run-dir", "{run_dir}", "--reference", "{reference}", "--audit-config", "{audit_config}", "--focus", "{focus}"],
+    "learn": ["python3", "-m", "copox.adapters.alth_character", "learn", "--run-dir", "{run_dir}", "--tournament", "{tournament}"],
+    "promote": ["python3", "-m", "copox.adapters.alth_character", "promote", "--repo-root", "{repo_root}", "--asset-dir", "{asset_dir}", "--candidate-dir", "{candidate_dir}", "--baseline-params", "{baseline_params}", "--target", "{target}", "--finalize"],
+    "report": ["python3", "-m", "copox.report", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--output", "{run_dir}/report.md", "--title", "COPOX · Theo aprobado por unanimidad"]
+  },
+  "auditor_overrides": {
+    "HeadAgent": {"applicable": true},
+    "FaceAgent": {"applicable": true},
+    "HairAgent": {"applicable": true},
+    "ArmsAgent": {"applicable": false},
+    "LegsAgent": {"applicable": false},
+    "FootwearAgent": {"applicable": false}
+  },
+  "promotion": {
+    "unanimous": true
+  },
+  "reporting": {
+    "required_evidence": ["hoja.png", "overlay_front.png", "overlay_side.png", "overlay_back.png", "overlay_threeq.png"],
+    "publish_only_unanimous": true
+  }
+}
