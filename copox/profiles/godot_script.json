@@ -1,0 +1,15 @@
+{
+  "id": "godot_script_v1",
+  "description": "Scripts y lógica Godot/Python con pruebas deterministas y regresión.",
+  "auditors": [
+    {"id":"SyntaxGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","SyntaxGate","--metrics","{candidate_dir}/metrics.json","--metric","code.syntax_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"UnitTestGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","UnitTestGate","--metrics","{candidate_dir}/metrics.json","--metric","code.unit_tests_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"IntegrationGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","IntegrationGate","--metrics","{candidate_dir}/metrics.json","--metric","code.integration_tests_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"ArchitectureAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","ArchitectureAuditor","--metrics","{candidate_dir}/metrics.json","--metric","code.architecture_ok","--op","true","--result","{audit_result}"]},
+    {"id":"APICompatibilityGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","APICompatibilityGate","--metrics","{candidate_dir}/metrics.json","--metric","code.api_compatibility_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"PerformanceAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","PerformanceAuditor","--metrics","{candidate_dir}/metrics.json","--metric","code.performance_ok","--op","true","--result","{audit_result}"]},
+    {"id":"RegressionGuard","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","RegressionGuard","--metrics","{candidate_dir}/metrics.json","--metric","regression.tests_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"VisualBehaviourGate","applicable":false,"command":["python3","-m","copox.auditors.metric_gate","--agent","VisualBehaviourGate","--metrics","{candidate_dir}/metrics.json","--metric","code.visual_behaviour_ok","--op","true","--result","{audit_result}"]},
+    {"id":"LearningArchitect","command":["python3","-m","copox.auditors.metric_gate","--agent","LearningArchitect","--metrics","{candidate_dir}/metrics.json","--metric","learning.ready_to_promote","--op","true","--result","{audit_result}"]}
+  ]
+}
