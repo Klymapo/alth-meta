@@ -1,0 +1,77 @@
+name: COPOX · Rig maturity
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/rig_candidate.py"
+      - "copox/adapters/glb_structure_probe.py"
+      - "copox/adapters/regional_reference_audit.py"
+      - "copox/maturity/theo.json"
+      - "assets/joven_rubio/theo_alpha.glb"
+      - ".github/workflows/copox-rig-maturity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rig-maturity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v6
+      - name: Preparar runtimes
+        run: |
+          python3 -m pip install -q numpy scipy trimesh Pillow
+          bash tools/ensure_blender.sh --strict
+      - name: Crear rig candidato learning-only
+        run: |
+          rm -rf .copox/rig_maturity
+          mkdir -p .copox/rig_maturity/evidence
+          alth-python copox/adapters/rig_candidate.py \
+            --input assets/joven_rubio/theo_alpha.glb \
+            --output .copox/rig_maturity/model.glb \
+            --report .copox/rig_maturity/rig.json
+          python3 -m copox.adapters.glb_structure_probe \
+            --input .copox/rig_maturity/model.glb \
+            --output .copox/rig_maturity/structure.json
+          python3 -m copox.adapters.regional_reference_audit \
+            --prev assets/joven_rubio/theo_alpha.glb \
+            --curr .copox/rig_maturity/model.glb \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --output .copox/rig_maturity/regional.json \
+            --evidence-dir .copox/rig_maturity/evidence
+      - name: Verificar skin, pose y rest pose
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('.copox/rig_maturity')
+          rig=json.loads((root/'rig.json').read_text())
+          structure=json.loads((root/'structure.json').read_text())
+          regional=json.loads((root/'regional.json').read_text())
+          assert rig['promotion_allowed'] is False
+          assert rig['candidate_ready_for_audit'] is True, rig
+          assert rig['weight_coverage'] == 1.0
+          assert rig['pose_test']['finite'] is True
+          assert rig['pose_test']['moved_vertices'] > 0
+          assert structure['counts']['skins'] >= 1, structure['counts']
+          assert structure['counts']['joints'] >= 10, structure['counts']
+          # En rest pose el rig no debe alterar la forma visible.
+          for name,data in regional['regions'].items():
+              assert abs(float(data['delta_pp'])) < 0.10, (name,data)
+          print('PASS: rig candidato con skin + pose real + rest pose estable')
+          PY
+      - name: Evidencia rig
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-rig-maturity
+          path: .copox/rig_maturity/
+          retention-days: 1
+          if-no-files-found: ignore
