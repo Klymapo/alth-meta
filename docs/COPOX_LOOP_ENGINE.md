@@ -21,11 +21,15 @@ La analogía de diseño es una videocasetera:
 8. Si ningún candidato converge, la baseline se conserva y la campaña termina en `PLATEAU`.
 9. La IA no pertenece al inner loop por defecto. Primero: algoritmos, parámetros, pruebas y auditores deterministas.
 10. ChatGPT actúa como director: define campañas, cambia estrategia ante plateau y consume únicamente reportes consolidados.
+11. Una campaña trabaja sobre el mismatch prioritario (o dos estrechamente acoplados). No se activan auditores especializados de regiones que el productor no está intentando mejorar.
+12. La proyección/auditoría debe registrar explícitamente el sistema de coordenadas del artefacto. Blender Z-up y glTF Y-up no se consideran intercambiables.
 
 ## Flujo
 
 ```text
 baseline aceptada
+      │
+      ├─ prepare (una vez por campaña)
       │
       ▼
 torneo (N hermanos)
@@ -55,22 +59,27 @@ torneo (N hermanos)
 
 ## Contrato universal del cassette
 
-Los cassettes son JSON y declaran únicamente configuración y comandos. El motor no conoce el dominio.
-
-Campos principales:
+Los cassettes son JSON y declaran configuración y comandos. El motor no conoce el dominio.
 
 ```json
 {
-  "id": "theo-profile-refinement",
-  "kind": "character_3d",
+  "id": "personaje-pelo",
+  "kind": "alth_character",
   "profile": "copox/profiles/alth_character.json",
-  "target": "assets/joven_rubio",
-  "baseline": "main",
+  "target": "personaje_x",
+  "baseline": "copox/baselines/personaje_x.json",
+  "variables": {
+    "asset_dir": "assets/personaje_x",
+    "reference": "refs/personajes/personaje_x.jpg",
+    "search_space": "copox/search_spaces/personaje_x.json",
+    "focus": "hair,profile"
+  },
   "strategy": {
     "tournament_size": 3,
     "max_candidates": 6
   },
   "commands": {
+    "prepare": ["python3", "..."],
     "mutate": ["python3", "..."],
     "execute": ["python3", "..."],
     "capture": ["python3", "..."],
@@ -78,18 +87,17 @@ Campos principales:
     "promote": ["python3", "..."],
     "report": ["python3", "..."]
   },
-  "promotion": {
-    "unanimous": true
-  },
+  "promotion": {"unanimous": true},
   "reporting": {
-    "required_evidence": ["front.png", "side.png", "back.png", "threeq.png"]
+    "required_evidence": ["hoja.png", "overlay_front.png", "overlay_side.png"]
   }
 }
 ```
 
-Los comandos son listas de argumentos; no se ejecutan mediante shell. Variables disponibles:
+Los comandos son listas de argumentos; no se ejecutan mediante shell. Variables universales disponibles:
 
 - `{cassette_id}`
+- `{cassette_path}`
 - `{candidate_id}`
 - `{candidate_dir}`
 - `{evidence_dir}`
@@ -100,9 +108,11 @@ Los comandos son listas de argumentos; no se ejecutan mediante shell. Variables 
 - `{repo_root}`
 - `{auditor_id}` / `{audit_result}` durante auditoría
 
+Además, todos los valores escalares declarados dentro de `variables` pasan al contexto del cassette. El engine no interpreta su significado.
+
 ## Perfiles
 
-Un perfil define auditores, no productores. Ejemplos previstos:
+Un perfil define auditores, no productores:
 
 - `alth_character`: mesh, spec, likeness, silueta, anatomía, regiones, regresión, LearningArchitect.
 - `alth_asset`: geometría, escala, dimensiones, silueta, materiales, referencia.
@@ -111,20 +121,40 @@ Un perfil define auditores, no productores. Ejemplos previstos:
 - `godot_ui`: layout, overflow, clipping, contraste, tipografía, responsive, interacción, regresión visual.
 - `godot_script`: sintaxis, unit, integration, headless, performance, arquitectura y regresión.
 
-El cassette puede activar o desactivar auditores mediante `auditor_overrides`. Así un cambio de pelo puede activar `HairAgent` y mantener brazos/piernas en `N-A`, mientras `RegressionGuard` vigila las regiones congeladas.
+El cassette puede activar o desactivar auditores mediante `auditor_overrides`. Los gates globales siguen vigilando likeness, cambio positivo, anatomía y regresiones aunque un auditor regional esté en `N-A`.
+
+## Adaptador ALTH Character
+
+`copox/adapters/alth_character.py` implementa un productor determinista sin IA:
+
+1. `prepare`: reproduce la baseline y guarda GLB, hoja y reporte.
+2. `mutate`: cambia parámetros declarados en un search space; no puede inventar parámetros fuera del contrato.
+3. `execute`: Blender headless genera el candidato y un GLB de iteración.
+4. `capture`: Audit V2 genérico compara baseline/candidato contra la referencia.
+5. `learn`: usa `unresolved` + error budget; un fallo repetido rota técnica/parámetro en lugar de repetir una tercera vez lo mismo.
+6. `promote`: sólo recibe candidatos ya unánimes; actualiza la baseline paramétrica. La persistencia Git es opt-in.
+
+`copox/adapters/alth_character_audit.py` trabaja sobre GLB exportado. El GLB de ALTH es glTF Y-up; esta transformación se declara en `reference_configs/*` y el auditor usa un **registro bloqueado a la baseline**, para que modificar pelo no parezca mover brazos/piernas por un reescalado automático del candidato.
+
+Los landmarks del modelo se obtienen por nombres semánticos de geometría. Los landmarks de referencia pueden ser explícitos o detectarse automáticamente dentro de ROIs semánticas amplias. No se escriben coordenadas exactas inventadas a mano.
 
 ## Evidencia
-
-Ruta por defecto:
 
 ```text
 .copox/evidence/<cassette>/<run>/
   manifest.json
+  baseline/
   candidates/
     t01-c01/
       candidate.json
+      params.json
+      model.glb
+      reporte.json
       metrics.json
       evidence/
+        hoja.png
+        overlay_front.png
+        ...
       audit/
 ```
 
@@ -134,19 +164,17 @@ Los renders fallidos son artefactos temporales. La trazabilidad persistente pued
 
 La unidad de exclusión es el **cassette**, no todo COPOX. Dos campañas que escriben la misma baseline no deben ejecutarse en paralelo.
 
-Ejemplo conceptual:
-
 ```text
 copox-theo       -> secuencial
 copox-detective  -> secuencial
 copox-hud        -> secuencial
 ```
 
-pero esos tres grupos pueden ejecutarse simultáneamente.
+pero esos grupos pueden ejecutarse simultáneamente. El scheduler actual consulta `copox/cassettes/enabled/*.json`; mientras esa carpeta no contenga un cassette productivo, no hay loops autónomos activos.
 
 ## Coste
 
-El inner loop debe poder operar sin APIs de IA. Herramientas preferidas:
+El inner loop debe poder operar sin APIs de IA:
 
 - GitHub Actions en runners estándar del repositorio público.
 - Python y librerías open source.
@@ -158,9 +186,9 @@ IA gratuita sólo puede ser un fallback explícito. ChatGPT no inspecciona cada 
 
 ## Compatibilidad con ALTH/CHSP-X
 
-`bucle.yml`, `aprobar.yml` y CHSP-X permanecen inicialmente intactos. COPOX se introduce en paralelo y los adaptadores ALTH irán sustituyendo gradualmente la lógica específica del bucle antiguo.
+`bucle.yml`, `aprobar.yml` y CHSP-X permanecen disponibles durante la migración. COPOX se introduce en paralelo.
 
-La auditoría V2 de personajes se migra como plugin/perfil, manteniendo:
+Audit V2 conserva:
 
 - candidatos hermanos desde la última baseline aceptada;
 - LikenessLead;
@@ -170,11 +198,11 @@ La auditoría V2 de personajes se migra como plugin/perfil, manteniendo:
 - LearningArchitect;
 - máximo de candidatos antes de plateau.
 
-La diferencia es que COPOX sube el criterio de aprobación a unanimidad de todos los auditores aplicables.
+COPOX cambia el criterio de aprobación a **unanimidad de todos los auditores aplicables**.
 
-## Fases de implementación
+## Estado de implementación
 
-### Fase A — núcleo
+### Fase A — núcleo: validada
 
 - contrato de cassette;
 - motor de torneo;
@@ -182,15 +210,28 @@ La diferencia es que COPOX sube el criterio de aprobación a unanimidad de todos
 - unanimidad;
 - manifiesto;
 - plateau;
-- workflows manual/scheduler.
+- workflows manual/scheduler;
+- smoke end-to-end en GitHub Actions.
 
-### Fase B — ALTH
+### Fase B — ALTH: integración en validación
 
-- adapter de render actual;
-- adapter Audit V2;
-- parametrización de personajes/assets;
-- promoción automática a baseline interna;
-- CHSP-X sólo muestra versiones unánimes.
+Implementado:
+
+- adapter Blender headless real;
+- adapter Audit V2 configurable;
+- baseline paramétrica;
+- search space determinista;
+- LearningArchitect heurístico;
+- exportación GLB de iteración;
+- overlays + métricas + verificación ALTH;
+- cassette de ejemplo de personaje fuera de `enabled/`.
+
+Antes de habilitar loops programados se exige:
+
+1. validar semánticamente coordenadas glTF y regiones congeladas;
+2. validar landmarks automáticos;
+3. ejecutar un torneo real de tres candidatos sin persistencia;
+4. confirmar que un FAIL veta realmente la promoción y que sólo ALL PASS publica reporte.
 
 ### Fase C — Godot
 
