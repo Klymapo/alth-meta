@@ -1,0 +1,106 @@
+name: COPOX · Facial animation maturity
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/facial_morph_candidate.py"
+      - "copox/adapters/facial_morph_preview.py"
+      - "copox/adapters/glb_structure_probe.py"
+      - "copox/learning/facial_diagnosis.py"
+      - "copox/adapters/alth_glb_render.py"
+      - "copox/maturity/theo.json"
+      - "assets/joven_rubio/theo_alpha.glb"
+      - ".github/workflows/copox-facial-maturity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  facial-maturity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v6
+      - name: Preparar runtimes
+        run: |
+          python3 -m pip install -q numpy scipy trimesh Pillow
+          bash tools/ensure_blender.sh --strict
+      - name: Crear controles faciales candidatos
+        run: |
+          rm -rf .copox/facial_maturity
+          mkdir -p .copox/facial_maturity/rest/evidence
+          alth-python copox/adapters/facial_morph_candidate.py \
+            --input assets/joven_rubio/theo_alpha.glb \
+            --output .copox/facial_maturity/model.glb \
+            --report .copox/facial_maturity/facial.json
+          python3 -m copox.adapters.glb_structure_probe \
+            --input .copox/facial_maturity/model.glb \
+            --output .copox/facial_maturity/structure.json
+          python3 -m copox.learning.facial_diagnosis \
+            --candidate-report .copox/facial_maturity/facial.json \
+            --structure .copox/facial_maturity/structure.json \
+            --output .copox/facial_maturity/learning.json
+          python3 -m copox.adapters.regional_reference_audit \
+            --prev assets/joven_rubio/theo_alpha.glb \
+            --curr .copox/facial_maturity/model.glb \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --output .copox/facial_maturity/rest/regional.json \
+            --evidence-dir .copox/facial_maturity/rest/evidence
+          alth-python copox/adapters/alth_glb_render.py \
+            --input .copox/facial_maturity/model.glb \
+            --output-dir .copox/facial_maturity/rest/render \
+            --title "COPOX · facial rest"
+      - name: Generar previews activos
+        run: |
+          for control in blink_left blink_right mouth_open; do
+            alth-python copox/adapters/facial_morph_preview.py \
+              --input .copox/facial_maturity/model.glb \
+              --control "$control" \
+              --output-dir ".copox/facial_maturity/previews/$control"
+          done
+      - name: Verificar M4 facial sin aprobar semántica final
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import numpy as np
+          from PIL import Image
+
+          root=Path('.copox/facial_maturity')
+          facial=json.loads((root/'facial.json').read_text())
+          structure=json.loads((root/'structure.json').read_text())
+          learning=json.loads((root/'learning.json').read_text())
+          regional=json.loads((root/'rest'/'regional.json').read_text())
+          assert facial['promotion_allowed'] is False
+          assert facial['rest_vertices_unchanged'] is True
+          assert facial['control_count'] == 3
+          assert facial['all_controls_move_vertices'] is True
+          assert structure['counts']['morph_targets'] >= 3, structure['counts']
+          assert learning['ready_for_m4_process'] is True, learning
+          assert learning['promotion_allowed'] is False
+          for name,data in regional['regions'].items():
+              assert abs(float(data['delta_pp'])) < 0.05, (name,data)
+          rest=np.asarray(Image.open(root/'rest'/'render'/'hoja.png').convert('RGB'),dtype=np.int16)
+          for control in ('blink_left','blink_right','mouth_open'):
+              sheet=root/'previews'/control/'hoja.png'
+              assert sheet.exists(), sheet
+              img=np.asarray(Image.open(sheet).convert('RGB'),dtype=np.int16)
+              assert img.shape==rest.shape
+              changed=int(np.count_nonzero(np.any(img!=rest,axis=2)))
+              assert changed>0, (control,changed)
+          print('PASS: morph targets faciales exportables + rest estable + previews activos')
+          PY
+      - name: Evidencia facial
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-facial-maturity
+          path: .copox/facial_maturity/
+          retention-days: 1
+          if-no-files-found: ignore
