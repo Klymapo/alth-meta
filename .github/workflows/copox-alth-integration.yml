@@ -27,6 +27,8 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: astral-sh/setup-uv@v6
+
       - name: Preparar baseline real ALTH
         run: |
           rm -rf .copox/integration
