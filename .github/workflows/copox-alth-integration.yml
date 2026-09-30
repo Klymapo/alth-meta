@@ -4,11 +4,14 @@ on:
   pull_request:
     paths:
       - "copox/adapters/alth_character*.py"
+      - "copox/adapters/alth_glb_*.py"
+      - "copox/state_bundle.py"
       - "copox/baselines/**"
       - "copox/search_spaces/**"
       - "copox/reference_configs/**"
+      - "copox/profiles/alth_character_alpha.json"
       - "copox/cassettes/examples/theo.json"
-      - "assets/joven_rubio/build.py"
+      - "assets/joven_rubio/theo_alpha.glb"
       - "alth/**"
       - ".github/workflows/copox-alth-integration.yml"
   workflow_dispatch:
@@ -25,44 +28,45 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - uses: astral-sh/setup-uv@v6
 
-      - name: Preparar baseline real ALTH
+      - name: Preparar baseline Theo Alpha
         run: |
           rm -rf .copox/integration
-          python3 -m copox.adapters.alth_character prepare \
+          python3 -m copox.adapters.alth_character_alpha prepare \
             --repo-root . \
-            --asset-dir assets/joven_rubio \
-            --baseline-params copox/baselines/joven_rubio.json \
+            --baseline-params copox/baselines/joven_rubio_alpha.json \
+            --baseline-model assets/joven_rubio/theo_alpha.glb \
             --run-dir .copox/integration
 
-      - name: Generar un candidato paramétrico de pelo
+      - name: Generar candidato estructurado de pelo
         run: |
           mkdir -p .copox/integration/candidates/t01-c02/evidence
-          python3 -m copox.adapters.alth_character mutate \
-            --baseline-params copox/baselines/joven_rubio.json \
-            --search-space copox/search_spaces/joven_rubio.json \
+          python3 -m copox.adapters.alth_character_alpha mutate \
+            --baseline-params .copox/integration/baseline/params.json \
+            --search-space copox/search_spaces/joven_rubio_alpha_hair.json \
             --run-dir .copox/integration \
             --candidate-dir .copox/integration/candidates/t01-c02 \
             --candidate-id t01-c02
-          python3 -m copox.adapters.alth_character execute \
+          python3 -m copox.adapters.alth_character_alpha execute \
             --repo-root . \
-            --asset-dir assets/joven_rubio \
+            --baseline-model .copox/integration/baseline/model.glb \
+            --edit-config copox/reference_configs/joven_rubio_alpha.json \
             --candidate-dir .copox/integration/candidates/t01-c02
 
-      - name: Capturar y auditar contra referencia
+      - name: Capturar y auditar Alpha contra referencia
         run: |
-          python3 -m copox.adapters.alth_character capture \
+          python3 -m copox.adapters.alth_character_alpha capture \
             --candidate-dir .copox/integration/candidates/t01-c02 \
             --evidence-dir .copox/integration/candidates/t01-c02/evidence \
             --run-dir .copox/integration \
             --reference refs/personajes/joven-rubio-4-vistas.jpg \
-            --audit-config copox/reference_configs/joven_rubio.json \
+            --audit-config copox/reference_configs/joven_rubio_alpha.json \
             --focus hair,profile
 
-      - name: Verificar contrato y semántica de evidencia real
+      - name: Verificar GLB aprobado, estructura y frozen regions
         run: |
           python3 - <<'PY'
           import json
@@ -77,24 +81,25 @@ jobs:
           missing = [str(p) for p in required if not p.exists()]
           assert not missing, missing
           m = json.loads((root/'metrics.json').read_text(encoding='utf-8'))
+          r = json.loads((root/'reporte.json').read_text(encoding='utf-8'))
           assert m['technical']['mesh_integrity'] is True
           assert m['technical']['spec_compliance'] is True
-          assert m['registration']['coordinate_system']['vertical_axis'] == 1
-          assert set(m['visual']['full']['candidate']) >= {'front','side','back','threeq','weighted'}
-          assert len(m['landmarks']['reference']) >= 3, m['landmarks']
-          assert 'error_budget' in m and m['error_budget']
-          # Sólo cambia pelo: el registro fijo debe impedir regresiones ficticias del cuerpo.
+          assert m['registration']['coordinate_system']['vertical_axis'] == 2
+          assert m['structure']['hair_structure_ok'] is True
+          assert float(m['structure']['randomness_penalty_mm']) <= 0.75
+          assert r['technical']['frozen_nodes_unchanged'] is True
+          assert len(r['technical']['hair_nodes']) == 12
           detail = m['regions']['detail']
           for frozen in ('torso','arms_hands','legs_feet'):
               assert abs(float(detail[frozen]['delta_pp'])) < 0.05, (frozen, detail[frozen])
-          print('PASS: GLB + hoja + overlays + ejes glTF + landmarks + frozen regions coherentes')
+          print('PASS: Theo Alpha seed + grupos estructurados + frozen regions + evidencia')
           PY
 
       - name: Guardar evidencia de integración
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: copox-alth-integration
+          name: copox-theo-alpha-integration
           path: .copox/integration/
           retention-days: 1
           if-no-files-found: ignore
