@@ -23,16 +23,21 @@ class CopoxMaturityTests(unittest.TestCase):
             "whole_body_silhouette", "global_proportions", "head_shape", "hair", "ears", "face", "neck",
             "torso", "shoulders", "arms", "elbows_forearms", "hands", "fingers", "pelvis_hips", "legs",
             "knees", "ankles", "feet_footwear", "materials_colors", "mesh_topology", "orientation", "rig_readiness",
+            "facial_animation_readiness",
         }
         self.assertEqual(ids, expected)
         self.assertFalse(result["ready"])
         blockers = {m["id"] for m in result["blockers"]}
-        self.assertIn("ears", blockers)
-        self.assertIn("hands", blockers)
-        self.assertIn("fingers", blockers)
-        self.assertIn("rig_readiness", blockers)
+        # Las regiones anatómicas validadas ya deben estar en M4 o M5.
+        for mature in ("head_shape", "ears", "hands", "fingers", "legs", "feet_footwear"):
+            self.assertNotIn(mature, blockers)
+        # El loop completo sigue cerrado por las áreas técnicas/globales todavía inmaduras.
+        for blocked in ("whole_body_silhouette", "global_proportions", "materials_colors", "mesh_topology", "orientation", "rig_readiness", "facial_animation_readiness"):
+            self.assertIn(blocked, blockers)
         hair = next(m for m in result["modules"] if m["id"] == "hair")
         self.assertEqual(hair["computed_level"], "M5")
+        fingers = next(m for m in result["modules"] if m["id"] == "fingers")
+        self.assertEqual(fingers["computed_level"], "M4")
 
     def test_global_module_catalog_also_has_maturity(self):
         result = assess_coverage("copox/maturity/modules.json", min_level="M4", critical_only=False)
