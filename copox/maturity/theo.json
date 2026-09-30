@@ -10,146 +10,144 @@
   },
   "modules": [
     {
-      "id": "whole_body_silhouette", "label": "Silueta global", "domain": "global", "critical": true, "priority": 1,
-      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": true, "persistence": true, "loop_gate": false},
-      "processes": {"evidence": "hoja 4 vistas + overlays", "auditor": "LikenessLead/OrganicSilhouette/AnatomyCoherence", "regression": "RegressionGuard"},
-      "learning_questions": ["¿Qué vista concentra el mayor error de silueta?", "¿El error viene de proporción global o de una región localizada?"],
-      "signals": ["visual.full.*", "visual.weighted_gain_pp", "visual.anatomy_coherence_ok"]
+      "id":"whole_body_silhouette","label":"Silueta global","domain":"global","critical":true,"priority":1,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":false,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"regional_reference_audit + 4 vistas","auditor":"LikenessLead/OrganicSilhouette","learning":"regional_diagnosis","regression":"RegressionGuard"},
+      "learning_questions":["¿Qué vista y región explican la mayor parte del error global?","¿Qué intervención regional mejora la silueta sin mover zonas ya correctas?"],
+      "signals":["error_ranking","visual.full.*","visual.weighted_gain_pp"]
     },
     {
-      "id": "global_proportions", "label": "Proporciones globales", "domain": "global", "critical": true, "priority": 2,
-      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": true, "persistence": true, "loop_gate": false},
-      "processes": {"auditor": "AnatomyCoherence"},
-      "learning_questions": ["¿Qué relación cabeza/torso/extremidades difiere de la referencia?", "¿Qué cambio puede hacerse sin escalar regiones ya correctas?"],
-      "signals": ["visual.anatomy_coherence_ok", "regions.detail"]
+      "id":"global_proportions","label":"Proporciones globales","domain":"global","critical":true,"priority":2,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":false,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"auditor":"AnatomyCoherence + regional_reference_audit","learning":"regional error budget"},
+      "learning_questions":["¿Qué relación cabeza/torso/extremidades difiere de la referencia?","¿Qué combinación de regiones debe cambiar en vez de escalar todo el personaje?"],
+      "signals":["visual.anatomy_coherence_ok","error_ranking"]
     },
     {
-      "id": "head_shape", "label": "Cráneo / forma de cabeza", "domain": "head", "critical": true, "priority": 3,
-      "capabilities": {"evidence": true, "auditor": false, "mutator": false, "learning": false, "regression": true, "persistence": true, "loop_gate": false},
-      "learning_questions": ["¿El perfil necesita cambio de frente, occipital, mandíbula o volumen lateral?", "¿Qué nodos del GLB forman realmente cráneo y mandíbula?"],
-      "signals": ["overlay_front", "overlay_side", "overlay_threeq"]
+      "id":"head_shape","label":"Cráneo / forma de cabeza","domain":"head","critical":true,"priority":3,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"regional closeups front/side/3q","auditor":"regional_reference_audit","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿El perfil necesita frente, occipital, mandíbula o volumen lateral?"],"signals":["regions.head_shape"]
     },
     {
-      "id": "hair", "label": "Pelo", "domain": "head", "critical": true, "priority": 4,
-      "capabilities": {"evidence": true, "auditor": true, "mutator": true, "learning": true, "regression": true, "persistence": true, "loop_gate": true},
-      "processes": {"evidence": "4 vistas", "auditor": "HairAgent + HairStructureGate + HairRandomnessGate", "mutator": "12 grupos semánticos Alpha", "learning": "alth_character_alpha.learn", "persistence": "state_bundle"},
-      "learning_questions": ["¿El mismatch principal es masa, flequillo, corona, laterales o parte trasera?", "¿El siguiente cambio mejora la referencia sin volver a apariencia de mechones aleatorios?"],
-      "signals": ["regions.hair_ok", "structure.hair_structure_ok", "structure.randomness_penalty_mm"]
+      "id":"hair","label":"Pelo","domain":"head","critical":true,"priority":4,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":true},
+      "processes":{"evidence":"4 vistas","auditor":"HairAgent + HairStructureGate + HairRandomnessGate","mutator":"12 grupos semánticos Alpha","learning":"alth_character_alpha.learn","persistence":"state_bundle"},
+      "learning_questions":["¿El mismatch principal es masa, flequillo, corona, laterales o parte trasera?"],"signals":["regions.hair_ok","structure.hair_structure_ok","structure.randomness_penalty_mm"]
     },
     {
-      "id": "ears", "label": "Orejas", "domain": "head", "critical": true, "priority": 5,
-      "capabilities": {"evidence": true, "auditor": false, "mutator": false, "learning": false, "regression": false, "persistence": true, "loop_gate": false},
-      "learning_questions": ["¿Cuáles mallas son las orejas anatómicas correctas?", "¿Qué geometría lateral produce las orejas fantasma?", "¿Las orejas correctas tienen material/color de pelo por error?", "¿Qué debe eliminarse, recolorearse o integrarse al cabello?"],
-      "signals": ["vista lateral izquierda/derecha", "3/4", "nombres de nodos", "materiales por nodo"]
+      "id":"ears","label":"Orejas","domain":"head","critical":true,"priority":5,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"side/3q closeups + UV probe","auditor":"regional_reference_audit + uv_region_probe","mutator":"named-node regional morph","learning":"regional_hypothesis_study","regression":"regional_process"},
+      "learning_questions":["¿Los nodos Oreja_*_perfil son las orejas fantasma?","¿La oreja embebida necesita corrección UV/material?"],"signals":["regions.ears","uv_regions","ear hypothesis ranking"]
     },
     {
-      "id": "face", "label": "Rostro", "domain": "face", "critical": true, "priority": 6,
-      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": true, "persistence": true, "loop_gate": false},
-      "processes": {"evidence": "landmarks + frontal/3/4", "auditor": "FaceAgent/landmark metrics"},
-      "learning_questions": ["¿El error dominante es posición de ojos, cejas, boca o volumen facial?", "¿Los landmarks detectados corresponden a las piezas correctas de Alpha?"],
-      "signals": ["landmarks.*", "regions.face_ok"]
+      "id":"face","label":"Rostro","domain":"face","critical":true,"priority":6,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"front/3q + landmarks","auditor":"regional_reference_audit/FaceAgent","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿El error dominante es posición, silueta o volumen facial?"],"signals":["regions.face","landmarks.*"]
     },
     {
-      "id": "neck", "label": "Cuello", "domain": "torso", "critical": true, "priority": 7,
-      "capabilities": {"evidence": true, "auditor": false, "mutator": false, "learning": false, "regression": false, "persistence": true, "loop_gate": false},
-      "learning_questions": ["¿El cuello es demasiado grueso/largo/corto?", "¿La transición cabeza-cuello coincide con la referencia?"],
-      "signals": ["frontal", "side", "threeq"]
+      "id":"neck","label":"Cuello","domain":"torso","critical":true,"priority":7,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"front/side closeups","auditor":"regional_reference_audit","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿El cuello falla por grosor, longitud o transición con cabeza?"],"signals":["regions.neck"]
     },
     {
-      "id": "torso", "label": "Torso", "domain": "torso", "critical": true, "priority": 8,
-      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": true, "persistence": true, "loop_gate": false},
-      "processes": {"auditor": "regional IoU + RegressionGuard"},
-      "learning_questions": ["¿El torso falla por anchura, profundidad o taper?", "¿Qué piezas corresponden a pecho/cintura/cadera?"],
-      "signals": ["regions.detail.torso"]
+      "id":"torso","label":"Torso","domain":"torso","critical":true,"priority":8,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"auditor":"regional_reference_audit","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿El torso falla por anchura, profundidad o taper?"],"signals":["regions.torso"]
     },
     {
-      "id": "shoulders", "label": "Hombros", "domain": "arms", "critical": true, "priority": 9,
-      "capabilities": {"evidence": true, "auditor": false, "mutator": false, "learning": false, "regression": false, "persistence": true, "loop_gate": false},
-      "learning_questions": ["¿La anchura y caída de hombros coincide con la referencia?", "¿La unión hombro-brazo parece bloque/esfera o una transición orgánica?"],
-      "signals": ["front", "back", "threeq"]
+      "id":"shoulders","label":"Hombros","domain":"arms","critical":true,"priority":9,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"auditor":"regional_reference_audit","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿La unión hombro-brazo parece bloque/esfera o transición orgánica?"],"signals":["regions.shoulders"]
     },
     {
-      "id": "arms", "label": "Brazos", "domain": "arms", "critical": true, "priority": 10,
-      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": true, "persistence": true, "loop_gate": false},
-      "processes": {"auditor": "ArmsAgent/regional IoU"},
-      "learning_questions": ["¿El brazo es demasiado masudo, cilíndrico o recto?", "¿Qué taper exige la referencia entre brazo y antebrazo?"],
-      "signals": ["regions.detail.arms_hands"]
+      "id":"arms","label":"Brazos","domain":"arms","critical":true,"priority":10,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"auditor":"regional_reference_audit + ArmsAgent","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿El brazo es demasiado masudo, cilíndrico o recto?"],"signals":["regions.arms"]
     },
     {
-      "id": "elbows_forearms", "label": "Codos / antebrazos", "domain": "arms", "critical": true, "priority": 11,
-      "capabilities": {"evidence": true, "auditor": false, "mutator": false, "learning": false, "regression": false, "persistence": true, "loop_gate": false},
-      "learning_questions": ["¿Dónde debe leerse el codo en T-pose?", "¿Cómo debe adelgazar el antebrazo hacia la muñeca?"],
-      "signals": ["front", "side", "closeup_arm"]
+      "id":"elbows_forearms","label":"Codos / antebrazos","domain":"arms","critical":true,"priority":11,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"auditor":"regional_reference_audit","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿Dónde debe leerse el codo y cómo debe adelgazar el antebrazo?"],"signals":["regions.elbows_forearms"]
     },
     {
-      "id": "hands", "label": "Manos", "domain": "hands", "critical": true, "priority": 12,
-      "capabilities": {"evidence": true, "auditor": false, "mutator": false, "learning": false, "regression": false, "persistence": true, "loop_gate": false},
-      "learning_questions": ["¿La palma tiene forma/volumen correcto?", "¿El pulgar se distingue de la palma?", "¿Qué parte del aspecto de masa moldeada proviene de geometría y cuál de shading/material?"],
-      "signals": ["closeup_hand_left", "closeup_hand_right", "hand_silhouette"]
+      "id":"hands","label":"Manos","domain":"hands","critical":true,"priority":12,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"regional closeups + hand_detail_probe","auditor":"regional_reference_audit + hand detail","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿La palma o el pulgar causan la lectura de masa moldeada?","¿La silueta distal coincide con la referencia?"],"signals":["regions.hands","hand_detail"]
     },
     {
-      "id": "fingers", "label": "Dedos / pulgar", "domain": "hands", "critical": true, "priority": 13,
-      "capabilities": {"evidence": false, "auditor": false, "mutator": false, "learning": false, "regression": false, "persistence": true, "loop_gate": false},
-      "learning_questions": ["¿Cuántos dedos son geometría independiente y cuántos están fusionados?", "¿Qué separación mínima mantiene estilo chibi sin verse como manopla?", "¿La topología soporta futura animación de dedos?"],
-      "signals": ["finger_components", "finger_gaps", "thumb_angle", "closeup_hand"]
+      "id":"fingers","label":"Dedos / pulgar","domain":"hands","critical":true,"priority":13,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"hand_detail_probe","auditor":"distal components/runs + regional reference","mutator":"regional_vertex_morph; topology_local_refine candidato","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿Cuántas separaciones distales muestra la referencia frente al modelo?","¿Hace falta densidad topológica antes de esculpir separación?"],"signals":["hand_detail","regions.fingers","topology"]
     },
     {
-      "id": "pelvis_hips", "label": "Pelvis / cadera", "domain": "legs", "critical": true, "priority": 14,
-      "capabilities": {"evidence": true, "auditor": false, "mutator": false, "learning": false, "regression": false, "persistence": true, "loop_gate": false},
-      "learning_questions": ["¿La anchura de cadera y transición torso-pierna coincide con la referencia?"],
-      "signals": ["front", "back", "threeq"]
+      "id":"pelvis_hips","label":"Pelvis / cadera","domain":"legs","critical":true,"priority":14,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"auditor":"regional_reference_audit","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿La anchura de cadera y transición torso-pierna coincide con la referencia?"],"signals":["regions.pelvis_hips"]
     },
     {
-      "id": "legs", "label": "Piernas", "domain": "legs", "critical": true, "priority": 15,
-      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": true, "persistence": true, "loop_gate": false},
-      "processes": {"auditor": "LegsAgent/regional IoU"},
-      "learning_questions": ["¿El problema principal está en muslo, pantorrilla, longitud o taper?"],
-      "signals": ["regions.detail.legs_feet"]
+      "id":"legs","label":"Piernas","domain":"legs","critical":true,"priority":15,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"auditor":"regional_reference_audit + LegsAgent","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿El error principal está en muslo, pantorrilla, longitud o taper?"],"signals":["regions.legs"]
     },
     {
-      "id": "knees", "label": "Rodillas", "domain": "legs", "critical": true, "priority": 16,
-      "capabilities": {"evidence": true, "auditor": false, "mutator": false, "learning": false, "regression": false, "persistence": true, "loop_gate": false},
-      "learning_questions": ["¿La rodilla se lee como articulación o como unión cubo-esfera?", "¿Su altura coincide con la referencia?"],
-      "signals": ["front", "side", "knee_closeup"]
+      "id":"knees","label":"Rodillas","domain":"legs","critical":true,"priority":16,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"auditor":"regional_reference_audit","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿La rodilla se lee como articulación orgánica y está a la altura correcta?"],"signals":["regions.knees"]
     },
     {
-      "id": "ankles", "label": "Tobillos", "domain": "legs", "critical": true, "priority": 17,
-      "capabilities": {"evidence": true, "auditor": false, "mutator": false, "learning": false, "regression": false, "persistence": true, "loop_gate": false},
-      "learning_questions": ["¿La transición pantorrilla-pie mantiene lectura orgánica?"],
-      "signals": ["side", "front", "ankle_closeup"]
+      "id":"ankles","label":"Tobillos","domain":"legs","critical":true,"priority":17,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"auditor":"regional_reference_audit","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿La transición pantorrilla-pie mantiene lectura orgánica?"],"signals":["regions.ankles"]
     },
     {
-      "id": "feet_footwear", "label": "Pies / calzado", "domain": "feet", "critical": true, "priority": 18,
-      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": true, "persistence": true, "loop_gate": false},
-      "processes": {"auditor": "FootwearAgent (actualmente región legs_feet amplia)"},
-      "learning_questions": ["¿El pie es demasiado cúbico/corto/largo?", "¿Debe separarse auditoría de pie de la región general de piernas?"],
-      "signals": ["regions.detail.legs_feet"]
+      "id":"feet_footwear","label":"Pies / calzado","domain":"feet","critical":true,"priority":18,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"auditor":"regional_reference_audit + FootwearAgent","mutator":"regional_vertex_morph","learning":"regional_diagnosis","regression":"regional_process"},
+      "learning_questions":["¿El pie es demasiado cúbico, corto o largo?"],"signals":["regions.feet_footwear"]
     },
     {
-      "id": "materials_colors", "label": "Materiales / color blocking", "domain": "materials", "critical": true, "priority": 19,
-      "capabilities": {"evidence": true, "auditor": false, "mutator": false, "learning": false, "regression": false, "persistence": true, "loop_gate": false},
-      "learning_questions": ["¿Qué piezas tienen material equivocado respecto a su función?", "¿Las orejas correctas están usando material de cabello?", "¿Qué colores afectan la lectura de las formas?"],
-      "signals": ["material_by_node", "reference_palette", "render"]
+      "id":"materials_colors","label":"Materiales / color blocking / UV","domain":"materials","critical":true,"priority":19,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":false,"learning":true,"regression":false,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"glb_structure_probe + uv_region_probe","auditor":"semantic material/UV comparison","learning":"UV-vs-geometry diagnosis"},
+      "learning_questions":["¿Qué error es material/UV y cuál geometría?","¿Puede aislarse la zona objetivo sin afectar el atlas compartido?"],"signals":["uv_regions","material_by_node"]
     },
     {
-      "id": "mesh_topology", "label": "Malla / topología", "domain": "technical", "critical": true, "priority": 20,
-      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": true, "persistence": true, "loop_gate": false},
-      "processes": {"auditor": "MeshIntegrityGate"},
-      "learning_questions": ["¿Hay mallas duplicadas, normales problemáticas o piezas superpuestas?", "¿Qué topología limita el refinamiento/rig posterior?"],
-      "signals": ["technical.mesh_integrity", "node/mesh inventory"]
+      "id":"mesh_topology","label":"Malla / topología","domain":"technical","critical":true,"priority":20,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":false,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"mesh_topology_probe","auditor":"MeshIntegrityGate + seam analysis","learning":"topology probe"},
+      "learning_questions":["¿La densidad local permite definir dedos?","¿Qué operación conserva seams UV/normales?"],"signals":["topology","technical.mesh_integrity"]
     },
     {
-      "id": "orientation", "label": "Orientación / sistema de ejes", "domain": "technical", "critical": true, "priority": 21,
-      "capabilities": {"evidence": true, "auditor": true, "mutator": true, "learning": false, "regression": true, "persistence": true, "loop_gate": true},
-      "processes": {"auditor": "orientation gate + hair_above_body", "mutator": "GLB Y-up -> ALTH Z-up sólo para render"},
-      "learning_questions": ["¿La orientación se conserva en export/import sin afectar la geometría persistida?"],
-      "signals": ["orientation.ok", "orientation.hair_above_body"]
+      "id":"orientation","label":"Orientación / sistema de ejes","domain":"technical","critical":true,"priority":21,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":false,"regression":true,"persistence":true,"loop_gate":true},
+      "processes":{"auditor":"orientation gate + hair_above_body","mutator":"GLB Y-up -> ALTH Z-up sólo para render"},
+      "learning_questions":["¿La orientación se conserva en export/import sin afectar geometría persistida?"],"signals":["orientation.ok","orientation.hair_above_body"]
     },
     {
-      "id": "rig_readiness", "label": "Preparación para rig", "domain": "rig", "critical": true, "priority": 22,
-      "capabilities": {"evidence": false, "auditor": false, "mutator": false, "learning": false, "regression": false, "persistence": true, "loop_gate": false},
-      "learning_questions": ["¿Qué piezas deben articularse por separado?", "¿Ojos, boca, cabello, dedos y extremidades tienen geometría/nodos adecuados para animación?", "¿Qué zonas colapsarían al riggear?"],
-      "signals": ["separate_nodes", "joint_clearance", "deformation_test_poses"]
+      "id":"rig_readiness","label":"Preparación para rig","domain":"rig","critical":true,"priority":22,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":false,"learning":true,"regression":false,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"glb_structure_probe","auditor":"skin/joint/separate-node readiness","learning":"rig readiness diagnosis"},
+      "learning_questions":["¿Qué piezas deben articularse por separado?","¿Qué zonas colapsarían al deformar?"],"signals":["skins","joints","separate_nodes","deformation_test_poses"]
+    },
+    {
+      "id":"facial_animation_readiness","label":"Ojos / boca animables","domain":"rig","critical":true,"priority":23,
+      "capabilities":{"evidence":true,"auditor":true,"mutator":false,"learning":true,"regression":false,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"glb_structure_probe","auditor":"semantic node separability","learning":"missing-node diagnosis"},
+      "learning_questions":["¿Ojos y boca son geometría separable o están embebidos en la malla/atlas?","¿Conviene extraer geometría o crear shapekeys?"],"signals":["separate_eye_nodes","separate_mouth_nodes"]
     }
   ]
 }
