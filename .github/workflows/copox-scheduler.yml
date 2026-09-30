@@ -1,0 +1,39 @@
+name: COPOX · Scheduler
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: matrix
+        name: Descubrir cassettes habilitados
+        run: |
+          value="$(python3 -m copox.discover --dir copox/cassettes/enabled)"
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+          echo "Cassettes: $value"
+
+  run:
+    needs: discover
+    if: needs.discover.outputs.matrix != '[]'
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        cassette: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    uses: ./.github/workflows/copox-run.yml
+    with:
+      cassette: ${{ matrix.cassette }}
+    secrets: inherit
