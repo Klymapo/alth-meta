@@ -10,17 +10,17 @@ ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT))
 
 import bpy  # noqa: E402
-from mathutils import Vector, Euler  # noqa: E402
+from mathutils import Euler, Matrix, Vector  # noqa: E402
 
 HAIR_TOKENS=("fleco","mechon","capa_","corona","oreja")
 
 
-def _arm_points(meshes, arm_matrix):
-    inv=arm_matrix.inverted()
+def _canonical_bounds(meshes, rotation):
     pts=[]
     for obj in meshes:
+        m=rotation @ obj.matrix_world
         for v in obj.data.vertices:
-            pts.append(inv @ obj.matrix_world @ v.co)
+            pts.append(m @ v.co)
     lo=Vector((min(p.x for p in pts),min(p.y for p in pts),min(p.z for p in pts)))
     hi=Vector((max(p.x for p in pts),max(p.y for p in pts),max(p.z for p in pts)))
     span=Vector((max(hi.x-lo.x,1e-9),max(hi.y-lo.y,1e-9),max(hi.z-lo.z,1e-9)))
@@ -72,61 +72,65 @@ def main()->int:
     if not meshes: raise RuntimeError('GLB sin mallas')
     body=max(meshes,key=lambda o:len(o.data.polygons))
 
+    # Misma convención canónica que auditor/render: Blender GLB -> -90° X -> Z-up.
+    rotation=Matrix.Rotation(math.radians(-90.0),4,'X')
+    lo,hi,span=_canonical_bounds(meshes,rotation)
+
     arm_data=bpy.data.armatures.new('COPOX_Rig')
     arm_obj=bpy.data.objects.new('COPOX_Rig',arm_data)
     bpy.context.scene.collection.objects.link(arm_obj)
     arm_obj.matrix_world=body.matrix_world.copy()
-    lo,hi,span=_arm_points(meshes,arm_obj.matrix_world)
+    to_can_arm=rotation @ arm_obj.matrix_world
+    from_can_arm=to_can_arm.inverted()
+    P=lambda x,y,z: from_can_arm @ _P(lo,span,x,y,z)
 
     bpy.context.view_layer.objects.active=arm_obj; arm_obj.select_set(True)
     bpy.ops.object.mode_set(mode='EDIT')
-    root=_add_bone(arm_data,'root',_P(lo,span,.5,.5,.04),_P(lo,span,.5,.5,.36))
-    pelvis=_add_bone(arm_data,'pelvis',_P(lo,span,.5,.5,.30),_P(lo,span,.5,.5,.45),root)
-    spine=_add_bone(arm_data,'spine',_P(lo,span,.5,.5,.43),_P(lo,span,.5,.5,.57),pelvis)
-    chest=_add_bone(arm_data,'chest',_P(lo,span,.5,.5,.55),_P(lo,span,.5,.5,.66),spine)
-    neck=_add_bone(arm_data,'neck',_P(lo,span,.5,.5,.64),_P(lo,span,.5,.5,.72),chest)
-    head=_add_bone(arm_data,'head',_P(lo,span,.5,.5,.70),_P(lo,span,.5,.5,.91),neck)
-    ula=_add_bone(arm_data,'upper_arm.L',_P(lo,span,.36,.5,.60),_P(lo,span,.21,.5,.56),chest)
-    fla=_add_bone(arm_data,'forearm.L',_P(lo,span,.21,.5,.56),_P(lo,span,.08,.5,.52),ula)
-    _add_bone(arm_data,'hand.L',_P(lo,span,.08,.5,.52),_P(lo,span,.025,.5,.52),fla)
-    ura=_add_bone(arm_data,'upper_arm.R',_P(lo,span,.64,.5,.60),_P(lo,span,.79,.5,.56),chest)
-    fra=_add_bone(arm_data,'forearm.R',_P(lo,span,.79,.5,.56),_P(lo,span,.92,.5,.52),ura)
-    _add_bone(arm_data,'hand.R',_P(lo,span,.92,.5,.52),_P(lo,span,.975,.5,.52),fra)
-    tla=_add_bone(arm_data,'thigh.L',_P(lo,span,.44,.5,.36),_P(lo,span,.44,.5,.20),pelvis)
-    sla=_add_bone(arm_data,'shin.L',_P(lo,span,.44,.5,.20),_P(lo,span,.44,.5,.065),tla)
-    _add_bone(arm_data,'foot.L',_P(lo,span,.44,.5,.065),_P(lo,span,.44,.72,.03),sla)
-    tra=_add_bone(arm_data,'thigh.R',_P(lo,span,.56,.5,.36),_P(lo,span,.56,.5,.20),pelvis)
-    sra=_add_bone(arm_data,'shin.R',_P(lo,span,.56,.5,.20),_P(lo,span,.56,.5,.065),tra)
-    _add_bone(arm_data,'foot.R',_P(lo,span,.56,.5,.065),_P(lo,span,.56,.72,.03),sra)
+    root=_add_bone(arm_data,'root',P(.5,.5,.04),P(.5,.5,.36))
+    pelvis=_add_bone(arm_data,'pelvis',P(.5,.5,.30),P(.5,.5,.45),root)
+    spine=_add_bone(arm_data,'spine',P(.5,.5,.43),P(.5,.5,.57),pelvis)
+    chest=_add_bone(arm_data,'chest',P(.5,.5,.55),P(.5,.5,.66),spine)
+    neck=_add_bone(arm_data,'neck',P(.5,.5,.64),P(.5,.5,.72),chest)
+    _add_bone(arm_data,'head',P(.5,.5,.70),P(.5,.5,.91),neck)
+    ula=_add_bone(arm_data,'upper_arm.L',P(.36,.5,.60),P(.21,.5,.56),chest)
+    fla=_add_bone(arm_data,'forearm.L',P(.21,.5,.56),P(.08,.5,.52),ula)
+    _add_bone(arm_data,'hand.L',P(.08,.5,.52),P(.025,.5,.52),fla)
+    ura=_add_bone(arm_data,'upper_arm.R',P(.64,.5,.60),P(.79,.5,.56),chest)
+    fra=_add_bone(arm_data,'forearm.R',P(.79,.5,.56),P(.92,.5,.52),ura)
+    _add_bone(arm_data,'hand.R',P(.92,.5,.52),P(.975,.5,.52),fra)
+    tla=_add_bone(arm_data,'thigh.L',P(.44,.5,.36),P(.44,.5,.20),pelvis)
+    sla=_add_bone(arm_data,'shin.L',P(.44,.5,.20),P(.44,.5,.065),tla)
+    _add_bone(arm_data,'foot.L',P(.44,.5,.065),P(.44,.72,.03),sla)
+    tra=_add_bone(arm_data,'thigh.R',P(.56,.5,.36),P(.56,.5,.20),pelvis)
+    sra=_add_bone(arm_data,'shin.R',P(.56,.5,.20),P(.56,.5,.065),tra)
+    _add_bone(arm_data,'foot.R',P(.56,.5,.065),P(.56,.72,.03),sra)
     bpy.ops.object.mode_set(mode='OBJECT')
 
     bone_names={b.name for b in arm_data.bones}
     weighted=0; total=0; assignment_counts={name:0 for name in bone_names}
     rest_coords={}
-    inv=arm_obj.matrix_world.inverted()
     for obj in meshes:
         for vg in list(obj.vertex_groups): obj.vertex_groups.remove(vg)
         groups={name:obj.vertex_groups.new(name=name) for name in bone_names}
         rest_coords[obj.name]=[v.co.copy() for v in obj.data.vertices]
+        to_can_obj=rotation @ obj.matrix_world
         for v in obj.data.vertices:
-            p_arm=inv @ obj.matrix_world @ v.co
-            n=Vector(((p_arm.x-lo.x)/span.x,(p_arm.y-lo.y)/span.y,(p_arm.z-lo.z)/span.z))
+            p_can=to_can_obj @ v.co
+            n=Vector(((p_can.x-lo.x)/span.x,(p_can.y-lo.y)/span.y,(p_can.z-lo.z)/span.z))
             bone=_choose_bone(obj.name,n)
             groups[bone].add([v.index],1.0,'REPLACE')
             assignment_counts[bone]+=1; weighted+=1; total+=1
         mod=obj.modifiers.new(name='COPOX_Armature',type='ARMATURE'); mod.object=arm_obj
 
-    # Pose simple de antebrazo izquierdo: debe deformar algo y permanecer finito.
-    bpy.context.view_layer.objects.active=arm_obj
-    arm_obj.select_set(True)
+    # Pose de antebrazo izquierdo: debe deformar una región real y permanecer finita.
+    bpy.context.view_layer.objects.active=arm_obj; arm_obj.select_set(True)
     bpy.ops.object.mode_set(mode='POSE')
     pb=arm_obj.pose.bones['forearm.L']; pb.rotation_mode='XYZ'; pb.rotation_euler=Euler((0.0,math.radians(18.0),0.0),'XYZ')
     bpy.context.view_layer.update()
     deps=bpy.context.evaluated_depsgraph_get()
     moved_vertices=0; max_disp=0.0; finite=True
     for obj in meshes:
-        eval_obj=obj.evaluated_get(deps); em=eval_obj.to_mesh()
-        original=rest_coords[obj.name]
+        eval_obj=obj.evaluated_get(deps); em=eval_obj.to_mesh(); original=rest_coords[obj.name]
         for i,v in enumerate(em.vertices):
             if i>=len(original): break
             d=(v.co-original[i]).length
@@ -140,12 +144,14 @@ def main()->int:
     out=Path(args.output).resolve(); out.parent.mkdir(parents=True,exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=str(out),export_format='GLB',export_skins=True,export_animations=True)
     report={
-        'mode':'rig_candidate_learning_only','bone_count':len(bone_names),'bone_names':sorted(bone_names),
+        'mode':'rig_candidate_learning_only','coordinate_system':'canonical_z_up_for_bones_and_weights',
+        'bone_count':len(bone_names),'bone_names':sorted(bone_names),
         'vertex_count':total,'weighted_vertices':weighted,'weight_coverage':weighted/max(total,1),
-        'assignment_counts':assignment_counts,'pose_test':{'bone':'forearm.L','angle_deg':18.0,'moved_vertices':moved_vertices,'max_displacement':max_disp,'finite':finite},
+        'assignment_counts':assignment_counts,
+        'pose_test':{'bone':'forearm.L','angle_deg':18.0,'moved_vertices':moved_vertices,'max_displacement':max_disp,'finite':finite},
         'candidate_ready_for_audit':bool(weighted==total and moved_vertices>0 and finite),
         'promotion_allowed':False,
-        'learning':{'finger_bones_present':False,'facial_bones_present':False,'note':'Este rig sólo valida el proceso de skin/deformación. Dedos y cara requieren procesos propios antes de rig final.'}
+        'learning':{'finger_bones_present':False,'facial_bones_present':False,'note':'Este rig valida skin/deformación corporal. Dedos y cara tienen procesos de madurez separados antes del rig final.'}
     }
     Path(args.report).write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(report,ensure_ascii=False)); return 0
