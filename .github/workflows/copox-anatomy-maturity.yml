@@ -1,0 +1,124 @@
+name: COPOX · Anatomy maturity
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/regional_*.py"
+      - "copox/auditors/regional_gate.py"
+      - "copox/learning/regional_*.py"
+      - "copox/hypotheses/**"
+      - "copox/maturity/**"
+      - "copox/reference_configs/joven_rubio_alpha.json"
+      - "assets/joven_rubio/theo_alpha.glb"
+      - ".github/workflows/copox-anatomy-maturity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  anatomy-maturity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias de análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+
+      - name: Diagnóstico regional absoluto de Alpha
+        run: |
+          rm -rf .copox/anatomy
+          mkdir -p .copox/anatomy/baseline
+          python3 -m copox.adapters.regional_reference_audit \
+            --prev assets/joven_rubio/theo_alpha.glb \
+            --curr assets/joven_rubio/theo_alpha.glb \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --output .copox/anatomy/baseline/regional_metrics.json \
+            --evidence-dir .copox/anatomy/baseline/evidence
+          python3 -m copox.learning.regional_diagnosis \
+            --metrics .copox/anatomy/baseline/regional_metrics.json \
+            --output .copox/anatomy/baseline/learning.json
+
+      - name: Estudio de hipótesis de orejas
+        run: |
+          python3 -m copox.learning.regional_hypothesis_study \
+            --baseline assets/joven_rubio/theo_alpha.glb \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --hypotheses copox/hypotheses/theo_ears.json \
+            --output-dir .copox/anatomy/ears
+
+      - name: Validar mutador seguro de manos y dedos
+        run: |
+          mkdir -p .copox/anatomy/hands .copox/anatomy/fingers
+          cat > .copox/anatomy/hands/params.json <<'JSON'
+          {"region":"hands","scale":[0.99,0.98,1.01],"shift_mm":[0.0,0.0,0.0]}
+          JSON
+          cat > .copox/anatomy/fingers/params.json <<'JSON'
+          {"region":"fingers","scale":[1.0,0.98,1.01],"shift_mm":[0.0,0.0,0.0]}
+          JSON
+          python3 -m copox.adapters.regional_vertex_morph \
+            --baseline assets/joven_rubio/theo_alpha.glb \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --params .copox/anatomy/hands/params.json \
+            --output .copox/anatomy/hands/model.glb \
+            --report .copox/anatomy/hands/morph.json
+          python3 -m copox.adapters.regional_vertex_morph \
+            --baseline assets/joven_rubio/theo_alpha.glb \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --params .copox/anatomy/fingers/params.json \
+            --output .copox/anatomy/fingers/model.glb \
+            --report .copox/anatomy/fingers/morph.json
+
+      - name: Verificar cobertura y aprendizaje sin promoción
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('.copox/anatomy')
+          regional = json.loads((root/'baseline'/'regional_metrics.json').read_text())
+          required = {
+              'whole_body_silhouette','head_shape','hair','ears','face','neck','torso','shoulders',
+              'arms','elbows_forearms','hands','fingers','pelvis_hips','legs','knees','ankles','feet_footwear'
+          }
+          assert required <= set(regional['regions']), sorted(required - set(regional['regions']))
+          learning = json.loads((root/'baseline'/'learning.json').read_text())
+          assert learning['mode'] == 'learning_first'
+          assert learning['priority']
+
+          ears = json.loads((root/'ears'/'study.json').read_text())
+          assert ears['promotion_allowed'] is False
+          assert len(ears['results']) == 4
+          changed = [x for x in ears['results'] if x['id'] != 'baseline']
+          assert all(x['morph']['detail']['mode'] == 'named_nodes' for x in changed)
+          assert all(x['morph']['detail']['changed'] == 2 for x in changed)
+
+          for region in ('hands','fingers'):
+              report = json.loads((root/region/'morph.json').read_text())
+              assert report['mesh_integrity'] is True
+              assert report['safe_scope'] is True
+              assert report['detail']['mode'] == 'vertex_region'
+              assert report['detail']['selected_vertices'] > 0
+              assert report['detail']['selected_vertices'] < report['detail']['total_vertices']
+              assert report['detail']['untouched_vertices_unchanged'] is True
+
+          closeups = list((root/'baseline'/'evidence').glob('region_*.png'))
+          assert len(closeups) >= 20, len(closeups)
+          print('PASS: auditor regional + learning + orejas + manos/dedos con scope seguro')
+          PY
+
+      - name: Guardar evidencia anatómica
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-anatomy-maturity
+          path: .copox/anatomy/
+          retention-days: 1
+          if-no-files-found: ignore
