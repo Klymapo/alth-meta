@@ -1,0 +1,23 @@
+{
+  "id": "alth_character_alpha_v1",
+  "description": "Personajes GLB aprobados editados por grupos estructurados. Unanimidad, regresión congelada y gates de estructura de pelo.",
+  "auditors": [
+    {"id":"MeshIntegrityGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","MeshIntegrityGate","--metrics","{candidate_dir}/metrics.json","--metric","technical.mesh_integrity","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"SpecComplianceGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","SpecComplianceGate","--metrics","{candidate_dir}/metrics.json","--metric","technical.spec_compliance","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"LikenessLead","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","LikenessLead","--metrics","{candidate_dir}/metrics.json","--metric","visual.relevant_region_gain_pp","--op","ge","--threshold","0.10","--result","{audit_result}","--critical"]},
+    {"id":"ClearDifferenceGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","ClearDifferenceGate","--metrics","{candidate_dir}/metrics.json","--metric","visual.visible_delta_pct","--op","ge","--threshold","0.50","--result","{audit_result}","--critical"]},
+    {"id":"PositiveChangeAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","PositiveChangeAuditor","--metrics","{candidate_dir}/metrics.json","--metric","visual.weighted_gain_pp","--op","ge","--threshold","0.05","--result","{audit_result}"]},
+    {"id":"OrganicSilhouette","command":["python3","-m","copox.auditors.metric_gate","--agent","OrganicSilhouette","--metrics","{candidate_dir}/metrics.json","--metric","visual.organic_silhouette_ok","--op","true","--result","{audit_result}"]},
+    {"id":"AnatomyCoherence","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","AnatomyCoherence","--metrics","{candidate_dir}/metrics.json","--metric","visual.anatomy_coherence_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"RegressionGuard","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","RegressionGuard","--metrics","{candidate_dir}/metrics.json","--metric","regression.frozen_regions_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"HeadAgent","applicable":false,"command":["python3","-m","copox.auditors.metric_gate","--agent","HeadAgent","--metrics","{candidate_dir}/metrics.json","--metric","regions.head_ok","--op","true","--result","{audit_result}"]},
+    {"id":"FaceAgent","applicable":false,"command":["python3","-m","copox.auditors.metric_gate","--agent","FaceAgent","--metrics","{candidate_dir}/metrics.json","--metric","regions.face_ok","--op","true","--result","{audit_result}"]},
+    {"id":"HairAgent","applicable":false,"command":["python3","-m","copox.auditors.metric_gate","--agent","HairAgent","--metrics","{candidate_dir}/metrics.json","--metric","regions.hair_ok","--op","true","--result","{audit_result}"]},
+    {"id":"HairStructureGate","applicable":false,"critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","HairStructureGate","--metrics","{candidate_dir}/metrics.json","--metric","structure.hair_structure_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"HairRandomnessGate","applicable":false,"critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","HairRandomnessGate","--metrics","{candidate_dir}/metrics.json","--metric","structure.randomness_penalty_mm","--op","le","--threshold","0.75","--result","{audit_result}","--critical"]},
+    {"id":"ArmsAgent","applicable":false,"command":["python3","-m","copox.auditors.metric_gate","--agent","ArmsAgent","--metrics","{candidate_dir}/metrics.json","--metric","regions.arms_ok","--op","true","--result","{audit_result}"]},
+    {"id":"LegsAgent","applicable":false,"command":["python3","-m","copox.auditors.metric_gate","--agent","LegsAgent","--metrics","{candidate_dir}/metrics.json","--metric","regions.legs_ok","--op","true","--result","{audit_result}"]},
+    {"id":"FootwearAgent","applicable":false,"command":["python3","-m","copox.auditors.metric_gate","--agent","FootwearAgent","--metrics","{candidate_dir}/metrics.json","--metric","regions.footwear_ok","--op","true","--result","{audit_result}"]},
+    {"id":"LearningArchitect","command":["python3","-m","copox.auditors.metric_gate","--agent","LearningArchitect","--metrics","{candidate_dir}/metrics.json","--metric","learning.ready_to_promote","--op","true","--result","{audit_result}"]}
+  ]
+}

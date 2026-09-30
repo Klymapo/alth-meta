@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from copox.maturity import LEVEL_INDEX, cassette_maturity
+
 
 class ContractError(ValueError):
     pass
@@ -28,6 +30,7 @@ class Cassette:
     path: Path
     data: dict[str, Any]
     profile: dict[str, Any]
+    repo_root: Path
 
     @property
     def id(self) -> str:
@@ -58,6 +61,10 @@ class Cassette:
             item.update(overrides.get(str(base.get("id")), {}))
             resolved.append(item)
         return resolved
+
+    @property
+    def maturity(self) -> dict[str, Any] | None:
+        return cassette_maturity(self.data, self.repo_root)
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -96,7 +103,22 @@ def load_cassette(path: str | Path, repo_root: str | Path = ".") -> Cassette:
     if data.get("promotion", {}).get("unanimous") is not True:
         raise ContractError("COPOX v1 exige promotion.unanimous=true")
 
-    cassette = Cassette(path=path, data=data, profile=profile)
+    maturity_cfg = data.get("maturity")
+    if maturity_cfg is not None:
+        if not isinstance(maturity_cfg, dict):
+            raise ContractError("maturity debe ser un objeto")
+        if not maturity_cfg.get("coverage"):
+            raise ContractError("maturity.coverage es obligatorio")
+        min_level = str(maturity_cfg.get("min_level", "M4"))
+        if min_level not in LEVEL_INDEX:
+            raise ContractError(f"maturity.min_level inválido: {min_level}")
+        coverage_path = Path(str(maturity_cfg["coverage"]))
+        if not coverage_path.is_absolute():
+            coverage_path = repo_root / coverage_path
+        if not coverage_path.exists():
+            raise ContractError(f"maturity.coverage no existe: {coverage_path}")
+
+    cassette = Cassette(path=path, data=data, profile=profile, repo_root=repo_root)
     if not cassette.auditors:
         raise ContractError("El perfil debe declarar al menos un auditor")
     for auditor in cassette.auditors:

@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - uses: astral-sh/setup-uv@v6
 
@@ -26,22 +26,29 @@ jobs:
           import json
           from pathlib import Path
           src = json.loads(Path('copox/cassettes/examples/theo.json').read_text(encoding='utf-8'))
-          src['id'] = 'theo-hair-validation'
+          src['id'] = 'theo-alpha-hair-validation'
           src['strategy']['max_candidates'] = 3
+          # Excepción exclusiva de validación técnica: producción/scheduler siguen bloqueados por madurez.
+          src.setdefault('maturity', {})['block_execution'] = False
+          src['commands']['prepare'] = [
+              'python3','-m','copox.adapters.alth_character_alpha','prepare',
+              '--repo-root','{repo_root}', '--baseline-params','{baseline_params}',
+              '--baseline-model','{baseline_model}', '--run-dir','{run_dir}'
+          ]
           src['commands']['promote'] = [
-              'python3','-m','copox.adapters.alth_character','promote',
-              '--repo-root','{repo_root}', '--asset-dir','{asset_dir}',
-              '--candidate-dir','{candidate_dir}', '--baseline-params','{baseline_params}',
+              'python3','-m','copox.adapters.alth_character_alpha','promote',
+              '--repo-root','{repo_root}', '--candidate-dir','{candidate_dir}',
+              '--baseline-params','{baseline_params}', '--baseline-model','{baseline_model}',
               '--target','{target}'
           ]
-          Path('.copox/theo-hair-validation.json').write_text(json.dumps(src, ensure_ascii=False, indent=2), encoding='utf-8')
+          Path('.copox/theo-alpha-hair-validation.json').write_text(json.dumps(src, ensure_ascii=False, indent=2), encoding='utf-8')
           PY
 
       - name: Ejecutar torneo real de tres hermanos
         id: tournament
         run: |
           set +e
-          python3 -m copox.engine .copox/theo-hair-validation.json --output-root .copox/tournament
+          python3 -m copox.engine .copox/theo-alpha-hair-validation.json --output-root .copox/tournament
           code=$?
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           exit 0
@@ -60,7 +67,8 @@ jobs:
           assert len(m['candidates']) == 3, len(m['candidates'])
           assert m['status'] in {'PROMOTED','PLATEAU'}, m['status']
           assert os.environ['EXIT_CODE'] in {'0','2'}, os.environ['EXIT_CODE']
-
+          assert m['maturity']['ready'] is False
+          assert m['maturity']['block_execution'] is False
           for candidate in m['candidates']:
               if candidate['status'] == 'ELIGIBLE':
                   applicable = [a for a in candidate['audit'] if a['status'] != 'N-A']
@@ -69,7 +77,6 @@ jobs:
                   audit = candidate.get('audit', [])
                   if audit:
                       assert any(a['status'] == 'FAIL' for a in audit if a['status'] != 'N-A'), candidate
-
           report = root / 'report.md'
           if m['status'] == 'PROMOTED':
               assert m.get('winner'), m
@@ -79,12 +86,12 @@ jobs:
               applicable = [a for a in winner['audit'] if a['status'] != 'N-A']
               assert all(a['status'] == 'PASS' for a in applicable)
               assert list((root/'candidates'/m['winner']/'evidence').glob('*.png'))
-              print('PASS: torneo promovió sólo un candidato unánime y publicó capturas')
+              print('PASS: torneo técnico Alpha respetó veto/unanimidad; maturity gate sigue bloqueando producción')
           else:
               assert not m.get('winner')
               assert not report.exists(), 'PLATEAU publicó reporte indebidamente'
               assert all(c['status'] != 'ELIGIBLE' for c in m['candidates'])
-              print('PASS: torneo llegó a PLATEAU sin promoción ni reporte')
+              print('PASS: torneo técnico Alpha llegó a PLATEAU; maturity gate sigue bloqueando producción')
           PY
 
       - name: Resumen del torneo
@@ -95,11 +102,12 @@ jobs:
           from pathlib import Path
           manifests=list(Path('.copox/tournament').rglob('manifest.json'))
           if not manifests:
-              print('## COPOX · torneo real\n\nNo se produjo manifiesto.')
+              print('## COPOX · torneo Theo Alpha\n\nNo se produjo manifiesto.')
               raise SystemExit
           m=json.loads(manifests[0].read_text())
-          print('## COPOX · torneo real')
+          print('## COPOX · torneo Theo Alpha')
           print(f"\nEstado: **{m['status']}**")
+          print(f"\nMaturity general ready: **{m.get('maturity',{}).get('ready')}** (excepción técnica no productiva)")
           print(f"\nCandidatos: {len(m['candidates'])}")
           for c in m['candidates']:
               fails=[a['id'] for a in c.get('audit',[]) if a.get('status')=='FAIL']
@@ -112,7 +120,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: copox-alth-tournament-validation
+          name: copox-theo-alpha-tournament-validation
           path: .copox/tournament/
           retention-days: 1
           if-no-files-found: ignore

@@ -11,18 +11,23 @@
     "artifact_available": true,
     "artifact_verified": true,
     "approved_as": "latest_artistic_baseline",
-    "notes": "Archivo confirmado por el usuario como la última versión de Theo Alpha y verificado bit por bit contra el upload original. Sustituye al nombre previo theo_v11_rehecha.glb."
+    "notes": "Archivo confirmado por el usuario como la última versión de Theo Alpha y verificado bit por bit contra el upload original."
   },
   "execution": {
-    "runnable": false,
-    "blocked_reason": "El cassette ALTH actual todavía prepara la baseline desde copox/baselines/joven_rubio.json. Debe cablearse el adaptador para importar assets/joven_rubio/theo_alpha.glb como seed antes de ejecutar nuevos loops.",
-    "expected_state_branch": "copox/state/theo-character"
+    "runnable": true,
+    "seed_mode": "approved_glb",
+    "seed_repo_path": "assets/joven_rubio/theo_alpha.glb",
+    "baseline_params": "copox/baselines/joven_rubio_alpha.json",
+    "search_space": "copox/search_spaces/joven_rubio_alpha_hair.json",
+    "expected_state_branch": "copox/state/theo-character",
+    "state_format": "baseline+model-v1",
+    "note": "La campaña parte del GLB aprobado. Un state legacy sin model.glb se ignora y el primer run vuelve a Theo Alpha."
   },
   "validation_history": {
     "t01-c02": {
       "role": "validation_only",
       "artistic_baseline": false,
-      "note": "Ganador unánime del torneo técnico de COPOX; no sustituye a Theo Alpha como última versión artística aprobada."
+      "note": "Ganador unánime del torneo técnico anterior; no sustituye a Theo Alpha como última versión artística aprobada."
     }
   }
 }

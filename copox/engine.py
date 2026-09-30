@@ -118,20 +118,32 @@ def run_campaign(cassette_path: str, output_root: str = ".copox/evidence") -> in
     run_dir = Path(output_root) / cassette.id / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
 
+    maturity = cassette.maturity
     manifest: dict[str, Any] = {
         "engine": "copox-loop-engine",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "run_id": run_id,
         "cassette": cassette.id,
         "kind": cassette.kind,
         "target": cassette.data["target"],
         "baseline": cassette.data["baseline"],
         "variables": cassette.data.get("variables", {}),
+        "maturity": maturity,
         "started_at": int(time.time()),
         "status": "RUNNING",
         "candidates": [],
     }
     _write_json(run_dir / "manifest.json", manifest)
+
+    if maturity is not None:
+        _write_json(run_dir / "maturity.json", maturity)
+        if maturity.get("block_execution", True) and not maturity.get("ready", False):
+            manifest["status"] = "MATURITY_BLOCKED"
+            manifest["finished_at"] = int(time.time())
+            _write_json(run_dir / "manifest.json", manifest)
+            blockers = ", ".join(f"{x['id']}:{x['computed_level']}" for x in maturity.get("blockers", []))
+            print(f"[copox] MATURITY_BLOCKED: {blockers}", flush=True)
+            return 4
 
     env = os.environ.copy()
     prepare = cassette.data.get("commands", {}).get("prepare", [])

@@ -1,0 +1,46 @@
+{
+  "mesh_to_mm": 1000.0,
+  "coordinates": {
+    "vertical_axis": 2,
+    "front_horizontal_axis": 0,
+    "depth_axis": 1,
+    "front_sign": 1.0,
+    "side_sign": 1.0
+  },
+  "views": {
+    "front": [0.0, 0.0, 0.5, 0.5],
+    "side": [0.5, 0.0, 1.0, 0.5],
+    "back": [0.0, 0.5, 0.5, 1.0],
+    "threeq": [0.5, 0.5, 1.0, 1.0]
+  },
+  "approval": {
+    "weighted_gain_min_pp": 0.05,
+    "max_single_view_drop_pp": -0.10,
+    "relevant_region_gain_min_pp": 0.10,
+    "relevant_visible_delta_min_pct": 0.50,
+    "landmark_error_improvement_min_headwidth_pct": 0.15,
+    "freeze_tolerance_pp": -0.20
+  },
+  "landmarks": {
+    "head_width_px": 200.0,
+    "reference": {},
+    "auto_reference_rois": {},
+    "model_name_contains": {},
+    "note": "Campaña hair/profile: landmarks faciales quedan N-A. Theo Alpha se audita por silueta y regiones congeladas."
+  },
+  "glb_edit": {
+    "groups": {
+      "front": ["Fleco_izquierdo", "Fleco_derecho", "Mechon_central", "Mechon_frontal_corto"],
+      "crown": ["Corona_posterior"],
+      "side_left": ["Capa_lateral_superior", "Capa_lateral_media"],
+      "side_right": ["Capa_lateral_superior_espejo", "Capa_lateral_media_espejo"],
+      "back": ["Capa_posterior_central", "Capa_posterior_izquierda", "Capa_posterior_derecha"]
+    },
+    "symmetry_pairs": [
+      ["Capa_lateral_superior", "Capa_lateral_superior_espejo"],
+      ["Capa_lateral_media", "Capa_lateral_media_espejo"]
+    ],
+    "symmetry_growth_tolerance_mm": 0.75,
+    "note": "Sólo se transforman grupos semánticos completos. No hay semillas aleatorias, cuñas generadas ni edición independiente de mechones."
+  }
+}

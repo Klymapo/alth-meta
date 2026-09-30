@@ -1,16 +1,24 @@
 {
   "id": "theo-character",
   "kind": "alth_character",
-  "profile": "copox/profiles/alth_character.json",
+  "profile": "copox/profiles/alth_character_alpha.json",
   "target": "joven_rubio",
-  "baseline": "copox/baselines/joven_rubio.json",
+  "baseline": "copox/baselines/joven_rubio_alpha.json",
+  "maturity": {
+    "coverage": "copox/maturity/theo.json",
+    "min_level": "M4",
+    "critical_only": true,
+    "block_execution": true
+  },
   "variables": {
     "asset_dir": "assets/joven_rubio",
-    "baseline_params": "copox/baselines/joven_rubio.json",
+    "baseline_params": "copox/baselines/joven_rubio_alpha.json",
+    "baseline_model": "assets/joven_rubio/theo_alpha.glb",
     "state_branch": "copox/state/theo-character",
-    "search_space": "copox/search_spaces/joven_rubio.json",
+    "search_space": "copox/search_spaces/joven_rubio_alpha_hair.json",
     "reference": "refs/personajes/joven-rubio-4-vistas.jpg",
-    "audit_config": "copox/reference_configs/joven_rubio.json",
+    "audit_config": "copox/reference_configs/joven_rubio_alpha.json",
+    "edit_config": "copox/reference_configs/joven_rubio_alpha.json",
     "focus": "hair,profile"
   },
   "strategy": {
@@ -18,18 +26,20 @@
     "max_candidates": 6
   },
   "commands": {
-    "prepare": ["python3", "-m", "copox.adapters.alth_character", "prepare", "--repo-root", "{repo_root}", "--asset-dir", "{asset_dir}", "--baseline-params", "{baseline_params}", "--state-branch", "{state_branch}", "--run-dir", "{run_dir}"],
-    "mutate": ["python3", "-m", "copox.adapters.alth_character", "mutate", "--baseline-params", "{run_dir}/baseline/params.json", "--search-space", "{search_space}", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--candidate-id", "{candidate_id}"],
-    "execute": ["python3", "-m", "copox.adapters.alth_character", "execute", "--repo-root", "{repo_root}", "--asset-dir", "{asset_dir}", "--candidate-dir", "{candidate_dir}"],
-    "capture": ["python3", "-m", "copox.adapters.alth_character", "capture", "--candidate-dir", "{candidate_dir}", "--evidence-dir", "{evidence_dir}", "--run-dir", "{run_dir}", "--reference", "{reference}", "--audit-config", "{audit_config}", "--focus", "{focus}"],
-    "learn": ["python3", "-m", "copox.adapters.alth_character", "learn", "--run-dir", "{run_dir}", "--tournament", "{tournament}"],
-    "promote": ["python3", "-m", "copox.adapters.alth_character", "promote", "--repo-root", "{repo_root}", "--asset-dir", "{asset_dir}", "--candidate-dir", "{candidate_dir}", "--baseline-params", "{baseline_params}", "--state-branch", "{state_branch}", "--cassette-id", "{cassette_id}", "--target", "{target}"],
-    "report": ["python3", "-m", "copox.report", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--output", "{run_dir}/report.md", "--title", "COPOX · Theo aprobado por unanimidad"]
+    "prepare": ["python3", "-m", "copox.adapters.alth_character_alpha", "prepare", "--repo-root", "{repo_root}", "--baseline-params", "{baseline_params}", "--baseline-model", "{baseline_model}", "--state-branch", "{state_branch}", "--run-dir", "{run_dir}"],
+    "mutate": ["python3", "-m", "copox.adapters.alth_character_alpha", "mutate", "--baseline-params", "{run_dir}/baseline/params.json", "--search-space", "{search_space}", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--candidate-id", "{candidate_id}"],
+    "execute": ["python3", "-m", "copox.adapters.alth_character_alpha", "execute", "--repo-root", "{repo_root}", "--baseline-model", "{run_dir}/baseline/model.glb", "--edit-config", "{edit_config}", "--candidate-dir", "{candidate_dir}"],
+    "capture": ["python3", "-m", "copox.adapters.alth_character_alpha", "capture", "--candidate-dir", "{candidate_dir}", "--evidence-dir", "{evidence_dir}", "--run-dir", "{run_dir}", "--reference", "{reference}", "--audit-config", "{audit_config}", "--focus", "{focus}"],
+    "learn": ["python3", "-m", "copox.adapters.alth_character_alpha", "learn", "--run-dir", "{run_dir}", "--tournament", "{tournament}"],
+    "promote": ["python3", "-m", "copox.adapters.alth_character_alpha", "promote", "--repo-root", "{repo_root}", "--candidate-dir", "{candidate_dir}", "--baseline-params", "{baseline_params}", "--baseline-model", "{baseline_model}", "--state-branch", "{state_branch}", "--cassette-id", "{cassette_id}", "--target", "{target}"],
+    "report": ["python3", "-m", "copox.report", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--output", "{run_dir}/report.md", "--title", "COPOX · Theo Alpha aprobado por unanimidad"]
   },
   "auditor_overrides": {
     "HeadAgent": {"applicable": false},
     "FaceAgent": {"applicable": false},
     "HairAgent": {"applicable": true},
+    "HairStructureGate": {"applicable": true},
+    "HairRandomnessGate": {"applicable": true},
     "ArmsAgent": {"applicable": false},
     "LegsAgent": {"applicable": false},
     "FootwearAgent": {"applicable": false}

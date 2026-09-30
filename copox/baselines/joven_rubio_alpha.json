@@ -1,0 +1,14 @@
+{
+  "hair": {
+    "front_width_scale": 1.0,
+    "front_height_scale": 1.0,
+    "front_depth_mm": 0.0,
+    "crown_width_scale": 1.0,
+    "crown_height_mm": 0.0,
+    "side_width_scale": 1.0,
+    "side_height_scale": 1.0,
+    "side_outward_mm": 0.0,
+    "back_height_scale": 1.0,
+    "back_depth_mm": 0.0
+  }
+}
