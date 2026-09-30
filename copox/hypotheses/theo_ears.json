@@ -1,0 +1,14 @@
+{
+  "region": "ears",
+  "hypotheses": [
+    {"id": "baseline", "label": "Mantener orejas explícitas", "baseline": true},
+    {"id": "recess_70", "label": "Reducir volumen explícito al 70%", "scale": [0.70, 0.70, 0.70]},
+    {"id": "recess_40", "label": "Reducir volumen explícito al 40%", "scale": [0.40, 0.40, 0.40]},
+    {"id": "near_remove", "label": "Retirar casi por completo las orejas explícitas", "scale": [0.05, 0.05, 0.05]}
+  ],
+  "policy": {
+    "learning_only": true,
+    "promotion_allowed": false,
+    "note": "El objetivo es comprobar contra perfil y 3/4 si los nodos Oreja_*_perfil corresponden a las orejas fantasma observadas. Ningún resultado se promueve automáticamente."
+  }
+}
