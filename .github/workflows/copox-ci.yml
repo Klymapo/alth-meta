@@ -44,7 +44,7 @@ jobs:
           python3 -m copox.engine copox/cassettes/examples/smoke.json
           report="$(find .copox/evidence -name report.md -type f | head -1)"
           test -n "$report"
-          grep -q "3/3 PASS" "$report"
+          grep -q "4/4 PASS" "$report"
           grep -q "t01-c03" "$report"
           test -f "$(find .copox/evidence -path '*/t01-c03/PROMOTED' -type f | head -1)"
 
