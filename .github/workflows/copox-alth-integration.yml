@@ -5,7 +5,9 @@ on:
     paths:
       - "copox/adapters/alth_character*.py"
       - "copox/adapters/alth_glb_*.py"
+      - "copox/adapters/model_inventory.py"
       - "copox/state_bundle.py"
+      - "copox/maturity/**"
       - "copox/baselines/**"
       - "copox/search_spaces/**"
       - "copox/reference_configs/**"
@@ -56,6 +58,24 @@ jobs:
             --edit-config copox/reference_configs/joven_rubio_alpha.json \
             --candidate-dir .copox/integration/candidates/t01-c02
 
+      - name: Inventariar baseline real
+        run: |
+          python3 -m copox.adapters.model_inventory \
+            --input .copox/integration/baseline/model.glb \
+            --output .copox/integration/model_inventory.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          inv=json.loads(Path('.copox/integration/model_inventory.json').read_text(encoding='utf-8'))
+          assert inv['node_count'] == 16, inv['node_count']
+          assert inv['group_counts']['hair'] == 12, inv['group_counts']
+          assert inv['group_counts']['ears'] == 2, inv['group_counts']
+          assert inv['group_counts']['body_or_head'] == 2, inv['group_counts']
+          assert inv['groups']['ears'] == ['Oreja_izquierda_perfil','Oreja_derecha_perfil']
+          assert len(inv['materials']) == 1, inv['materials']
+          print('PASS: inventario semántico reproducible: 12 hair + 2 ears + 2 body/head')
+          PY
+
       - name: Capturar y auditar Alpha contra referencia
         run: |
           python3 -m copox.adapters.alth_character_alpha capture \
@@ -76,7 +96,7 @@ jobs:
               root/'model.glb', root/'hoja.png', root/'reporte.json', root/'metrics.json',
               root/'evidence'/'hoja.png', root/'evidence'/'overlay_front.png',
               root/'evidence'/'overlay_side.png', root/'evidence'/'overlay_back.png',
-              root/'evidence'/'overlay_threeq.png'
+              root/'evidence'/'overlay_threeq.png', Path('.copox/integration/model_inventory.json')
           ]
           missing = [str(p) for p in required if not p.exists()]
           assert not missing, missing
@@ -95,7 +115,7 @@ jobs:
           detail = m['regions']['detail']
           for frozen in ('torso','arms_hands','legs_feet'):
               assert abs(float(detail[frozen]['delta_pp'])) < 0.05, (frozen, detail[frozen])
-          print('PASS: Theo Alpha seed + orientación + grupos estructurados + frozen regions + evidencia')
+          print('PASS: Theo Alpha seed + orientación + inventario + frozen regions + evidencia')
           PY
 
       - name: Guardar evidencia de integración
