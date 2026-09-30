@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from copox.state import load_state, save_state
+
 
 def read_json(path: str | Path) -> dict[str, Any]:
     return json.loads(Path(path).read_text(encoding="utf-8"))
@@ -78,15 +80,28 @@ def build(repo_root: Path, asset_dir: Path, params: Path, export_glb: Path, mode
 def cmd_prepare(args: argparse.Namespace) -> int:
     repo = Path(args.repo_root).resolve()
     asset = (repo / args.asset_dir).resolve()
-    baseline_params = (repo / args.baseline_params).resolve()
+    baseline_seed = (repo / args.baseline_params).resolve()
     run_dir = Path(args.run_dir).resolve()
     baseline_dir = run_dir / "baseline"
     baseline_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(baseline_params, baseline_dir / "params.json")
-    sheet, report = build(repo, asset, baseline_dir / "params.json", baseline_dir / "model.glb")
+    runtime_params = baseline_dir / "params.json"
+
+    if args.state_branch:
+        source = load_state(repo, args.state_branch, runtime_params, baseline_seed)
+    else:
+        shutil.copy2(baseline_seed, runtime_params)
+        source = {"source": "seed", "fallback": str(baseline_seed)}
+    write_json(run_dir / "baseline_source.json", source)
+
+    sheet, report = build(repo, asset, runtime_params, baseline_dir / "model.glb")
     shutil.copy2(sheet, baseline_dir / "hoja.png")
     shutil.copy2(report, baseline_dir / "reporte.json")
-    write_json(run_dir / "search_state.json", {"tournament": 0, "failure_history": [], "parameter_cursor": 0})
+    write_json(run_dir / "search_state.json", {
+        "tournament": 0,
+        "failure_history": [],
+        "parameter_cursor": 0,
+        "baseline_source": source,
+    })
     return 0
 
 
@@ -210,27 +225,49 @@ def cmd_learn(args: argparse.Namespace) -> int:
 def cmd_promote(args: argparse.Namespace) -> int:
     repo = Path(args.repo_root).resolve()
     candidate = Path(args.candidate_dir).resolve()
-    baseline_params = (repo / args.baseline_params).resolve()
-    shutil.copy2(candidate / "params.json", baseline_params)
+    seed_path = (repo / args.baseline_params).resolve()
+    state_commit = None
+
+    if args.state_branch:
+        state_commit = save_state(
+            repo,
+            args.state_branch,
+            candidate / "params.json",
+            {
+                "cassette_id": args.cassette_id or args.target,
+                "target": args.target,
+                "candidate": candidate.name,
+                "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+                "github_run_number": os.environ.get("GITHUB_RUN_NUMBER"),
+            },
+        )
+
     promotion = {
         "candidate": candidate.name,
-        "params": str(baseline_params.relative_to(repo)),
-        "persist": bool(args.persist),
+        "seed_params": str(seed_path.relative_to(repo)),
+        "state_branch": args.state_branch,
+        "state_commit": state_commit,
+        "persist_main": bool(args.persist),
+        "finalized": bool(args.finalize),
     }
     write_json(candidate / "promotion.json", promotion)
+
     if args.finalize:
         asset = (repo / args.asset_dir).resolve()
-        build(repo, asset, baseline_params, asset / f"{asset.name}.glb", mode="final")
+        build(repo, asset, candidate / "params.json", asset / f"{asset.name}.glb", mode="final")
+
+    # Compatibilidad/override manual: sólo cuando se pide explícitamente se toca la rama actual.
     if args.persist:
+        shutil.copy2(candidate / "params.json", seed_path)
         subprocess.run(["git", "config", "user.name", "copox-loop-engine"], cwd=repo, check=True)
         subprocess.run(["git", "config", "user.email", "copox-loop-engine@users.noreply.github.com"], cwd=repo, check=True)
-        paths = [str(baseline_params.relative_to(repo))]
+        paths = [str(seed_path.relative_to(repo))]
         if args.finalize:
             paths.append(args.asset_dir)
         subprocess.run(["git", "add", "--", *paths], cwd=repo, check=True)
         status = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=repo)
         if status.returncode != 0:
-            subprocess.run(["git", "commit", "-m", f"copox: promueve {args.target} desde {candidate.name}"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", f"copox: publica {args.target} desde {candidate.name}"], cwd=repo, check=True)
             ref = os.environ.get("GITHUB_REF_NAME")
             if ref:
                 subprocess.run(["git", "push", "origin", f"HEAD:{ref}"], cwd=repo, check=True)
@@ -245,6 +282,7 @@ def main() -> int:
     a.add_argument("--repo-root", default=".")
     a.add_argument("--asset-dir", required=True)
     a.add_argument("--baseline-params", required=True)
+    a.add_argument("--state-branch")
     a.add_argument("--run-dir", required=True)
     a.set_defaults(func=cmd_prepare)
 
@@ -281,6 +319,8 @@ def main() -> int:
     a.add_argument("--asset-dir", required=True)
     a.add_argument("--candidate-dir", required=True)
     a.add_argument("--baseline-params", required=True)
+    a.add_argument("--state-branch")
+    a.add_argument("--cassette-id")
     a.add_argument("--target", required=True)
     a.add_argument("--persist", action="store_true")
     a.add_argument("--finalize", action="store_true")
