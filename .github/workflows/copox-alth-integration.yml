@@ -89,10 +89,13 @@ jobs:
           assert float(m['structure']['randomness_penalty_mm']) <= 0.75
           assert r['technical']['frozen_nodes_unchanged'] is True
           assert len(r['technical']['hair_nodes']) == 12
+          assert r['orientation']['ok'] is True, r.get('orientation')
+          bounds = r['orientation']['bounds']
+          assert float(bounds['H']) > float(bounds['D']) * 1.25, bounds
           detail = m['regions']['detail']
           for frozen in ('torso','arms_hands','legs_feet'):
               assert abs(float(detail[frozen]['delta_pp'])) < 0.05, (frozen, detail[frozen])
-          print('PASS: Theo Alpha seed + grupos estructurados + frozen regions + evidencia')
+          print('PASS: Theo Alpha seed + orientación + grupos estructurados + frozen regions + evidencia')
           PY
 
       - name: Guardar evidencia de integración
