@@ -1,0 +1,14 @@
+{
+  "parameters": [
+    {"path":"hair.front_width_scale","min":0.88,"max":1.12,"step":0.04,"tags":["hair","front","structure"]},
+    {"path":"hair.front_height_scale","min":0.88,"max":1.12,"step":0.04,"tags":["hair","front","structure"]},
+    {"path":"hair.front_depth_mm","min":-3.0,"max":3.0,"step":1.0,"tags":["hair","profile","front"]},
+    {"path":"hair.crown_width_scale","min":0.90,"max":1.10,"step":0.04,"tags":["hair","crown","structure"]},
+    {"path":"hair.crown_height_mm","min":-4.0,"max":4.0,"step":1.0,"tags":["hair","crown","profile"]},
+    {"path":"hair.side_width_scale","min":0.90,"max":1.10,"step":0.04,"tags":["hair","side","structure"]},
+    {"path":"hair.side_height_scale","min":0.90,"max":1.10,"step":0.04,"tags":["hair","side","structure"]},
+    {"path":"hair.side_outward_mm","min":-3.0,"max":3.0,"step":1.0,"tags":["hair","side","profile"]},
+    {"path":"hair.back_height_scale","min":0.90,"max":1.10,"step":0.04,"tags":["hair","back","structure"]},
+    {"path":"hair.back_depth_mm","min":-3.0,"max":3.0,"step":1.0,"tags":["hair","back","profile"]}
+  ]
+}
