@@ -23,10 +23,17 @@ La analogía de diseño es una videocasetera:
 10. ChatGPT actúa como director: define campañas, cambia estrategia ante plateau y consume únicamente reportes consolidados.
 11. Una campaña trabaja sobre el mismatch prioritario (o dos estrechamente acoplados). No se activan auditores especializados de regiones que el productor no está intentando mejorar.
 12. La proyección/auditoría debe registrar explícitamente el sistema de coordenadas del artefacto. Blender Z-up y glTF Y-up no se consideran intercambiables.
+13. Una promoción interna actualiza la **state branch del cassette**, no `main`. Publicar/release es un proceso distinto.
 
 ## Flujo
 
 ```text
+seed en main
+      │
+      ▼
+state branch del cassette
+      │
+      ▼
 baseline aceptada
       │
       ├─ prepare (una vez por campaña)
@@ -54,6 +61,8 @@ torneo (N hermanos)
              │
           promote
              │
+      state branch nueva
+             │
           report
 ```
 
@@ -72,6 +81,7 @@ Los cassettes son JSON y declaran configuración y comandos. El motor no conoce 
     "asset_dir": "assets/personaje_x",
     "reference": "refs/personajes/personaje_x.jpg",
     "search_space": "copox/search_spaces/personaje_x.json",
+    "state_branch": "copox/state/personaje-pelo",
     "focus": "hair,profile"
   },
   "strategy": {
@@ -110,6 +120,30 @@ Los comandos son listas de argumentos; no se ejecutan mediante shell. Variables 
 
 Además, todos los valores escalares declarados dentro de `variables` pasan al contexto del cassette. El engine no interpreta su significado.
 
+## Estado persistente por cassette
+
+`copox/state.py` usa Git plumbing para mantener una rama mínima independiente por cassette:
+
+```text
+copox/state/theo-character
+  commit N
+    baseline.json
+    state.json
+  ↑
+  commit N-1
+    baseline.json
+    state.json
+```
+
+Ventajas:
+
+- historial completo de promociones internas;
+- ningún commit intermedio ensucia `main`;
+- Theo, Detective, HUD y rig no compiten por el mismo archivo/branch;
+- el siguiente run carga exactamente la última baseline promovida;
+- el seed versionado en `main` sigue siendo fallback reproducible;
+- release/finalización sigue siendo una acción separada.
+
 ## Perfiles
 
 Un perfil define auditores, no productores:
@@ -127,12 +161,12 @@ El cassette puede activar o desactivar auditores mediante `auditor_overrides`. L
 
 `copox/adapters/alth_character.py` implementa un productor determinista sin IA:
 
-1. `prepare`: reproduce la baseline y guarda GLB, hoja y reporte.
+1. `prepare`: carga la state branch si existe; de lo contrario usa el seed de `main`; reproduce baseline y guarda GLB, hoja y reporte.
 2. `mutate`: cambia parámetros declarados en un search space; no puede inventar parámetros fuera del contrato.
 3. `execute`: Blender headless genera el candidato y un GLB de iteración.
 4. `capture`: Audit V2 genérico compara baseline/candidato contra la referencia.
 5. `learn`: usa `unresolved` + error budget; un fallo repetido rota técnica/parámetro en lugar de repetir una tercera vez lo mismo.
-6. `promote`: sólo recibe candidatos ya unánimes; actualiza la baseline paramétrica. La persistencia Git es opt-in.
+6. `promote`: sólo recibe candidatos ya unánimes; guarda la baseline paramétrica en la state branch del cassette. Persistir/publicar en la rama actual es opt-in separado.
 
 `copox/adapters/alth_character_audit.py` trabaja sobre GLB exportado. El GLB de ALTH es glTF Y-up; esta transformación se declara en `reference_configs/*` y el auditor usa un **registro bloqueado a la baseline**, para que modificar pelo no parezca mover brazos/piernas por un reescalado automático del candidato.
 
@@ -211,27 +245,30 @@ COPOX cambia el criterio de aprobación a **unanimidad de todos los auditores ap
 - manifiesto;
 - plateau;
 - workflows manual/scheduler;
-- smoke end-to-end en GitHub Actions.
+- smoke end-to-end en GitHub Actions;
+- state branches independientes y con historial.
 
-### Fase B — ALTH: integración en validación
+### Fase B — ALTH: validada para personaje/pelo
 
-Implementado:
+Validado en GitHub Actions real:
 
-- adapter Blender headless real;
+- adapter Blender headless;
 - adapter Audit V2 configurable;
 - baseline paramétrica;
 - search space determinista;
 - LearningArchitect heurístico;
 - exportación GLB de iteración;
 - overlays + métricas + verificación ALTH;
-- cassette de ejemplo de personaje fuera de `enabled/`.
+- coordenadas glTF Y-up;
+- frozen regions con registro bloqueado;
+- landmarks automáticos;
+- torneo de tres hermanos;
+- veto de candidatos fallidos;
+- ganador 10/10 auditores aplicables PASS;
+- reporte únicamente del ganador con capturas;
+- persistencia de baseline en rama de estado.
 
-Antes de habilitar loops programados se exige:
-
-1. validar semánticamente coordenadas glTF y regiones congeladas;
-2. validar landmarks automáticos;
-3. ejecutar un torneo real de tres candidatos sin persistencia;
-4. confirmar que un FAIL veta realmente la promoción y que sólo ALL PASS publica reporte.
+El cassette real de ejemplo permanece fuera de `enabled/`: el scheduler está preparado pero no activo para assets productivos.
 
 ### Fase C — Godot
 
