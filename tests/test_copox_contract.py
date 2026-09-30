@@ -1,4 +1,5 @@
 import json
+import subprocess
 import tempfile
 import unittest
 from argparse import Namespace
@@ -6,6 +7,7 @@ from pathlib import Path
 
 from copox.adapters.alth_character import cmd_mutate
 from copox.contracts import ContractError, load_cassette
+from copox.state import load_state, save_state
 
 
 class CopoxContractTests(unittest.TestCase):
@@ -21,6 +23,8 @@ class CopoxContractTests(unittest.TestCase):
         self.assertEqual(c.tournament_size, 3)
         self.assertEqual(c.max_candidates, 6)
         self.assertEqual(c.data["variables"]["focus"], "hair,profile")
+        self.assertEqual(c.data["variables"]["state_branch"], "copox/state/theo-character")
+        self.assertIn("{run_dir}/baseline/params.json", c.data["commands"]["mutate"])
         applicable = {a["id"]: a.get("applicable", True) for a in c.auditors}
         self.assertFalse(applicable["HeadAgent"])
         self.assertFalse(applicable["FaceAgent"])
@@ -69,6 +73,37 @@ class CopoxContractTests(unittest.TestCase):
             meta = out["_copox"]
             self.assertEqual(meta["mutated_parameter"], "hair.escala")
             self.assertNotEqual(meta["baseline_value"], meta["candidate_value"])
+
+    def test_state_branch_preserves_history_and_loads_latest_baseline(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            remote = root / "remote.git"
+            repo = root / "repo"
+            subprocess.run(["git", "init", "--bare", str(remote)], check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "init", str(repo)], check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", str(remote)], check=True)
+
+            b1 = root / "b1.json"
+            b2 = root / "b2.json"
+            b1.write_text('{"value": 1}\n', encoding="utf-8")
+            b2.write_text('{"value": 2}\n', encoding="utf-8")
+            branch = "copox/state/test-cassette"
+
+            c1 = save_state(repo, branch, b1, {"cassette_id": "test-cassette", "candidate": "c1"})
+            out1 = root / "out1.json"
+            meta1 = load_state(repo, branch, out1)
+            self.assertEqual(json.loads(out1.read_text())["value"], 1)
+            self.assertEqual(meta1["commit"], c1)
+
+            c2 = save_state(repo, branch, b2, {"cassette_id": "test-cassette", "candidate": "c2"})
+            out2 = root / "out2.json"
+            meta2 = load_state(repo, branch, out2)
+            self.assertEqual(json.loads(out2.read_text())["value"], 2)
+            self.assertEqual(meta2["commit"], c2)
+            self.assertNotEqual(c1, c2)
+
+            parents = subprocess.check_output(["git", "-C", str(repo), "rev-list", "--parents", "-n", "1", c2], text=True).split()
+            self.assertEqual(parents[1], c1)
 
 
 if __name__ == "__main__":
