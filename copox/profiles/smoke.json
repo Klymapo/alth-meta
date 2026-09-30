@@ -1,0 +1,9 @@
+{
+  "id": "smoke_v1",
+  "description": "Perfil mínimo para validar el motor sin Blender, Godot ni IA.",
+  "auditors": [
+    {"id":"BuildGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","BuildGate","--metrics","{candidate_dir}/metrics.json","--metric","smoke.build_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"QualityGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","QualityGate","--metrics","{candidate_dir}/metrics.json","--metric","smoke.quality_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"LearningArchitect","command":["python3","-m","copox.auditors.metric_gate","--agent","LearningArchitect","--metrics","{candidate_dir}/metrics.json","--metric","learning.ready_to_promote","--op","true","--result","{audit_result}"]}
+  ]
+}
