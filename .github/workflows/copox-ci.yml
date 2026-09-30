@@ -1,0 +1,63 @@
+name: COPOX · CI
+
+on:
+  pull_request:
+    paths:
+      - "copox/**"
+      - "tests/test_copox_contract.py"
+      - "docs/COPOX_LOOP_ENGINE.md"
+      - ".github/workflows/copox-*.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compilar Python
+        run: python3 -m compileall -q copox
+
+      - name: Validar JSON
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for p in Path('copox').rglob('*.json'):
+              json.loads(p.read_text(encoding='utf-8'))
+              print('OK', p)
+          PY
+
+      - name: Unit tests del contrato
+        run: python3 -m unittest tests.test_copox_contract -v
+
+      - name: Ejecutar smoke end-to-end
+        run: |
+          rm -rf .copox/evidence
+          python3 -m copox.engine copox/cassettes/examples/smoke.json
+          report="$(find .copox/evidence -name report.md -type f | head -1)"
+          test -n "$report"
+          grep -q "4/4 PASS" "$report"
+          grep -q "t01-c03" "$report"
+          test -f "$(find .copox/evidence -path '*/t01-c03/PROMOTED' -type f | head -1)"
+
+      - name: Verificar veto real
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          m = next(Path('.copox/evidence').rglob('manifest.json'))
+          data = json.loads(m.read_text())
+          by_id = {x['id']: x for x in data['candidates']}
+          assert by_id['t01-c01']['status'] == 'REJECTED'
+          assert data['winner'] == 't01-c03'
+          assert data['status'] == 'PROMOTED'
+          print('PASS: veto y promoción unánime verificados')
+          PY

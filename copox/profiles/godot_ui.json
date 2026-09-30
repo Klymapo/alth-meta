@@ -1,0 +1,15 @@
+{
+  "id": "godot_ui_v1",
+  "description": "Interfaces Godot con pruebas visuales y funcionales multi-resolución.",
+  "auditors": [
+    {"id":"SceneBootGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","SceneBootGate","--metrics","{candidate_dir}/metrics.json","--metric","ui.scene_boot_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"LayoutAuditor","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","LayoutAuditor","--metrics","{candidate_dir}/metrics.json","--metric","ui.layout_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"OverflowAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","OverflowAuditor","--metrics","{candidate_dir}/metrics.json","--metric","ui.overflow_ok","--op","true","--result","{audit_result}"]},
+    {"id":"ClippingAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","ClippingAuditor","--metrics","{candidate_dir}/metrics.json","--metric","ui.clipping_ok","--op","true","--result","{audit_result}"]},
+    {"id":"ContrastAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","ContrastAuditor","--metrics","{candidate_dir}/metrics.json","--metric","ui.contrast_ok","--op","true","--result","{audit_result}"]},
+    {"id":"ResponsiveAuditor","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","ResponsiveAuditor","--metrics","{candidate_dir}/metrics.json","--metric","ui.responsive_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"InteractionAuditor","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","InteractionAuditor","--metrics","{candidate_dir}/metrics.json","--metric","ui.interactions_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"VisualRegressionGuard","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","VisualRegressionGuard","--metrics","{candidate_dir}/metrics.json","--metric","regression.visual_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"LearningArchitect","command":["python3","-m","copox.auditors.metric_gate","--agent","LearningArchitect","--metrics","{candidate_dir}/metrics.json","--metric","learning.ready_to_promote","--op","true","--result","{audit_result}"]}
+  ]
+}

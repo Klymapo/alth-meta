@@ -1,0 +1,28 @@
+{
+  "body": {"grosor_extremidades": 1.25},
+  "face": {
+    "eye_width_scale": 1.0,
+    "eye_height_scale": 1.0,
+    "iris_width": 3.9,
+    "iris_height": 6.3,
+    "iris_outward": 0.6,
+    "iris_z": -0.3,
+    "brow_width": 8.4,
+    "brow_height": 1.6,
+    "brow_z": 2.8,
+    "mouth_width": 6.0,
+    "mouth_height": 0.9,
+    "mouth_z": -6.6
+  },
+  "hair": {
+    "escala": 1.3,
+    "sesgo_atras": 2.5,
+    "margen_arriba": 3.0,
+    "cunias": 10,
+    "ancho_base": [8.0, 12.0],
+    "largo": [10.0, 17.0],
+    "caida": [3.0, 8.0],
+    "copete": 3,
+    "semilla": 1
+  }
+}

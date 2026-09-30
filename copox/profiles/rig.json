@@ -1,0 +1,14 @@
+{
+  "id": "rig_v1",
+  "description": "Rigging y skinning con poses de estrés y regresión de deformaciones.",
+  "auditors": [
+    {"id":"BoneHierarchyGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","BoneHierarchyGate","--metrics","{candidate_dir}/metrics.json","--metric","rig.hierarchy_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"BoneOrientationGate","command":["python3","-m","copox.auditors.metric_gate","--agent","BoneOrientationGate","--metrics","{candidate_dir}/metrics.json","--metric","rig.orientation_ok","--op","true","--result","{audit_result}"]},
+    {"id":"WeightDistributionGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","WeightDistributionGate","--metrics","{candidate_dir}/metrics.json","--metric","rig.weights_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"DeformationAuditor","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","DeformationAuditor","--metrics","{candidate_dir}/metrics.json","--metric","rig.deformation_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"JointLimitsAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","JointLimitsAuditor","--metrics","{candidate_dir}/metrics.json","--metric","rig.joint_limits_ok","--op","true","--result","{audit_result}"]},
+    {"id":"FootContactAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","FootContactAuditor","--metrics","{candidate_dir}/metrics.json","--metric","rig.foot_contact_ok","--op","true","--result","{audit_result}"]},
+    {"id":"RegressionGuard","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","RegressionGuard","--metrics","{candidate_dir}/metrics.json","--metric","regression.frozen_regions_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"LearningArchitect","command":["python3","-m","copox.auditors.metric_gate","--agent","LearningArchitect","--metrics","{candidate_dir}/metrics.json","--metric","learning.ready_to_promote","--op","true","--result","{audit_result}"]}
+  ]
+}

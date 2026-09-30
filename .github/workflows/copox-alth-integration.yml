@@ -1,0 +1,100 @@
+name: COPOX · ALTH integration
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/alth_character*.py"
+      - "copox/baselines/**"
+      - "copox/search_spaces/**"
+      - "copox/reference_configs/**"
+      - "copox/cassettes/examples/theo.json"
+      - "assets/joven_rubio/build.py"
+      - "alth/**"
+      - ".github/workflows/copox-alth-integration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  adapter-real:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Preparar baseline real ALTH
+        run: |
+          rm -rf .copox/integration
+          python3 -m copox.adapters.alth_character prepare \
+            --repo-root . \
+            --asset-dir assets/joven_rubio \
+            --baseline-params copox/baselines/joven_rubio.json \
+            --run-dir .copox/integration
+
+      - name: Generar un candidato paramétrico de pelo
+        run: |
+          mkdir -p .copox/integration/candidates/t01-c02/evidence
+          python3 -m copox.adapters.alth_character mutate \
+            --baseline-params copox/baselines/joven_rubio.json \
+            --search-space copox/search_spaces/joven_rubio.json \
+            --run-dir .copox/integration \
+            --candidate-dir .copox/integration/candidates/t01-c02 \
+            --candidate-id t01-c02
+          python3 -m copox.adapters.alth_character execute \
+            --repo-root . \
+            --asset-dir assets/joven_rubio \
+            --candidate-dir .copox/integration/candidates/t01-c02
+
+      - name: Capturar y auditar contra referencia
+        run: |
+          python3 -m copox.adapters.alth_character capture \
+            --candidate-dir .copox/integration/candidates/t01-c02 \
+            --evidence-dir .copox/integration/candidates/t01-c02/evidence \
+            --run-dir .copox/integration \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --audit-config copox/reference_configs/joven_rubio.json \
+            --focus hair,profile
+
+      - name: Verificar contrato y semántica de evidencia real
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('.copox/integration/candidates/t01-c02')
+          required = [
+              root/'model.glb', root/'hoja.png', root/'reporte.json', root/'metrics.json',
+              root/'evidence'/'hoja.png', root/'evidence'/'overlay_front.png',
+              root/'evidence'/'overlay_side.png', root/'evidence'/'overlay_back.png',
+              root/'evidence'/'overlay_threeq.png'
+          ]
+          missing = [str(p) for p in required if not p.exists()]
+          assert not missing, missing
+          m = json.loads((root/'metrics.json').read_text(encoding='utf-8'))
+          assert m['technical']['mesh_integrity'] is True
+          assert m['technical']['spec_compliance'] is True
+          assert m['registration']['coordinate_system']['vertical_axis'] == 1
+          assert set(m['visual']['full']['candidate']) >= {'front','side','back','threeq','weighted'}
+          assert len(m['landmarks']['reference']) >= 3, m['landmarks']
+          assert 'error_budget' in m and m['error_budget']
+          # Sólo cambia pelo: el registro fijo debe impedir regresiones ficticias del cuerpo.
+          detail = m['regions']['detail']
+          for frozen in ('torso','arms_hands','legs_feet'):
+              assert abs(float(detail[frozen]['delta_pp'])) < 0.05, (frozen, detail[frozen])
+          print('PASS: GLB + hoja + overlays + ejes glTF + landmarks + frozen regions coherentes')
+          PY
+
+      - name: Guardar evidencia de integración
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-alth-integration
+          path: .copox/integration/
+          retention-days: 1
+          if-no-files-found: ignore

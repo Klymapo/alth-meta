@@ -1,0 +1,14 @@
+{
+  "id": "texture_v1",
+  "description": "Texturas, UV y materiales.",
+  "auditors": [
+    {"id":"UVIntegrityGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","UVIntegrityGate","--metrics","{candidate_dir}/metrics.json","--metric","texture.uv_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"SeamAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","SeamAuditor","--metrics","{candidate_dir}/metrics.json","--metric","texture.seams_ok","--op","true","--result","{audit_result}"]},
+    {"id":"StretchingAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","StretchingAuditor","--metrics","{candidate_dir}/metrics.json","--metric","texture.stretching_ok","--op","true","--result","{audit_result}"]},
+    {"id":"BleedAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","BleedAuditor","--metrics","{candidate_dir}/metrics.json","--metric","texture.bleed_ok","--op","true","--result","{audit_result}"]},
+    {"id":"PaletteAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","PaletteAuditor","--metrics","{candidate_dir}/metrics.json","--metric","texture.palette_ok","--op","true","--result","{audit_result}"]},
+    {"id":"MaterialResponseAuditor","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","MaterialResponseAuditor","--metrics","{candidate_dir}/metrics.json","--metric","texture.material_response_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"ReferenceAuditor","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","ReferenceAuditor","--metrics","{candidate_dir}/metrics.json","--metric","visual.reference_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"LearningArchitect","command":["python3","-m","copox.auditors.metric_gate","--agent","LearningArchitect","--metrics","{candidate_dir}/metrics.json","--metric","learning.ready_to_promote","--op","true","--result","{audit_result}"]}
+  ]
+}

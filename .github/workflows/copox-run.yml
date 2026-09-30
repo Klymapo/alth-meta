@@ -1,0 +1,98 @@
+name: COPOX · Ejecutar cassette
+run-name: "COPOX · ${{ inputs.cassette }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      cassette:
+        description: "Ruta del cassette JSON"
+        required: true
+        default: "copox/cassettes/examples/theo.json"
+  workflow_call:
+    inputs:
+      cassette:
+        description: "Ruta del cassette JSON"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    concurrency:
+      group: "copox-${{ inputs.cassette }}"
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validar cassette
+        env:
+          CASSETTE: ${{ inputs.cassette }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from copox.contracts import load_cassette
+          c = load_cassette(os.environ["CASSETTE"])
+          print(f"Cassette válido: {c.id} ({c.kind})")
+          print(f"Torneo={c.tournament_size}; máximo={c.max_candidates}; unanimidad={c.unanimity_required}")
+          PY
+
+      - name: Ejecutar campaña
+        id: run
+        continue-on-error: true
+        env:
+          CASSETTE: ${{ inputs.cassette }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          python3 -m copox.engine "$CASSETTE"
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Resumen público sólo si hubo unanimidad
+        if: always()
+        run: |
+          report="$(find .copox/evidence -name report.md -type f 2>/dev/null | sort | tail -1)"
+          if [ -n "$report" ]; then
+            cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## COPOX"
+              echo
+              echo "No se publicó candidato: la campaña no produjo una promoción con unanimidad y captura válida."
+              echo
+              echo "La evidencia técnica permanece en el artefacto interno de esta corrida."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Guardar evidencia completa
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-evidence-${{ github.run_number }}
+          path: .copox/evidence/
+          if-no-files-found: ignore
+          retention-days: 2
+
+      - name: Marcar plateau/error sin publicar candidatos
+        if: steps.run.outputs.exit_code != '0'
+        env:
+          CODE: ${{ steps.run.outputs.exit_code }}
+        run: |
+          if [ "$CODE" = "2" ]; then
+            echo "::notice title=COPOX::Campaña terminó en PLATEAU; baseline conservada."
+          else
+            echo "::error title=COPOX::Campaña terminó con código $CODE. Revisa la evidencia interna."
+            exit 1
+          fi

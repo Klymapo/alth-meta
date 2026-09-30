@@ -1,0 +1,43 @@
+{
+  "mesh_to_mm": 1000.0,
+  "coordinates": {
+    "vertical_axis": 1,
+    "front_horizontal_axis": 0,
+    "depth_axis": 2,
+    "front_sign": 1.0,
+    "side_sign": 1.0
+  },
+  "views": {
+    "front": [0.0, 0.0, 0.5, 0.5],
+    "side": [0.5, 0.0, 1.0, 0.5],
+    "back": [0.0, 0.5, 0.5, 1.0],
+    "threeq": [0.5, 0.5, 1.0, 1.0]
+  },
+  "approval": {
+    "weighted_gain_min_pp": 0.05,
+    "max_single_view_drop_pp": -0.10,
+    "relevant_region_gain_min_pp": 0.10,
+    "relevant_visible_delta_min_pct": 0.50,
+    "landmark_error_improvement_min_headwidth_pct": 0.15,
+    "freeze_tolerance_pp": -0.20
+  },
+  "landmarks": {
+    "head_width_px": 200.0,
+    "reference": {},
+    "auto_reference_rois": {
+      "eye_left": [0.37, 0.31, 0.49, 0.41],
+      "eye_right": [0.51, 0.31, 0.63, 0.41],
+      "brow_left": [0.37, 0.24, 0.49, 0.33],
+      "brow_right": [0.51, 0.24, 0.63, 0.33],
+      "mouth_center": [0.44, 0.41, 0.56, 0.50]
+    },
+    "model_name_contains": {
+      "eye_left": ["iris_izq"],
+      "eye_right": ["iris_der"],
+      "brow_left": ["ceja_izq"],
+      "brow_right": ["ceja_der"],
+      "mouth_center": ["joven_boca"]
+    },
+    "note": "Las coordenadas exactas de landmarks no se escriben a mano: se obtienen automáticamente de componentes oscuros dentro de ROIs amplias de la referencia. Las ROIs sólo delimitan la zona semántica de búsqueda."
+  }
+}
