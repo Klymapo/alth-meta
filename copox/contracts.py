@@ -49,6 +49,16 @@ class Cassette:
     def unanimity_required(self) -> bool:
         return bool(self.data["promotion"].get("unanimous", True))
 
+    @property
+    def auditors(self) -> list[dict[str, Any]]:
+        overrides = self.data.get("auditor_overrides", {})
+        resolved: list[dict[str, Any]] = []
+        for base in self.profile.get("auditors", []):
+            item = dict(base)
+            item.update(overrides.get(str(base.get("id")), {}))
+            resolved.append(item)
+        return resolved
+
 
 def _load_json(path: Path) -> dict[str, Any]:
     try:
@@ -86,10 +96,10 @@ def load_cassette(path: str | Path, repo_root: str | Path = ".") -> Cassette:
     if data.get("promotion", {}).get("unanimous") is not True:
         raise ContractError("COPOX v1 exige promotion.unanimous=true")
 
-    auditors = profile.get("auditors", [])
-    if not auditors:
+    cassette = Cassette(path=path, data=data, profile=profile)
+    if not cassette.auditors:
         raise ContractError("El perfil debe declarar al menos un auditor")
-    for auditor in auditors:
+    for auditor in cassette.auditors:
         if not auditor.get("id"):
             raise ContractError("Cada auditor necesita id")
         if auditor.get("applicable", True) and "command" not in auditor:
@@ -99,4 +109,4 @@ def load_cassette(path: str | Path, repo_root: str | Path = ".") -> Cassette:
     if not required_evidence:
         raise ContractError("reporting.required_evidence no puede estar vacío")
 
-    return Cassette(path=path, data=data, profile=profile)
+    return cassette
