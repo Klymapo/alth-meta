@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "copox/**"
+      - "tests/test_copox_contract.py"
       - "docs/COPOX_LOOP_ENGINE.md"
       - ".github/workflows/copox-*.yml"
   workflow_dispatch:
@@ -33,6 +34,9 @@ jobs:
               json.loads(p.read_text(encoding='utf-8'))
               print('OK', p)
           PY
+
+      - name: Unit tests del contrato
+        run: python3 -m unittest tests.test_copox_contract -v
 
       - name: Ejecutar smoke end-to-end
         run: |
