@@ -28,11 +28,11 @@ Exporta a Godot como GLB con la raíz ×0.01: el personaje estándar (95 mm de m
 COPOX desacopla el proceso iterativo del contenido que se quiere iterar. El engine no sabe si el cassette es Theo, un rig, una textura, una UI o un script.
 
 ```text
-baseline → candidatos hermanos → ejecutar → capturar → auditar → aprender
-                                      │
-                               unanimidad total
-                                      │
-                           state branch → reporte
+seed/main → state branch → baseline → candidatos hermanos → ejecutar → capturar → auditar
+                                                           │
+                                                    unanimidad total
+                                                           │
+                                                nueva state → reporte
 ```
 
 Reglas clave:
@@ -46,6 +46,8 @@ Reglas clave:
 - scheduler preparado para varios cassettes en paralelo, con exclusión por cassette.
 
 La validación real de personaje ALTH está documentada en `docs/COPOX_VALIDATION_2026-09-30.md`.
+
+**COPOX está preparado pero no activado para cassettes productivos:** mientras `copox/cassettes/enabled/` permanezca vacío, el scheduler no modifica Theo, Detective, rigs, UI ni otros assets automáticamente.
 
 ## Bucle ALTH histórico con cualquier IA
 
@@ -62,5 +64,3 @@ La validación real de personaje ALTH está documentada en `docs/COPOX_VALIDATIO
 - Opciones por asset siguen en su `spec.json` → `"bucle": {...}`.
 - Cada vuelta histórica queda en `renders/<asset>/bucle/vNN/`.
 - Aprobar por la vía histórica: CHSP-X o Actions → **Aprobar ALTH**.
-
-Mientras COPOX no tenga cassettes dentro de `copox/cassettes/enabled/`, el scheduler no ejecuta loops productivos automáticamente.
