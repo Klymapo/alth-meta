@@ -10,7 +10,7 @@
     "search_space": "copox/search_spaces/joven_rubio.json",
     "reference": "refs/personajes/joven-rubio-4-vistas.jpg",
     "audit_config": "copox/reference_configs/joven_rubio.json",
-    "focus": "head,face,hair"
+    "focus": "hair,profile"
   },
   "strategy": {
     "tournament_size": 3,
@@ -26,8 +26,8 @@
     "report": ["python3", "-m", "copox.report", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--output", "{run_dir}/report.md", "--title", "COPOX · Theo aprobado por unanimidad"]
   },
   "auditor_overrides": {
-    "HeadAgent": {"applicable": true},
-    "FaceAgent": {"applicable": true},
+    "HeadAgent": {"applicable": false},
+    "FaceAgent": {"applicable": false},
     "HairAgent": {"applicable": true},
     "ArmsAgent": {"applicable": false},
     "LegsAgent": {"applicable": false},
