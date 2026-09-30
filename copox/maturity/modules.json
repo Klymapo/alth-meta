@@ -1,0 +1,78 @@
+{
+  "id": "copox-module-catalog",
+  "target": "copox",
+  "kind": "module_catalog",
+  "modules": [
+    {
+      "id": "alth_character_alpha",
+      "label": "ALTH Character · GLB aprobado",
+      "domain": "3d_character",
+      "critical": true,
+      "priority": 1,
+      "capabilities": {"evidence": true, "auditor": true, "mutator": true, "learning": true, "regression": true, "persistence": true, "loop_gate": true},
+      "processes": {"evidence": "alth_glb_render", "auditor": "alth_character_audit", "mutator": "alth_glb_character", "learning": "alth_character_alpha.learn", "persistence": "state_bundle"}
+    },
+    {
+      "id": "alth_character_legacy",
+      "label": "ALTH Character · generador paramétrico legacy",
+      "domain": "3d_character",
+      "critical": false,
+      "priority": 90,
+      "capabilities": {"evidence": true, "auditor": true, "mutator": true, "learning": true, "regression": true, "persistence": true, "loop_gate": true},
+      "processes": {"evidence": "alth.revisar", "auditor": "alth_character_audit", "mutator": "alth_character.mutate", "learning": "alth_character.learn", "persistence": "state"}
+    },
+    {
+      "id": "alth_asset",
+      "label": "ALTH Asset",
+      "domain": "3d_asset",
+      "critical": true,
+      "priority": 20,
+      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": true, "persistence": false, "loop_gate": false},
+      "learning_questions": ["¿Qué parámetros geométricos son editables sin romper la spec?", "¿Qué evidencia regional necesita cada clase de asset?"]
+    },
+    {
+      "id": "rig",
+      "label": "Rig / deformación",
+      "domain": "rig",
+      "critical": true,
+      "priority": 30,
+      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": false, "persistence": false, "loop_gate": false},
+      "learning_questions": ["¿Qué poses mínimas revelan colapsos de hombro, codo, muñeca, cadera y rodilla?", "¿Qué métricas de deformación deben vetar un rig?"]
+    },
+    {
+      "id": "texture",
+      "label": "Texturas / materiales",
+      "domain": "texture_material",
+      "critical": true,
+      "priority": 40,
+      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": true, "persistence": false, "loop_gate": false},
+      "learning_questions": ["¿Qué desviaciones de color/material cambian la lectura del personaje?", "¿Cómo separar error de material de error geométrico?"]
+    },
+    {
+      "id": "godot_ui",
+      "label": "Godot UI",
+      "domain": "ui",
+      "critical": false,
+      "priority": 60,
+      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": true, "persistence": false, "loop_gate": false},
+      "learning_questions": ["¿Qué elementos visuales y estados deben capturarse para comparar una UI?"]
+    },
+    {
+      "id": "godot_script",
+      "label": "Godot Script",
+      "domain": "code",
+      "critical": false,
+      "priority": 70,
+      "capabilities": {"evidence": true, "auditor": true, "mutator": false, "learning": false, "regression": true, "persistence": false, "loop_gate": false},
+      "learning_questions": ["¿Qué superficie pública puede mutarse sin tocar GameState/autoloads?", "¿Qué tests representan comportamiento, no sólo sintaxis?"]
+    },
+    {
+      "id": "smoke",
+      "label": "Framework smoke",
+      "domain": "framework",
+      "critical": false,
+      "priority": 100,
+      "capabilities": {"evidence": true, "auditor": true, "mutator": true, "learning": true, "regression": true, "persistence": true, "loop_gate": true}
+    }
+  ]
+}
