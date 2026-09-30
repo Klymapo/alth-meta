@@ -1,0 +1,29 @@
+{
+  "mesh_to_mm": 1000.0,
+  "views": {
+    "front": [0.0, 0.0, 0.5, 0.5],
+    "side": [0.5, 0.0, 1.0, 0.5],
+    "back": [0.0, 0.5, 0.5, 1.0],
+    "threeq": [0.5, 0.5, 1.0, 1.0]
+  },
+  "approval": {
+    "weighted_gain_min_pp": 0.05,
+    "max_single_view_drop_pp": -0.10,
+    "relevant_region_gain_min_pp": 0.10,
+    "relevant_visible_delta_min_pct": 0.50,
+    "landmark_error_improvement_min_headwidth_pct": 0.15,
+    "freeze_tolerance_pp": -0.20
+  },
+  "landmarks": {
+    "head_width_px": 60.0,
+    "reference": {},
+    "model_name_contains": {
+      "eye_left": ["iris_izq"],
+      "eye_right": ["iris_der"],
+      "brow_left": ["ceja_izq"],
+      "brow_right": ["ceja_der"],
+      "mouth_center": ["joven_boca"]
+    },
+    "note": "Los landmarks de referencia se detectarán/calibrarán desde la hoja; no se inventan coordenadas manuales. Mientras estén vacíos, FaceAgent usa mejora regional de silueta y los gates globales siguen activos."
+  }
+}
