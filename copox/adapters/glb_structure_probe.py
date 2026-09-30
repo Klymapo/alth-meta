@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import struct
 from collections import defaultdict
 from pathlib import Path
@@ -28,19 +29,24 @@ def read_glb_json(path: str | Path) -> dict[str, Any]:
     raise ValueError("GLB sin chunk JSON")
 
 
+def _token(low: str, word: str) -> bool:
+    return bool(re.search(rf"(?:^|[_.\-]){re.escape(word)}(?:$|[_.\-])", low))
+
+
 def _semantic(name: str) -> str:
     low = name.lower()
-    keywords = {
-        "hair": ("fleco", "mechon", "capa_", "corona", "pelo", "hair"),
-        "ears": ("oreja", "ear"),
-        "eyes": ("ojo", "iris", "eye"),
-        "mouth": ("boca", "mouth", "labio", "lip"),
-        "hands": ("mano", "hand"),
-        "fingers": ("dedo", "finger", "thumb", "pulgar"),
-    }
-    for group, tokens in keywords.items():
-        if any(token in low for token in tokens):
-            return group
+    if any(x in low for x in ("fleco", "mechon", "capa_", "corona", "pelo")) or _token(low, "hair"):
+        return "hair"
+    if "oreja" in low or _token(low, "ear"):
+        return "ears"
+    if any(x in low for x in ("ojo", "iris")) or _token(low, "eye"):
+        return "eyes"
+    if any(x in low for x in ("boca", "labio")) or _token(low, "mouth") or _token(low, "lip"):
+        return "mouth"
+    if "mano" in low or _token(low, "hand"):
+        return "hands"
+    if any(x in low for x in ("dedo", "pulgar")) or _token(low, "finger") or _token(low, "thumb"):
+        return "fingers"
     return "other"
 
 
@@ -90,19 +96,30 @@ def probe(path: str | Path, output: str | Path) -> dict[str, Any]:
     for row in node_rows:
         semantic_nodes[row["semantic"]].append(row["name"])
 
+    morph_targets = 0
+    morph_target_meshes = []
+    for idx, mesh in enumerate(meshes):
+        count = max((len(p.get("targets") or []) for p in (mesh.get("primitives") or [])), default=0)
+        if count:
+            morph_targets += count
+            morph_target_meshes.append({
+                "mesh": idx,
+                "name": str(mesh.get("name") or f"mesh_{idx}"),
+                "target_count": count,
+                "target_names": (mesh.get("extras") or {}).get("targetNames", []),
+            })
+
     shared_hair_ear_material = bool(
         set(semantic_materials.get("hair", set())) & set(semantic_materials.get("ears", set()))
     )
     rig_ready_basic = bool(skins and joints)
-    finger_nodes = semantic_nodes.get("fingers", [])
-    hand_nodes = semantic_nodes.get("hands", [])
 
     result = {
         "file": str(path),
         "counts": {
             "nodes": len(nodes), "meshes": len(meshes), "materials": len(materials),
             "textures": len(textures), "images": len(images), "skins": len(skins),
-            "joints": len(joints), "animations": len(animations),
+            "joints": len(joints), "animations": len(animations), "morph_targets": morph_targets,
         },
         "materials": {
             "rows": material_rows,
@@ -117,10 +134,13 @@ def probe(path: str | Path, output: str | Path) -> dict[str, Any]:
             "basic_skin_present": rig_ready_basic,
             "joint_names": joint_names,
             "animations": [str(a.get("name") or f"animation_{i}") for i, a in enumerate(animations)],
-            "separate_hand_nodes": hand_nodes,
-            "separate_finger_nodes": finger_nodes,
+            "separate_hand_nodes": semantic_nodes.get("hands", []),
+            "separate_finger_nodes": semantic_nodes.get("fingers", []),
+            "separate_eye_nodes": semantic_nodes.get("eyes", []),
+            "separate_mouth_nodes": semantic_nodes.get("mouth", []),
             "hair_nodes": semantic_nodes.get("hair", []),
             "ear_nodes": semantic_nodes.get("ears", []),
+            "morph_target_meshes": morph_target_meshes,
         },
         "nodes": node_rows,
         "learning": {
@@ -129,8 +149,8 @@ def probe(path: str | Path, output: str | Path) -> dict[str, Any]:
                 "Si orejas correctas están embebidas en la malla principal, un cambio de material por nodo no basta: localizar UV/polígonos primero.",
             ],
             "rig": [
-                "No declarar rig-ready si no existe skin/joints o si manos/dedos no tienen topología deformable comprobada.",
-                "Pelo, ojos, boca y dedos deben conservar separabilidad o pesos controlables para animación.",
+                "No declarar rig final sólo porque exista skin/joints: verificar poses y regiones sin controles específicos.",
+                "Pelo, ojos, boca y dedos deben conservar separabilidad o morph targets/pesos controlables para animación.",
             ],
         },
     }
