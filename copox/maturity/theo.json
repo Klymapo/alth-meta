@@ -11,15 +11,15 @@
   "modules": [
     {
       "id":"whole_body_silhouette","label":"Silueta global","domain":"global","critical":true,"priority":1,
-      "capabilities":{"evidence":true,"auditor":true,"mutator":false,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
-      "processes":{"evidence":"regional_reference_audit + 4 vistas","auditor":"LikenessLead/OrganicSilhouette","learning":"regional_diagnosis","regression":"RegressionGuard"},
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"regional_reference_audit + 4 vistas","auditor":"LikenessLead/OrganicSilhouette","learning":"global_shape_study","regression":"global per-view veto","mutator":"global_axis_morph","validation":".github/workflows/copox-global-maturity.yml"},
       "learning_questions":["¿Qué vista y región explican la mayor parte del error global?","¿Qué intervención regional mejora la silueta sin mover zonas ya correctas?"],
       "signals":["error_ranking","visual.full.*","visual.weighted_gain_pp"]
     },
     {
       "id":"global_proportions","label":"Proporciones globales","domain":"global","critical":true,"priority":2,
-      "capabilities":{"evidence":true,"auditor":true,"mutator":false,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
-      "processes":{"auditor":"AnatomyCoherence + regional_reference_audit","learning":"regional error budget"},
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"auditor":"AnatomyCoherence + regional_reference_audit","learning":"global_shape_study","mutator":"global_axis_morph","regression":"global per-view veto","validation":".github/workflows/copox-global-maturity.yml"},
       "learning_questions":["¿Qué relación cabeza/torso/extremidades difiere de la referencia?","¿Qué combinación de regiones debe cambiar en vez de escalar todo el personaje?"],
       "signals":["visual.anatomy_coherence_ok","error_ranking"]
     },
@@ -121,32 +121,32 @@
     },
     {
       "id":"materials_colors","label":"Materiales / color blocking / UV","domain":"materials","critical":true,"priority":19,
-      "capabilities":{"evidence":true,"auditor":true,"mutator":false,"learning":true,"regression":false,"persistence":true,"loop_gate":false},
-      "processes":{"evidence":"glb_structure_probe + uv_region_probe","auditor":"semantic material/UV comparison","learning":"UV-vs-geometry diagnosis"},
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"glb_structure_probe + uv_region_probe","auditor":"semantic material/UV comparison","learning":"material_diagnosis","mutator":"material_region_candidate","regression":"geometry unchanged + scope_exact + regional audit","validation":".github/workflows/copox-material-maturity.yml"},
       "learning_questions":["¿Qué error es material/UV y cuál geometría?","¿Puede aislarse la zona objetivo sin afectar el atlas compartido?"],"signals":["uv_regions","material_by_node"]
     },
     {
       "id":"mesh_topology","label":"Malla / topología","domain":"technical","critical":true,"priority":20,
-      "capabilities":{"evidence":true,"auditor":true,"mutator":false,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
-      "processes":{"evidence":"mesh_topology_probe","auditor":"MeshIntegrityGate + seam analysis","learning":"topology probe"},
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"mesh_topology_probe","auditor":"MeshIntegrityGate + seam analysis","learning":"topology_diagnosis + mesh_topology_probe","mutator":"topology_local_refine","regression":"coordinate multiset + original surface BVH + area + UV layers + regional audit","validation":".github/workflows/copox-alth-integration.yml"},
       "learning_questions":["¿La densidad local permite definir dedos?","¿Qué operación conserva seams UV/normales?"],"signals":["topology","technical.mesh_integrity"]
     },
     {
       "id":"orientation","label":"Orientación / sistema de ejes","domain":"technical","critical":true,"priority":21,
-      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":false,"regression":true,"persistence":true,"loop_gate":true},
-      "processes":{"auditor":"orientation gate + hair_above_body","mutator":"GLB Y-up -> ALTH Z-up sólo para render"},
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"auditor":"orientation gate + hair_above_body","mutator":"GLB Y-up -> ALTH Z-up sólo para render","learning":"orientation_diagnosis","validation":".github/workflows/copox-orientation-maturity.yml","loop_gate_note":"Render orientation gate exists; autonomous orientation correction/promotion is not validated."},
       "learning_questions":["¿La orientación se conserva en export/import sin afectar geometría persistida?"],"signals":["orientation.ok","orientation.hair_above_body"]
     },
     {
       "id":"rig_readiness","label":"Preparación para rig","domain":"rig","critical":true,"priority":22,
-      "capabilities":{"evidence":true,"auditor":true,"mutator":false,"learning":true,"regression":false,"persistence":true,"loop_gate":false},
-      "processes":{"evidence":"glb_structure_probe","auditor":"skin/joint/separate-node readiness","learning":"rig readiness diagnosis"},
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"glb_structure_probe","auditor":"skin/joint/separate-node readiness","learning":"rig_diagnosis","mutator":"rig_candidate","regression":"rest pose by view + finite real deformation","validation":".github/workflows/copox-rig-maturity.yml"},
       "learning_questions":["¿Qué piezas deben articularse por separado?","¿Qué zonas colapsarían al deformar?"],"signals":["skins","joints","separate_nodes","deformation_test_poses"]
     },
     {
       "id":"facial_animation_readiness","label":"Ojos / boca animables","domain":"rig","critical":true,"priority":23,
-      "capabilities":{"evidence":true,"auditor":true,"mutator":false,"learning":true,"regression":false,"persistence":true,"loop_gate":false},
-      "processes":{"evidence":"glb_structure_probe","auditor":"semantic node separability","learning":"missing-node diagnosis"},
+      "capabilities":{"evidence":true,"auditor":true,"mutator":true,"learning":true,"regression":true,"persistence":true,"loop_gate":false},
+      "processes":{"evidence":"glb_structure_probe","auditor":"semantic node separability","learning":"facial_diagnosis","mutator":"facial_morph_candidate","regression":"rest regional audit + exported named targets + active previews","validation":".github/workflows/copox-facial-maturity.yml"},
       "learning_questions":["¿Ojos y boca son geometría separable o están embebidos en la malla/atlas?","¿Conviene extraer geometría o crear shapekeys?"],"signals":["separate_eye_nodes","separate_mouth_nodes"]
     }
   ]

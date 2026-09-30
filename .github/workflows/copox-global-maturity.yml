@@ -48,6 +48,8 @@ jobs:
           assert s['conclusion'] in {
               'GLOBAL_AXIS_CHANGE_NOT_NEEDED','GLOBAL_AXIS_HYPOTHESIS_IMPROVES_MATCH','LOCAL_REGIONS_SHOULD_BE_PRIORITIZED'
           }
+          assert s['best_hypothesis'] in s['eligible_hypotheses']
+          assert any(not x['regression']['ok'] for x in s['results']), s
           for x in s['results']:
               assert 0.0 <= float(x['weighted_iou']) <= 1.0
               if x['id'] != 'baseline':

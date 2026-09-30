@@ -2,11 +2,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import shutil
 from pathlib import Path
 
 from copox.adapters.alth_character_audit import audit
 from copox.adapters.global_axis_morph import morph
+
+
+def check_view_regression(view_deltas: dict, max_drop_pp: float = 0.20) -> dict:
+    required = ('front', 'side', 'back', 'threeq')
+    failed = [view for view in required if view not in view_deltas or not math.isfinite(float(view_deltas[view])) or float(view_deltas[view]) < -max_drop_pp]
+    return {'ok': not failed, 'max_drop_pp': max_drop_pp, 'failed_views': failed}
 
 
 def study(baseline: str, reference: str, config: str, output_dir: str, step: float = 0.02) -> dict:
@@ -35,11 +42,13 @@ def study(baseline: str, reference: str, config: str, output_dir: str, step: flo
             "id":hid,"scale_xyz":scale,"weighted_iou":float(full['weighted']),
             "weighted_delta_pp":float(metrics['visual']['weighted_gain_pp']),
             "max_view_drop_pp":float(min(metrics['visual']['full']['delta_pp'][v] for v in ('front','side','back','threeq'))),
+            "regression":check_view_regression(metrics['visual']['full']['delta_pp']),
             "morph":morph_report,
         })
     ranking=sorted(results,key=lambda x:x['weighted_iou'],reverse=True)
     base=next(x for x in results if x['id']=='baseline')
-    best=ranking[0]
+    eligible=[x for x in ranking if x['regression']['ok'] and x['morph']['mesh_integrity']]
+    best=eligible[0]
     if best['id']=='baseline':
         conclusion='GLOBAL_AXIS_CHANGE_NOT_NEEDED'
     elif best['weighted_delta_pp']>0:
@@ -48,6 +57,7 @@ def study(baseline: str, reference: str, config: str, output_dir: str, step: flo
         conclusion='LOCAL_REGIONS_SHOULD_BE_PRIORITIZED'
     result={
         "mode":"learning_only_no_promotion","results":results,"ranking":ranking,
+        "eligible_hypotheses":[x['id'] for x in eligible],
         "best_hypothesis":best['id'],"baseline_weighted_iou":base['weighted_iou'],
         "conclusion":conclusion,"promotion_allowed":False,
         "learning":"Si un cambio global no supera a baseline, distribuir el error a regiones y evitar deformar zonas ya correctas."

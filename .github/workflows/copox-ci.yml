@@ -36,7 +36,9 @@ jobs:
           PY
 
       - name: Unit tests COPOX
-        run: python3 -m unittest tests.test_copox_contract tests.test_copox_maturity -v
+        run: |
+          python3 -m pip install -q numpy scipy trimesh Pillow
+          python3 -m unittest tests.test_copox_contract tests.test_copox_maturity tests.test_copox_alpha tests.test_copox_learning_guards -v
 
       - name: Verificar reporte de madurez de Theo
         run: |
@@ -44,11 +46,13 @@ jobs:
           python3 -m copox.maturity copox/maturity/theo.json --min-level M4 --check --output .copox/theo-maturity.md
           code=$?
           set -e
-          test "$code" -eq 4
+          test "$code" -eq 0
           grep -q "Orejas" .copox/theo-maturity.md
           grep -q "Dedos / pulgar" .copox/theo-maturity.md
           grep -q "Preparación para rig" .copox/theo-maturity.md
-          echo "PASS: cobertura completa registrada y loop general correctamente bloqueado"
+          python3 -m copox.maturity copox/maturity/theo.json --min-level M5 --check > .copox/theo-m5.json || test "$?" -eq 4
+          test "$(python3 -m copox.discover)" = '[]'
+          echo "PASS: Theo alcanza M4; M5 incompleto y ningún cassette productivo activado"
 
       - name: Ejecutar smoke end-to-end
         run: |

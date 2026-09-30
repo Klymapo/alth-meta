@@ -14,8 +14,8 @@ def diagnose(candidate_report: str, structure_path: str, output: str) -> dict:
     target_names={name for row in structure.get('rig',{}).get('morph_target_meshes',[]) for name in row.get('target_names',[])}
     rest_ok=bool(candidate.get('rest_vertices_unchanged'))
     moves=bool(candidate.get('all_controls_move_vertices'))
-    exported=EXPECTED <= (target_names or controls)
-    ready=bool(EXPECTED<=controls and rest_ok and moves and structure.get('counts',{}).get('morph_targets',0)>=3)
+    exported=EXPECTED <= target_names
+    ready=bool(EXPECTED<=controls and rest_ok and moves and exported and structure.get('counts',{}).get('morph_targets',0)>=3)
     result={
         'mode':'facial_control_learning','ready_for_m4_process':ready,
         'controls':sorted(controls),'exported_target_names':sorted(target_names),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import math
 import sys
@@ -12,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 import bpy  # noqa: E402
 import bmesh  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
+from mathutils.bvhtree import BVHTree  # noqa: E402
 
 
 def _read(path: str | Path):
@@ -76,8 +78,12 @@ def main() -> int:
     bm = bmesh.new()
     bm.from_mesh(mesh)
     bm.faces.ensure_lookup_table()
-    original_verts = list(bm.verts)
-    original_coords = [v.co.copy() for v in original_verts]
+    # Subdivision may replace BMVert handles. Snapshot values, never keep
+    # references to BMesh elements across an operation that can remove them.
+    original_coords = Counter(tuple(v.co) for v in bm.verts)
+    original_surface = BVHTree.FromBMesh(bm)
+    area_before = sum(f.calc_area() for f in bm.faces)
+    uv_names_before = [layer.name for layer in mesh.uv_layers]
     selected_faces = [
         f for f in bm.faces
         if _inside(canonical_matrix @ f.calc_center_median(), boxes, lo, span)
@@ -88,18 +94,33 @@ def main() -> int:
             f"La región {args.region} no seleccionó caras en coordenadas canónicas; "
             f"bounds={tuple(round(x, 6) for x in (*lo, *hi))}"
         )
+    selected_face_count = len(selected_faces)
     selected_edges = list({e for f in selected_faces for e in f.edges})
-    bmesh.ops.subdivide_edges(bm, edges=selected_edges, cuts=max(1, args.cuts), use_grid_fill=True)
-    originals_unchanged = all((v.co - old).length <= 1e-12 for v, old in zip(original_verts, original_coords))
+    selected_edge_count = len(selected_edges)
+    bmesh.ops.subdivide_edges(bm, edges=selected_edges, cuts=max(1, args.cuts), smooth=0.0, use_grid_fill=True)
+    current_coords = Counter(tuple(v.co) for v in bm.verts)
+    missing_originals = original_coords - current_coords
+    originals_unchanged = not missing_originals
+    new_positions = set(current_coords) - set(original_coords)
+    surface_distances = []
+    for point in new_positions:
+        nearest = original_surface.find_nearest(Vector(point))
+        surface_distances.append(float(nearest[3]) if nearest[0] is not None else math.inf)
+    max_surface_distance = max(surface_distances, default=0.0)
+    area_after = sum(f.calc_area() for f in bm.faces)
+    relative_area_delta = abs(area_after - area_before) / max(area_before, 1e-12)
+    surface_unchanged = bool(max_surface_distance <= 1e-7 and relative_area_delta <= 1e-6)
     bm.to_mesh(mesh)
     bm.free()
     mesh.update()
+    bpy.context.view_layer.update()
 
     after_vertices = len(mesh.vertices)
     after_faces = len(mesh.polygons)
     after_bounds_local = [Vector(v) for v in obj.bound_box]
     bounds_delta = max((a-b).length for a, b in zip(before_bounds_local, after_bounds_local))
     uv_layers = len(mesh.uv_layers)
+    uv_layers_preserved = uv_names_before == [layer.name for layer in mesh.uv_layers]
 
     output = Path(args.output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -111,13 +132,19 @@ def main() -> int:
         "selection_coordinates": "canonical_z_up_via_render_correction_only",
         "before": {"vertices": before_vertices, "faces": before_faces},
         "after": {"vertices": after_vertices, "faces": after_faces},
-        "selected_faces": len(selected_faces),
-        "selected_edges": len(selected_edges),
+        "selected_faces": selected_face_count,
+        "selected_edges": selected_edge_count,
         "uv_layers": uv_layers,
         "original_vertices_unchanged": bool(originals_unchanged),
+        "original_vertex_check": "exact_coordinate_multiset_including_duplicate_positions",
+        "missing_original_vertices": sum(missing_originals.values()),
+        "surface_unchanged": surface_unchanged,
+        "max_new_vertex_surface_distance": max_surface_distance,
+        "relative_area_delta": relative_area_delta,
+        "uv_layers_preserved": uv_layers_preserved,
         "bounds_delta": float(bounds_delta),
         "topology_density_increased": bool(after_vertices > before_vertices and after_faces > before_faces),
-        "safe_geometry_regression": bool(originals_unchanged and bounds_delta <= 1e-9),
+        "safe_geometry_regression": bool(originals_unchanged and surface_unchanged and uv_layers_preserved and bounds_delta <= 1e-9),
         "promotion_allowed": False,
         "learning": "La subdivisión sólo aumenta grados de libertad locales. La orientación canónica se usa para seleccionar, no se persiste. Cualquier sculpt posterior sigue sujeto a auditoría regional y render regression."
     }

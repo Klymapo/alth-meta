@@ -26,14 +26,13 @@ class CopoxMaturityTests(unittest.TestCase):
             "facial_animation_readiness",
         }
         self.assertEqual(ids, expected)
-        self.assertFalse(result["ready"])
+        self.assertTrue(result["ready"])
         blockers = {m["id"] for m in result["blockers"]}
         # Las regiones anatómicas validadas ya deben estar en M4 o M5.
         for mature in ("head_shape", "ears", "hands", "fingers", "legs", "feet_footwear"):
             self.assertNotIn(mature, blockers)
-        # El loop completo sigue cerrado por las áreas técnicas/globales todavía inmaduras.
-        for blocked in ("whole_body_silhouette", "global_proportions", "materials_colors", "mesh_topology", "orientation", "rig_readiness", "facial_animation_readiness"):
-            self.assertIn(blocked, blockers)
+        self.assertEqual(blockers, set())
+        self.assertFalse(assess_coverage("copox/maturity/theo.json", min_level="M5")["ready"])
         hair = next(m for m in result["modules"] if m["id"] == "hair")
         self.assertEqual(hair["computed_level"], "M5")
         fingers = next(m for m in result["modules"] if m["id"] == "fingers")
@@ -48,7 +47,17 @@ class CopoxMaturityTests(unittest.TestCase):
 
     def test_model_loop_is_blocked_before_candidates(self):
         with tempfile.TemporaryDirectory(dir=".") as td:
-            code = run_campaign("copox/cassettes/examples/theo.json", output_root=td)
+            root = Path(td).resolve()
+            coverage = json.loads(Path("copox/maturity/theo.json").read_text())
+            fingers = next(m for m in coverage["modules"] if m["id"] == "fingers")
+            fingers["capabilities"]["regression"] = False
+            coverage_path = root / "immature.json"
+            coverage_path.write_text(json.dumps(coverage))
+            cassette = json.loads(Path("copox/cassettes/examples/theo.json").read_text())
+            cassette["maturity"]["coverage"] = str(coverage_path)
+            cassette_path = root / "cassette.json"
+            cassette_path.write_text(json.dumps(cassette))
+            code = run_campaign(cassette_path, output_root=td)
             self.assertEqual(code, 4)
             manifests = list(Path(td).rglob("manifest.json"))
             self.assertEqual(len(manifests), 1)
@@ -56,6 +65,10 @@ class CopoxMaturityTests(unittest.TestCase):
             self.assertEqual(data["status"], "MATURITY_BLOCKED")
             self.assertEqual(data["candidates"], [])
             self.assertTrue((manifests[0].parent / "maturity.json").exists())
+
+    def test_m4_does_not_enable_a_productive_campaign(self):
+        enabled = Path("copox/cassettes/enabled")
+        self.assertEqual(list(enabled.glob("*.json")), [])
 
 
 if __name__ == "__main__":

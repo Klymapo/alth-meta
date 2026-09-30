@@ -7,6 +7,7 @@ on:
       - "copox/adapters/alth_glb_*.py"
       - "copox/adapters/model_inventory.py"
       - "copox/adapters/topology_local_refine.py"
+      - "copox/learning/topology_diagnosis.py"
       - "copox/state_bundle.py"
       - "copox/maturity/**"
       - "copox/baselines/**"
@@ -135,15 +136,24 @@ jobs:
             --config copox/reference_configs/joven_rubio_alpha.json \
             --output .copox/integration/topology_fingers/regional.json \
             --evidence-dir .copox/integration/topology_fingers/evidence
+          python3 -m copox.learning.topology_diagnosis \
+            --candidate-report .copox/integration/topology_fingers/topology.json \
+            --regional .copox/integration/topology_fingers/regional.json \
+            --output .copox/integration/topology_fingers/learning.json
           python3 - <<'PY'
           import json
           from pathlib import Path
           root=Path('.copox/integration/topology_fingers')
           t=json.loads((root/'topology.json').read_text())
           r=json.loads((root/'regional.json').read_text())
+          learning=json.loads((root/'learning.json').read_text())
           assert t['topology_density_increased'] is True, t
           assert t['original_vertices_unchanged'] is True, t
           assert t['safe_geometry_regression'] is True, t
+          assert t['surface_unchanged'] is True, t
+          assert t['uv_layers_preserved'] is True, t
+          assert learning['ready_for_m4_process'] is True, learning
+          assert learning['promotion_allowed'] is False
           assert t['uv_layers'] >= 1, t
           # subdividir sin mover la superficie no debe cambiar de forma materialmente
           for name,data in r['regions'].items():
