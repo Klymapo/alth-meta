@@ -1,0 +1,14 @@
+{
+  "id": "alth_asset_v1",
+  "description": "Objetos 3D ALTH sin reglas de personaje.",
+  "auditors": [
+    {"id":"MeshIntegrityGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","MeshIntegrityGate","--metrics","{candidate_dir}/metrics.json","--metric","technical.mesh_integrity","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"SpecComplianceGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","SpecComplianceGate","--metrics","{candidate_dir}/metrics.json","--metric","technical.spec_compliance","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"DimensionAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","DimensionAuditor","--metrics","{candidate_dir}/metrics.json","--metric","dimensions.ok","--op","true","--result","{audit_result}"]},
+    {"id":"SilhouetteAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","SilhouetteAuditor","--metrics","{candidate_dir}/metrics.json","--metric","visual.silhouette_ok","--op","true","--result","{audit_result}"]},
+    {"id":"MaterialAuditor","command":["python3","-m","copox.auditors.metric_gate","--agent","MaterialAuditor","--metrics","{candidate_dir}/metrics.json","--metric","materials.ok","--op","true","--result","{audit_result}"]},
+    {"id":"ReferenceAuditor","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","ReferenceAuditor","--metrics","{candidate_dir}/metrics.json","--metric","visual.reference_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"RegressionGuard","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","RegressionGuard","--metrics","{candidate_dir}/metrics.json","--metric","regression.frozen_regions_ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"LearningArchitect","command":["python3","-m","copox.auditors.metric_gate","--agent","LearningArchitect","--metrics","{candidate_dir}/metrics.json","--metric","learning.ready_to_promote","--op","true","--result","{audit_result}"]}
+  ]
+}
