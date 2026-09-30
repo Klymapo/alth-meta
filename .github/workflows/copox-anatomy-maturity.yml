@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "copox/adapters/regional_*.py"
+      - "copox/adapters/glb_structure_probe.py"
       - "copox/auditors/regional_gate.py"
       - "copox/learning/regional_*.py"
       - "copox/hypotheses/**"
@@ -44,6 +45,9 @@ jobs:
           python3 -m copox.learning.regional_diagnosis \
             --metrics .copox/anatomy/baseline/regional_metrics.json \
             --output .copox/anatomy/baseline/learning.json
+          python3 -m copox.adapters.glb_structure_probe \
+            --input assets/joven_rubio/theo_alpha.glb \
+            --output .copox/anatomy/baseline/structure.json
 
       - name: Estudio de hipótesis de orejas
         run: |
@@ -93,6 +97,13 @@ jobs:
           assert learning['mode'] == 'learning_first'
           assert learning['priority']
 
+          structure = json.loads((root/'baseline'/'structure.json').read_text())
+          assert structure['counts']['nodes'] > 0
+          assert len(structure['rig']['ear_nodes']) == 2, structure['rig']['ear_nodes']
+          assert len(structure['rig']['hair_nodes']) >= 10, structure['rig']['hair_nodes']
+          assert 'basic_skin_present' in structure['rig']
+          assert 'hair_and_explicit_ears_share_material' in structure['materials']
+
           ears = json.loads((root/'ears'/'study.json').read_text())
           assert ears['promotion_allowed'] is False
           assert len(ears['results']) == 4
@@ -111,7 +122,7 @@ jobs:
 
           closeups = list((root/'baseline'/'evidence').glob('region_*.png'))
           assert len(closeups) >= 20, len(closeups)
-          print('PASS: auditor regional + learning + orejas + manos/dedos con scope seguro')
+          print('PASS: referencia regional + orejas + manos/dedos + materiales/rig probe')
           PY
 
       - name: Guardar evidencia anatómica
