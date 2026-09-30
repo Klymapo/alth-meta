@@ -1,0 +1,22 @@
+{
+  "character": "Theo",
+  "approved_artistic_version": {
+    "label": "Theo Alpha",
+    "source_filename": "theo_v11_rehecha.glb",
+    "status": "APPROVED",
+    "approved_as": "latest_artistic_baseline",
+    "notes": "Baseline artística seleccionada por el usuario para futuros loops COPOX. Debe reemplazar al ganador del torneo de validación como referencia aprobada."
+  },
+  "execution": {
+    "runnable": false,
+    "blocked_reason": "El GLB theo_v11_rehecha.glb todavía no está materializado en main ni localizado en Drive/Library; no ejecutar loops hasta que los bytes estén disponibles.",
+    "expected_state_branch": "copox/state/theo-character"
+  },
+  "validation_history": {
+    "t01-c02": {
+      "role": "validation_only",
+      "artistic_baseline": false,
+      "note": "Ganador unánime del torneo técnico de COPOX; no sustituye a Theo Alpha como última versión artística aprobada."
+    }
+  }
+}
