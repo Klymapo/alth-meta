@@ -1,7 +1,7 @@
 {
   "id": "theo-character",
   "kind": "alth_character",
-  "profile": "copox/profiles/alth_character.json",
+  "profile": "copox/profiles/alth_character_alpha.json",
   "target": "joven_rubio",
   "baseline": "copox/baselines/joven_rubio_alpha.json",
   "variables": {
