@@ -1,8 +1,10 @@
 import json
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
 
+from copox.adapters.alth_character import cmd_mutate
 from copox.contracts import ContractError, load_cassette
 
 
@@ -12,6 +14,18 @@ class CopoxContractTests(unittest.TestCase):
         self.assertEqual(c.tournament_size, 3)
         self.assertEqual(c.max_candidates, 6)
         self.assertTrue(c.unanimity_required)
+
+    def test_theo_contract_is_generic_and_strict(self):
+        c = load_cassette("copox/cassettes/examples/theo.json")
+        self.assertEqual(c.kind, "alth_character")
+        self.assertEqual(c.tournament_size, 3)
+        self.assertEqual(c.max_candidates, 6)
+        applicable = {a["id"]: a.get("applicable", True) for a in c.auditors}
+        self.assertTrue(applicable["HeadAgent"])
+        self.assertTrue(applicable["FaceAgent"])
+        self.assertTrue(applicable["HairAgent"])
+        self.assertFalse(applicable["ArmsAgent"])
+        self.assertNotIn("theo", Path("copox/engine.py").read_text(encoding="utf-8").lower())
 
     def test_unanimity_is_mandatory(self):
         src = json.loads(Path("copox/cassettes/examples/smoke.json").read_text(encoding="utf-8"))
@@ -33,6 +47,25 @@ class CopoxContractTests(unittest.TestCase):
             c = load_cassette(path)
             status = {a["id"]: a.get("applicable", True) for a in c.auditors}
             self.assertFalse(status["LearningArchitect"])
+
+    def test_parametric_mutator_changes_one_allowed_parameter(self):
+        with tempfile.TemporaryDirectory(dir=".") as td:
+            root = Path(td)
+            candidate = root / "candidate"
+            candidate.mkdir()
+            (root / "search_state.json").write_text(json.dumps({"parameter_cursor": 0}), encoding="utf-8")
+            args = Namespace(
+                baseline_params="copox/baselines/joven_rubio.json",
+                search_space="copox/search_spaces/joven_rubio.json",
+                run_dir=str(root),
+                candidate_dir=str(candidate),
+                candidate_id="t01-c01",
+            )
+            self.assertEqual(cmd_mutate(args), 0)
+            out = json.loads((candidate / "params.json").read_text(encoding="utf-8"))
+            meta = out["_copox"]
+            self.assertEqual(meta["mutated_parameter"], "hair.escala")
+            self.assertNotEqual(meta["baseline_value"], meta["candidate_value"])
 
 
 if __name__ == "__main__":
