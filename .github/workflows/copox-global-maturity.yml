@@ -1,0 +1,65 @@
+name: COPOX · Global model maturity
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/global_axis_morph.py"
+      - "copox/learning/global_shape_study.py"
+      - "copox/adapters/alth_character_audit.py"
+      - "copox/reference_configs/joven_rubio_alpha.json"
+      - "copox/maturity/theo.json"
+      - "assets/joven_rubio/theo_alpha.glb"
+      - ".github/workflows/copox-global-maturity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  global-maturity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - name: Estudiar hipótesis globales
+        run: |
+          rm -rf .copox/global_maturity
+          python3 -m copox.learning.global_shape_study \
+            --baseline assets/joven_rubio/theo_alpha.glb \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --output-dir .copox/global_maturity \
+            --step 0.02
+      - name: Validar proceso learning-first global
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('.copox/global_maturity/study.json')
+          s=json.loads(p.read_text())
+          assert s['promotion_allowed'] is False
+          assert len(s['results']) == 7
+          assert s['best_hypothesis'] in {x['id'] for x in s['results']}
+          assert s['conclusion'] in {
+              'GLOBAL_AXIS_CHANGE_NOT_NEEDED','GLOBAL_AXIS_HYPOTHESIS_IMPROVES_MATCH','LOCAL_REGIONS_SHOULD_BE_PRIORITIZED'
+          }
+          for x in s['results']:
+              assert 0.0 <= float(x['weighted_iou']) <= 1.0
+              if x['id'] != 'baseline':
+                  assert x['morph']['mesh_integrity'] is True
+                  assert x['morph']['geometry_count_before'] == x['morph']['geometry_count_after']
+          print('PASS:', s['best_hypothesis'], s['conclusion'])
+          PY
+      - name: Guardar evidencia global
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-global-maturity
+          path: .copox/global_maturity/
+          retention-days: 1
+          if-no-files-found: ignore
