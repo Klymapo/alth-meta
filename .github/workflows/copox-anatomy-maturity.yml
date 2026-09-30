@@ -7,6 +7,7 @@ on:
       - "copox/adapters/hand_detail_probe.py"
       - "copox/adapters/glb_structure_probe.py"
       - "copox/adapters/uv_region_probe.py"
+      - "copox/adapters/mesh_topology_probe.py"
       - "copox/auditors/regional_gate.py"
       - "copox/learning/regional_*.py"
       - "copox/hypotheses/**"
@@ -53,6 +54,9 @@ jobs:
           python3 -m copox.adapters.uv_region_probe \
             --input assets/joven_rubio/theo_alpha.glb \
             --output .copox/anatomy/baseline/uv_regions.json
+          python3 -m copox.adapters.mesh_topology_probe \
+            --input assets/joven_rubio/theo_alpha.glb \
+            --output .copox/anatomy/baseline/topology.json
           python3 -m copox.adapters.hand_detail_probe \
             --model assets/joven_rubio/theo_alpha.glb \
             --reference refs/personajes/joven-rubio-4-vistas.jpg \
@@ -101,7 +105,6 @@ jobs:
                   'target_metrics': result['target_metrics'],
                   'next_learning': result['learning']['priority'][0],
               }
-              # conservar métricas, pero no 15 copias del GLB ni cientos de PNGs en artifact
               (out/'model.glb').unlink(missing_ok=True)
               shutil.rmtree(out/'evidence', ignore_errors=True)
           (root/'summary.json').write_text(json.dumps(results, indent=2), encoding='utf-8')
@@ -138,6 +141,12 @@ jobs:
           assert uv['samples']['explicit_ears']['count'] > 0
           assert uv['samples']['body_ear_neighborhood']['count'] > 0
 
+          topology = json.loads((root/'baseline'/'topology.json').read_text())
+          assert topology['summary']['geometry_count'] >= 16
+          assert topology['dominant']['vertices'] > 0
+          assert topology['dominant']['welded_topology']['nonmanifold_edges'] == 0
+          assert topology['learning']['naive_vertex_merge_allowed'] is False
+
           hand = json.loads((root/'baseline'/'hand_detail.json').read_text())
           assert len(hand['hands']) == 2
           assert all(x['reference']['occupied_pixels'] > 0 for x in hand['hands'])
@@ -160,7 +169,7 @@ jobs:
 
           closeups = list((root/'baseline'/'evidence').glob('region_*.png'))
           assert len(closeups) >= 20, len(closeups)
-          print('PASS: M4 regional + detail manos + UV orejas + rig/material diagnostics')
+          print('PASS: M4 regional + manos + UV orejas + topología + rig/material diagnostics')
           PY
 
       - name: Guardar evidencia anatómica
