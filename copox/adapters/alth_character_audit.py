@@ -13,6 +13,13 @@ from PIL import Image, ImageDraw
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "mesh_to_mm": 1000.0,
+    "coordinates": {
+        "vertical_axis": 1,
+        "front_horizontal_axis": 0,
+        "depth_axis": 2,
+        "front_sign": 1.0,
+        "side_sign": 1.0,
+    },
     "views": {
         "front": [0.0, 0.0, 0.5, 0.5],
         "side": [0.5, 0.0, 1.0, 0.5],
@@ -39,6 +46,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "landmarks": {
         "head_width_px": 60.0,
         "reference": {},
+        "auto_reference_rois": {},
         "model_name_contains": {},
     },
 }
@@ -82,10 +90,7 @@ def crop_norm(image: np.ndarray, box: list[float]) -> np.ndarray:
 def load_scene(path: str, scale: float) -> tuple[trimesh.Scene, trimesh.Trimesh]:
     scene = trimesh.load(path, force="scene")
     dumped = scene.dump(concatenate=True)
-    if isinstance(dumped, list):
-        mesh = trimesh.util.concatenate(dumped)
-    else:
-        mesh = dumped
+    mesh = trimesh.util.concatenate(dumped) if isinstance(dumped, list) else dumped
     mesh = mesh.copy()
     mesh.vertices *= scale
     return scene, mesh
@@ -98,28 +103,45 @@ def bbox(mask: np.ndarray) -> tuple[int, int, int, int]:
     return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
 
 
-def raster_silhouette(mesh: trimesh.Trimesh, view: str, out_shape: tuple[int, int], ref_mask: np.ndarray) -> np.ndarray:
+def horizontal_coordinate(vertices: np.ndarray, view: str, cfg: dict[str, Any]) -> np.ndarray:
+    coord = cfg["coordinates"]
+    front = vertices[:, int(coord["front_horizontal_axis"])] * float(coord.get("front_sign", 1.0))
+    depth = vertices[:, int(coord["depth_axis"])] * float(coord.get("side_sign", 1.0))
+    if view == "front":
+        return front
+    if view == "back":
+        return -front
+    if view == "side":
+        return depth
+    if view == "threeq":
+        angle = np.deg2rad(45.0)
+        return front * np.cos(angle) + depth * np.sin(angle)
+    raise ValueError(f"Vista no soportada: {view}")
+
+
+def registration_from_baseline(mesh: trimesh.Trimesh, view: str, ref_mask: np.ndarray, cfg: dict[str, Any]) -> dict[str, float]:
+    vertices = np.asarray(mesh.vertices)
+    vertical = vertices[:, int(cfg["coordinates"]["vertical_axis"])]
+    horizontal = horizontal_coordinate(vertices, view, cfg)
+    x0, y0, x1, y1 = bbox(ref_mask)
+    span = max(1e-6, float(vertical.max() - vertical.min()))
+    return {
+        "scale": (y1 - y0 + 1) / span,
+        "vertical_min": float(vertical.min()),
+        "horizontal_center": (float(horizontal.min()) + float(horizontal.max())) / 2.0,
+        "pixel_center_x": (x0 + x1) / 2.0,
+        "pixel_bottom_y": float(y1),
+    }
+
+
+def raster_silhouette(mesh: trimesh.Trimesh, view: str, out_shape: tuple[int, int], registration: dict[str, float], cfg: dict[str, Any]) -> np.ndarray:
     vertices = np.asarray(mesh.vertices)
     faces = np.asarray(mesh.faces)
-    if view == "front":
-        horizontal = vertices[:, 0]
-    elif view == "side":
-        horizontal = vertices[:, 1]
-    elif view == "back":
-        horizontal = -vertices[:, 0]
-    elif view == "threeq":
-        angle = np.deg2rad(45.0)
-        horizontal = vertices[:, 0] * np.cos(angle) + vertices[:, 1] * np.sin(angle)
-    else:
-        raise ValueError(f"Vista no soportada: {view}")
-    z = vertices[:, 2]
-    x0, y0, x1, y1 = bbox(ref_mask)
-    z_span = max(1e-6, float(z.max() - z.min()))
-    scale = (y1 - y0 + 1) / z_span
-    center_x = (x0 + x1) / 2
-    center_h = (float(horizontal.min()) + float(horizontal.max())) / 2
-    px = center_x + (horizontal - center_h) * scale
-    py = y1 - (z - float(z.min())) * scale
+    vertical = vertices[:, int(cfg["coordinates"]["vertical_axis"])]
+    horizontal = horizontal_coordinate(vertices, view, cfg)
+    scale = registration["scale"]
+    px = registration["pixel_center_x"] + (horizontal - registration["horizontal_center"]) * scale
+    py = registration["pixel_bottom_y"] - (vertical - registration["vertical_min"]) * scale
     canvas = Image.new("1", (out_shape[1], out_shape[0]), 0)
     draw = ImageDraw.Draw(canvas)
     for tri in faces:
@@ -146,19 +168,16 @@ def region_mask(ref_mask: np.ndarray, norm: list[float]) -> np.ndarray:
     return out
 
 
-def project_front(point_mm: np.ndarray, mesh: trimesh.Trimesh, ref_mask: np.ndarray) -> list[float]:
-    vertices = np.asarray(mesh.vertices)
-    x0, y0, x1, y1 = bbox(ref_mask)
-    z_span = max(1e-6, float(vertices[:, 2].max() - vertices[:, 2].min()))
-    scale = (y1 - y0 + 1) / z_span
-    center_x = (x0 + x1) / 2
-    center_mesh_x = (float(vertices[:, 0].min()) + float(vertices[:, 0].max())) / 2
-    px = center_x + (float(point_mm[0]) - center_mesh_x) * scale
-    py = y1 - (float(point_mm[2]) - float(vertices[:, 2].min())) * scale
+def project_front(point_mm: np.ndarray, registration: dict[str, float], cfg: dict[str, Any]) -> list[float]:
+    coord = cfg["coordinates"]
+    horizontal = float(point_mm[int(coord["front_horizontal_axis"])]) * float(coord.get("front_sign", 1.0))
+    vertical = float(point_mm[int(coord["vertical_axis"])])
+    px = registration["pixel_center_x"] + (horizontal - registration["horizontal_center"]) * registration["scale"]
+    py = registration["pixel_bottom_y"] - (vertical - registration["vertical_min"]) * registration["scale"]
     return [float(px), float(py)]
 
 
-def scene_landmarks(scene: trimesh.Scene, mesh: trimesh.Trimesh, ref_mask: np.ndarray, cfg: dict[str, Any]) -> dict[str, list[float]]:
+def scene_landmarks(scene: trimesh.Scene, ref_registration: dict[str, float], cfg: dict[str, Any]) -> dict[str, list[float]]:
     patterns = cfg.get("landmarks", {}).get("model_name_contains", {})
     if not patterns:
         return {}
@@ -177,8 +196,53 @@ def scene_landmarks(scene: trimesh.Scene, mesh: trimesh.Trimesh, ref_mask: np.nd
             center_world = np.asarray(transform) @ center_local
             centers.append(center_world[:3] * scale)
         if centers:
-            result[str(landmark)] = project_front(np.mean(np.vstack(centers), axis=0), mesh, ref_mask)
+            result[str(landmark)] = project_front(np.mean(np.vstack(centers), axis=0), ref_registration, cfg)
     return result
+
+
+def darkest_component_centroid(image: np.ndarray, roi_norm: list[float], person_bbox: tuple[int, int, int, int]) -> list[float] | None:
+    x0, y0, x1, y1 = person_bbox
+    rx0 = x0 + int(round(roi_norm[0] * (x1 - x0 + 1)))
+    ry0 = y0 + int(round(roi_norm[1] * (y1 - y0 + 1)))
+    rx1 = x0 + int(round(roi_norm[2] * (x1 - x0 + 1)))
+    ry1 = y0 + int(round(roi_norm[3] * (y1 - y0 + 1)))
+    rx0, ry0 = max(0, rx0), max(0, ry0)
+    rx1, ry1 = min(image.shape[1], rx1), min(image.shape[0], ry1)
+    crop = image[ry0:ry1, rx0:rx1]
+    if crop.size == 0:
+        return None
+    gray = crop.mean(axis=2)
+    threshold = min(150.0, float(np.quantile(gray, 0.22)))
+    dark = gray <= threshold
+    labels, count = ndi.label(dark)
+    if count == 0:
+        return None
+    components: list[tuple[int, float, float]] = []
+    for idx in range(1, count + 1):
+        ys, xs = np.where(labels == idx)
+        if len(xs) >= 3:
+            components.append((len(xs), float(xs.mean()), float(ys.mean())))
+    if not components:
+        return None
+    _, cx, cy = max(components, key=lambda x: x[0])
+    return [float(rx0 + cx), float(ry0 + cy)]
+
+
+def reference_landmarks_from_image(ref_front: np.ndarray, ref_mask: np.ndarray, cfg: dict[str, Any]) -> dict[str, list[float]]:
+    landmark_cfg = cfg.get("landmarks", {})
+    explicit = landmark_cfg.get("reference", {})
+    if explicit:
+        return {str(k): [float(v[0]), float(v[1])] for k, v in explicit.items()}
+    rois = landmark_cfg.get("auto_reference_rois", {})
+    if not rois:
+        return {}
+    person_bbox = bbox(ref_mask)
+    out: dict[str, list[float]] = {}
+    for name, roi in rois.items():
+        point = darkest_component_centroid(ref_front, roi, person_bbox)
+        if point is not None:
+            out[str(name)] = point
+    return out
 
 
 def landmark_metrics(model: dict[str, list[float]], reference: dict[str, list[float]], head_width_px: float) -> tuple[dict[str, float], float | None]:
@@ -190,14 +254,13 @@ def landmark_metrics(model: dict[str, list[float]], reference: dict[str, list[fl
 
 
 def save_overlay(path: Path, reference: np.ndarray, baseline: np.ndarray, candidate: np.ndarray) -> None:
-    ref_rgb = np.array(reference, copy=True)
-    out = ref_rgb.astype(np.float32)
+    out = np.array(reference, copy=True).astype(np.float32)
     base_only = baseline & ~candidate
     cand_only = candidate & ~baseline
     overlap = candidate & baseline
     out[base_only] = 0.55 * out[base_only] + 0.45 * np.array([255, 70, 70])
     out[cand_only] = 0.55 * out[cand_only] + 0.45 * np.array([70, 210, 110])
-    out[overlap] = 0.8 * out[overlap] + 0.2 * np.array([80, 140, 255])
+    out[overlap] = 0.82 * out[overlap] + 0.18 * np.array([80, 140, 255])
     Image.fromarray(np.clip(out, 0, 255).astype(np.uint8)).save(path)
 
 
@@ -211,11 +274,13 @@ def audit(prev_glb: str, curr_glb: str, reference_sheet: str, focus: str, config
 
     refs = {name: crop_norm(reference, box) for name, box in cfg["views"].items()}
     ref_masks = {name: person_mask(img) for name, img in refs.items()}
+    registrations = {view: registration_from_baseline(prev_mesh, view, ref_masks[view], cfg) for view in ("front", "side", "back", "threeq")}
+
     masks: dict[tuple[str, str], np.ndarray] = {}
     scores: dict[str, dict[str, float]] = {"prev": {}, "curr": {}}
     for label, mesh in (("prev", prev_mesh), ("curr", curr_mesh)):
         for view in ("front", "side", "back", "threeq"):
-            mask = raster_silhouette(mesh, view, refs[view].shape[:2], ref_masks[view])
+            mask = raster_silhouette(mesh, view, refs[view].shape[:2], registrations[view], cfg)
             masks[(label, view)] = mask
             scores[label][view] = iou(mask, ref_masks[view])
         scores[label]["weighted"] = sum(scores[label][view] * float(cfg["weights"].get(view, 0.0)) for view in ("front", "side", "back", "threeq"))
@@ -254,12 +319,12 @@ def audit(prev_glb: str, curr_glb: str, reference_sheet: str, focus: str, config
     rel_gain = float(np.mean([regions[x]["delta_pp"] for x in relevant if x in regions])) if relevant else 0.0
     rel_visible = float(np.mean([regions[x]["visible_delta_pct"] for x in relevant if x in regions])) if relevant else 0.0
 
-    lm_cfg = cfg.get("landmarks", {})
-    reference_landmarks = lm_cfg.get("reference", {})
-    prev_landmarks = scene_landmarks(prev_scene, prev_mesh, ref_masks["front"], cfg)
-    curr_landmarks = scene_landmarks(curr_scene, curr_mesh, ref_masks["front"], cfg)
-    _, prev_lm_mean = landmark_metrics(prev_landmarks, reference_landmarks, float(lm_cfg.get("head_width_px", 60.0)))
-    _, curr_lm_mean = landmark_metrics(curr_landmarks, reference_landmarks, float(lm_cfg.get("head_width_px", 60.0)))
+    reference_landmarks = reference_landmarks_from_image(refs["front"], ref_masks["front"], cfg)
+    prev_landmarks = scene_landmarks(prev_scene, registrations["front"], cfg)
+    curr_landmarks = scene_landmarks(curr_scene, registrations["front"], cfg)
+    lm_head_width = float(cfg.get("landmarks", {}).get("head_width_px", 60.0))
+    _, prev_lm_mean = landmark_metrics(prev_landmarks, reference_landmarks, lm_head_width)
+    _, curr_lm_mean = landmark_metrics(curr_landmarks, reference_landmarks, lm_head_width)
     lm_improve = (prev_lm_mean - curr_lm_mean) if prev_lm_mean is not None and curr_lm_mean is not None else None
 
     approval = cfg["approval"]
@@ -269,18 +334,16 @@ def audit(prev_glb: str, curr_glb: str, reference_sheet: str, focus: str, config
         if region_name not in relevant and region_name in regions and regions[region_name]["delta_pp"] < float(approval["freeze_tolerance_pp"]):
             frozen.append(region_name)
 
-    face_ok = True
-    if "face" in regions:
-        face_ok = regions["face"]["delta_pp"] >= 0.0
-        if lm_improve is not None:
-            face_ok = face_ok and lm_improve >= float(approval["landmark_error_improvement_min_headwidth_pct"])
+    face_ok = regions.get("face", {}).get("delta_pp", 0.0) >= 0.0
+    if reference_landmarks and lm_improve is not None and ("face" in tokens or "head" in tokens):
+        face_ok = face_ok and lm_improve >= float(approval["landmark_error_improvement_min_headwidth_pct"])
 
     unresolved: list[str] = []
     if "hair" in relevant and "hair" in regions and regions["hair"]["delta_pp"] < float(approval["relevant_region_gain_min_pp"]):
         unresolved.append("hair")
     if "face" in relevant and not face_ok:
         unresolved.append("face")
-    if deltas["side"] < 0.0:
+    if ("profile" in tokens or "head" in tokens or "hair" in tokens) and deltas["side"] < 0.0:
         unresolved.append("profile")
     learning_action = "REUSE" if not unresolved else ("CREATE_RESEARCH" if len(unresolved) >= 2 else "EXTEND")
 
@@ -291,10 +354,7 @@ def audit(prev_glb: str, curr_glb: str, reference_sheet: str, focus: str, config
 
     mesh_integrity = bool(len(curr_mesh.vertices) > 0 and len(curr_mesh.faces) > 0 and np.isfinite(curr_mesh.vertices).all())
     metrics = {
-        "technical": {
-            "mesh_integrity": mesh_integrity,
-            "spec_compliance": technical_ok,
-        },
+        "technical": {"mesh_integrity": mesh_integrity, "spec_compliance": technical_ok},
         "visual": {
             "full": {"baseline": scores["prev"], "candidate": scores["curr"], "delta_pp": deltas},
             "weighted_gain_pp": deltas["weighted"],
@@ -316,14 +376,19 @@ def audit(prev_glb: str, curr_glb: str, reference_sheet: str, focus: str, config
         "regression": {"frozen_regions_ok": not frozen, "failed_regions": frozen},
         "learning": {"ready_to_promote": not unresolved, "action": learning_action, "unresolved": unresolved},
         "error_budget": sorted(
-            [
-                {"area": name, "error_score": (1.0 - values["curr_iou"]) * 100.0, "curr_iou": values["curr_iou"]}
-                for name, values in regions.items() if name in {"hair", "face", "torso", "arms_hands", "legs_feet"}
-            ],
+            [{"area": name, "error_score": (1.0 - values["curr_iou"]) * 100.0, "curr_iou": values["curr_iou"]}
+             for name, values in regions.items() if name in {"hair", "face", "torso", "arms_hands", "legs_feet"}],
             key=lambda x: x["error_score"], reverse=True,
         ),
         "focus": sorted(tokens),
-        "landmarks": {"baseline": prev_landmarks, "candidate": curr_landmarks, "reference": reference_landmarks},
+        "landmarks": {
+            "baseline": prev_landmarks,
+            "candidate": curr_landmarks,
+            "reference": reference_landmarks,
+            "baseline_mean_error_headwidth_pct": prev_lm_mean,
+            "candidate_mean_error_headwidth_pct": curr_lm_mean,
+        },
+        "registration": {"coordinate_system": cfg["coordinates"], "mode": "baseline_locked"},
     }
 
     output_path = Path(output)
