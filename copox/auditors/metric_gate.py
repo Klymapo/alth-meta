@@ -62,7 +62,8 @@ def main() -> int:
             "threshold": args.threshold,
             "feedback": "cumple criterio" if passed else "ajustar el productor o estrategia para mover esta métrica hacia el criterio",
         }
-        if isinstance(value, (int, float)):
+        # bool es subtipo de int en Python: un gate True/False nunca debe influir en el ranking.
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
             payload["score"] = float(value)
     except Exception as exc:
         payload = {
