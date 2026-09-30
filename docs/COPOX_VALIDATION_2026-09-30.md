@@ -47,14 +47,37 @@ Los tres candidatos partieron de la misma baseline `hair.escala = 1.30`.
 
 Sólo el ganador produjo `report.md`, y el reporte incluyó `hoja.png` y los cuatro overlays. Los candidatos rechazados no fueron promovidos ni publicados.
 
+## Persistencia entre campañas
+
+`copox/state.py` implementa una rama Git mínima por cassette, por ejemplo `copox/state/theo-character`.
+
+Cada promoción interna guarda únicamente:
+
+- `baseline.json` — parámetros de la baseline aceptada;
+- `state.json` — cassette, candidato, run y commit padre.
+
+La rama de estado es independiente de `main`: una promoción interna no publica un GLB final ni ensucia la rama de release.
+
+La CI `36744495033` validó:
+
+1. creación de la primera baseline de estado;
+2. lectura de esa baseline por el siguiente ciclo;
+3. segunda promoción;
+4. lectura de la segunda baseline;
+5. que el segundo commit de estado tiene al primero como padre.
+
+Así se conserva un historial reproducible y no se mezclan estados de cassettes distintos.
+
 ## Conclusión técnica
 
-Validado en runner real:
+Validado:
 
-`baseline → 3 siblings → build → capture → audit → veto → unanimous winner → report`
+`seed/main → state branch → baseline → sibling tournament → build → capture → audit → veto → unanimous winner → state branch siguiente → report`
 
 El workflow de torneo quedó después de la prueba como `workflow_dispatch` para evitar consumir runners en cada commit.
 
-## Pendiente antes de habilitar scheduler productivo
+## Estado de activación
 
-La baseline interna de una campaña autónoma debe persistir entre runs sin convertir cada promoción interna en un release de `main`. Se recomienda una rama de estado por cassette (`copox/state/<cassette-id>`) o mecanismo equivalente con historial reproducible. Hasta resolver esta persistencia, los cassettes reales permanecen fuera de `copox/cassettes/enabled/`.
+La infraestructura necesaria para campañas autónomas ya existe, pero **ningún cassette productivo está todavía en `copox/cassettes/enabled/`**. Por tanto el scheduler no está modificando Theo ni ningún otro asset en segundo plano.
+
+Antes de activarlo conviene hacer una decisión explícita separada: qué cassette(s) habilitar, con qué frecuencia y si la campaña debe detenerse después de N promociones o al alcanzar plateau.
