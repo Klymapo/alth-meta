@@ -38,7 +38,7 @@ jobs:
             --baseline-params copox/baselines/joven_rubio.json \
             --run-dir .copox/integration
 
-      - name: Generar un candidato paramétrico
+      - name: Generar un candidato paramétrico de pelo
         run: |
           mkdir -p .copox/integration/candidates/t01-c02/evidence
           python3 -m copox.adapters.alth_character mutate \
@@ -60,9 +60,9 @@ jobs:
             --run-dir .copox/integration \
             --reference refs/personajes/joven-rubio-4-vistas.jpg \
             --audit-config copox/reference_configs/joven_rubio.json \
-            --focus head,face,hair
+            --focus hair,profile
 
-      - name: Verificar contrato de evidencia real
+      - name: Verificar contrato y semántica de evidencia real
         run: |
           python3 - <<'PY'
           import json
@@ -78,9 +78,16 @@ jobs:
           assert not missing, missing
           m = json.loads((root/'metrics.json').read_text(encoding='utf-8'))
           assert m['technical']['mesh_integrity'] is True
+          assert m['technical']['spec_compliance'] is True
+          assert m['registration']['coordinate_system']['vertical_axis'] == 1
           assert set(m['visual']['full']['candidate']) >= {'front','side','back','threeq','weighted'}
+          assert len(m['landmarks']['reference']) >= 3, m['landmarks']
           assert 'error_budget' in m and m['error_budget']
-          print('PASS: ALTH adapter produjo GLB + hoja + reporte + overlays + métricas')
+          # Sólo cambia pelo: el registro fijo debe impedir regresiones ficticias del cuerpo.
+          detail = m['regions']['detail']
+          for frozen in ('torso','arms_hands','legs_feet'):
+              assert abs(float(detail[frozen]['delta_pp'])) < 0.05, (frozen, detail[frozen])
+          print('PASS: GLB + hoja + overlays + ejes glTF + landmarks + frozen regions coherentes')
           PY
 
       - name: Guardar evidencia de integración
