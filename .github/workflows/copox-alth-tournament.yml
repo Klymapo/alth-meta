@@ -28,6 +28,8 @@ jobs:
           src = json.loads(Path('copox/cassettes/examples/theo.json').read_text(encoding='utf-8'))
           src['id'] = 'theo-alpha-hair-validation'
           src['strategy']['max_candidates'] = 3
+          # Excepción exclusiva de validación técnica: producción/scheduler siguen bloqueados por madurez.
+          src.setdefault('maturity', {})['block_execution'] = False
           src['commands']['prepare'] = [
               'python3','-m','copox.adapters.alth_character_alpha','prepare',
               '--repo-root','{repo_root}', '--baseline-params','{baseline_params}',
@@ -65,6 +67,8 @@ jobs:
           assert len(m['candidates']) == 3, len(m['candidates'])
           assert m['status'] in {'PROMOTED','PLATEAU'}, m['status']
           assert os.environ['EXIT_CODE'] in {'0','2'}, os.environ['EXIT_CODE']
+          assert m['maturity']['ready'] is False
+          assert m['maturity']['block_execution'] is False
           for candidate in m['candidates']:
               if candidate['status'] == 'ELIGIBLE':
                   applicable = [a for a in candidate['audit'] if a['status'] != 'N-A']
@@ -82,12 +86,12 @@ jobs:
               applicable = [a for a in winner['audit'] if a['status'] != 'N-A']
               assert all(a['status'] == 'PASS' for a in applicable)
               assert list((root/'candidates'/m['winner']/'evidence').glob('*.png'))
-              print('PASS: torneo Alpha promovió sólo un candidato unánime y publicó capturas')
+              print('PASS: torneo técnico Alpha respetó veto/unanimidad; maturity gate sigue bloqueando producción')
           else:
               assert not m.get('winner')
               assert not report.exists(), 'PLATEAU publicó reporte indebidamente'
               assert all(c['status'] != 'ELIGIBLE' for c in m['candidates'])
-              print('PASS: torneo Alpha llegó a PLATEAU sin promoción ni reporte')
+              print('PASS: torneo técnico Alpha llegó a PLATEAU; maturity gate sigue bloqueando producción')
           PY
 
       - name: Resumen del torneo
@@ -103,6 +107,7 @@ jobs:
           m=json.loads(manifests[0].read_text())
           print('## COPOX · torneo Theo Alpha')
           print(f"\nEstado: **{m['status']}**")
+          print(f"\nMaturity general ready: **{m.get('maturity',{}).get('ready')}** (excepción técnica no productiva)")
           print(f"\nCandidatos: {len(m['candidates'])}")
           for c in m['candidates']:
               fails=[a['id'] for a in c.get('audit',[]) if a.get('status')=='FAIL']
