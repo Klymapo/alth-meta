@@ -37,7 +37,7 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
 
 
 def _base_context(cassette: Cassette, run_dir: Path) -> dict[str, str]:
-    return {
+    ctx = {
         "cassette_id": cassette.id,
         "cassette_path": str(cassette.path),
         "baseline": str(cassette.data["baseline"]),
@@ -45,6 +45,10 @@ def _base_context(cassette: Cassette, run_dir: Path) -> dict[str, str]:
         "repo_root": str(Path.cwd()),
         "run_dir": str(run_dir),
     }
+    for key, value in cassette.data.get("variables", {}).items():
+        if isinstance(value, (str, int, float, bool)):
+            ctx[str(key)] = str(value)
+    return ctx
 
 
 def _candidate_context(cassette: Cassette, run_dir: Path, candidate_id: str) -> dict[str, str]:
@@ -89,8 +93,9 @@ def _audit_candidate(cassette: Cassette, ctx: dict[str, str], env: dict[str, str
         results.append(result)
         if status == "PASS":
             pass_count += 1
-        if isinstance(result.get("score"), (int, float)):
-            scores.append(float(result["score"]))
+        score = result.get("score")
+        if isinstance(score, (int, float)) and not isinstance(score, bool):
+            scores.append(float(score))
 
     unanimous = applicable_count > 0 and pass_count == applicable_count
     selection_score = sum(scores) / len(scores) if scores else (1.0 if unanimous else 0.0)
@@ -115,12 +120,13 @@ def run_campaign(cassette_path: str, output_root: str = ".copox/evidence") -> in
 
     manifest: dict[str, Any] = {
         "engine": "copox-loop-engine",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "run_id": run_id,
         "cassette": cassette.id,
         "kind": cassette.kind,
         "target": cassette.data["target"],
         "baseline": cassette.data["baseline"],
+        "variables": cassette.data.get("variables", {}),
         "started_at": int(time.time()),
         "status": "RUNNING",
         "candidates": [],
