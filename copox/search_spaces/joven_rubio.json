@@ -1,0 +1,16 @@
+{
+  "parameters": [
+    {"path":"hair.escala","min":1.15,"max":1.55,"step":0.05,"tags":["hair","profile"]},
+    {"path":"hair.sesgo_atras","min":1.0,"max":4.0,"step":0.5,"tags":["hair","profile"]},
+    {"path":"hair.margen_arriba","min":1.0,"max":6.0,"step":0.5,"tags":["hair"]},
+    {"path":"hair.cunias","min":8,"max":14,"step":1,"type":"int","tags":["hair"]},
+    {"path":"hair.copete","min":1,"max":5,"step":1,"type":"int","tags":["hair","profile"]},
+    {"path":"face.eye_width_scale","min":0.85,"max":1.15,"step":0.04,"tags":["face"]},
+    {"path":"face.eye_height_scale","min":0.85,"max":1.15,"step":0.04,"tags":["face"]},
+    {"path":"face.iris_outward","min":0.0,"max":1.2,"step":0.15,"tags":["face"]},
+    {"path":"face.iris_z","min":-1.2,"max":0.6,"step":0.15,"tags":["face"]},
+    {"path":"face.brow_z","min":1.5,"max":4.5,"step":0.25,"tags":["face"]},
+    {"path":"face.mouth_z","min":-8.0,"max":-5.0,"step":0.25,"tags":["face"]},
+    {"path":"body.grosor_extremidades","min":1.05,"max":1.45,"step":0.05,"tags":["arms","legs","anatomy"]}
+  ]
+}
