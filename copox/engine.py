@@ -36,23 +36,31 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _base_context(cassette: Cassette, run_dir: Path) -> dict[str, str]:
+    return {
+        "cassette_id": cassette.id,
+        "cassette_path": str(cassette.path),
+        "baseline": str(cassette.data["baseline"]),
+        "target": str(cassette.data["target"]),
+        "repo_root": str(Path.cwd()),
+        "run_dir": str(run_dir),
+    }
+
+
 def _candidate_context(cassette: Cassette, run_dir: Path, candidate_id: str) -> dict[str, str]:
     candidate_dir = run_dir / "candidates" / candidate_id
     evidence_dir = candidate_dir / "evidence"
     audit_dir = candidate_dir / "audit"
     for p in (candidate_dir, evidence_dir, audit_dir):
         p.mkdir(parents=True, exist_ok=True)
-    return {
-        "cassette_id": cassette.id,
+    ctx = _base_context(cassette, run_dir)
+    ctx.update({
         "candidate_id": candidate_id,
         "candidate_dir": str(candidate_dir),
         "evidence_dir": str(evidence_dir),
         "audit_dir": str(audit_dir),
-        "baseline": str(cassette.data["baseline"]),
-        "target": str(cassette.data["target"]),
-        "repo_root": str(Path.cwd()),
-        "run_dir": str(run_dir),
-    }
+    })
+    return ctx
 
 
 def _audit_candidate(cassette: Cassette, ctx: dict[str, str], env: dict[str, str]) -> tuple[bool, float, list[dict[str, Any]]]:
@@ -61,7 +69,7 @@ def _audit_candidate(cassette: Cassette, ctx: dict[str, str], env: dict[str, str
     pass_count = 0
     scores: list[float] = []
 
-    for auditor in cassette.profile.get("auditors", []):
+    for auditor in cassette.auditors:
         if auditor.get("applicable", True) is False:
             results.append({"id": auditor["id"], "status": "N-A", "critical": bool(auditor.get("critical", False))})
             continue
@@ -120,6 +128,10 @@ def run_campaign(cassette_path: str, output_root: str = ".copox/evidence") -> in
     _write_json(run_dir / "manifest.json", manifest)
 
     env = os.environ.copy()
+    prepare = cassette.data.get("commands", {}).get("prepare", [])
+    if prepare:
+        _run_command(list(prepare), _base_context(cassette, run_dir), Path.cwd(), env)
+
     passing: list[dict[str, Any]] = []
     generated = 0
     tournament = 0
@@ -127,7 +139,6 @@ def run_campaign(cassette_path: str, output_root: str = ".copox/evidence") -> in
     while generated < cassette.max_candidates and not passing:
         tournament += 1
         batch = min(cassette.tournament_size, cassette.max_candidates - generated)
-        tournament_results: list[dict[str, Any]] = []
         for slot in range(batch):
             generated += 1
             candidate_id = f"t{tournament:02d}-c{slot + 1:02d}"
@@ -152,7 +163,6 @@ def run_campaign(cassette_path: str, output_root: str = ".copox/evidence") -> in
                         record.update({"status": "REJECTED", "reason": "auditor_veto"})
             except Exception as exc:
                 record.update({"status": "ERROR", "reason": str(exc)})
-            tournament_results.append(record)
             manifest["candidates"].append(record)
             _write_json(candidate_dir / "candidate.json", record)
             _write_json(run_dir / "manifest.json", manifest)
@@ -160,12 +170,8 @@ def run_campaign(cassette_path: str, output_root: str = ".copox/evidence") -> in
         if not passing:
             learning = cassette.data.get("commands", {}).get("learn", [])
             if learning:
-                learn_ctx = {
-                    "cassette_id": cassette.id,
-                    "run_dir": str(run_dir),
-                    "tournament": str(tournament),
-                    "repo_root": str(Path.cwd()),
-                }
+                learn_ctx = _base_context(cassette, run_dir)
+                learn_ctx["tournament"] = str(tournament)
                 _run_command(list(learning), learn_ctx, Path.cwd(), env)
 
     if passing:
