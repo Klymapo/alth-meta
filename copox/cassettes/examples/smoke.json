@@ -1,0 +1,23 @@
+{
+  "id": "smoke-loop",
+  "kind": "framework_test",
+  "profile": "copox/profiles/smoke.json",
+  "target": "copox-smoke",
+  "baseline": "main",
+  "strategy": {
+    "tournament_size": 3,
+    "max_candidates": 6
+  },
+  "commands": {
+    "capture": ["python3", "-m", "copox.smoke", "capture", "--candidate-dir", "{candidate_dir}", "--candidate-id", "{candidate_id}"],
+    "promote": ["python3", "-m", "copox.smoke", "promote", "--candidate-dir", "{candidate_dir}"],
+    "report": ["python3", "-m", "copox.report", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--output", "{run_dir}/report.md", "--title", "COPOX · Smoke aprobado"]
+  },
+  "promotion": {
+    "unanimous": true
+  },
+  "reporting": {
+    "publish_only_on_pass": true,
+    "required_evidence": ["capture.png"]
+  }
+}
