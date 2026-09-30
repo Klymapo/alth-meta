@@ -4,15 +4,18 @@
     "label": "Theo Alpha",
     "repo_path": "assets/joven_rubio/theo_alpha.glb",
     "source_filename": "theo_v11_perfiles_corregidos.glb",
+    "git_blob_sha": "b7a2865f14780abc0bb82542c9aa9143117f8896",
     "sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
     "size_bytes": 8856068,
     "status": "APPROVED",
+    "artifact_available": true,
+    "artifact_verified": true,
     "approved_as": "latest_artistic_baseline",
-    "notes": "Archivo confirmado por el usuario como la última versión de Theo Alpha. Sustituye lógicamente al nombre previo theo_v11_rehecha.glb y debe ser la baseline artística de futuros loops COPOX."
+    "notes": "Archivo confirmado por el usuario como la última versión de Theo Alpha y verificado bit por bit contra el upload original. Sustituye al nombre previo theo_v11_rehecha.glb."
   },
   "execution": {
     "runnable": false,
-    "blocked_reason": "Pendiente únicamente de materializar el binario en assets/joven_rubio/theo_alpha.glb; el conector GitHub disponible en esta sesión no admite subida binaria desde archivo local.",
+    "blocked_reason": "El cassette ALTH actual todavía prepara la baseline desde copox/baselines/joven_rubio.json. Debe cablearse el adaptador para importar assets/joven_rubio/theo_alpha.glb como seed antes de ejecutar nuevos loops.",
     "expected_state_branch": "copox/state/theo-character"
   },
   "validation_history": {
