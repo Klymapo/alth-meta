@@ -1,0 +1,122 @@
+name: COPOX · ALTH tournament validation
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/copox-alth-tournament.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tournament-real:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Preparar cassette de validación no persistente
+        run: |
+          mkdir -p .copox
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          src = json.loads(Path('copox/cassettes/examples/theo.json').read_text(encoding='utf-8'))
+          src['id'] = 'theo-hair-validation'
+          src['strategy']['max_candidates'] = 3
+          src['commands']['promote'] = [
+              'python3','-m','copox.adapters.alth_character','promote',
+              '--repo-root','{repo_root}', '--asset-dir','{asset_dir}',
+              '--candidate-dir','{candidate_dir}', '--baseline-params','{baseline_params}',
+              '--target','{target}'
+          ]
+          Path('.copox/theo-hair-validation.json').write_text(json.dumps(src, ensure_ascii=False, indent=2), encoding='utf-8')
+          PY
+
+      - name: Ejecutar torneo real de tres hermanos
+        id: tournament
+        run: |
+          set +e
+          python3 -m copox.engine .copox/theo-hair-validation.json --output-root .copox/tournament
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Verificar veto, unanimidad y publicación
+        env:
+          EXIT_CODE: ${{ steps.tournament.outputs.exit_code }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          manifests = list(Path('.copox/tournament').rglob('manifest.json'))
+          assert len(manifests) == 1, manifests
+          root = manifests[0].parent
+          m = json.loads(manifests[0].read_text(encoding='utf-8'))
+          assert len(m['candidates']) == 3, len(m['candidates'])
+          assert m['status'] in {'PROMOTED','PLATEAU'}, m['status']
+          assert os.environ['EXIT_CODE'] in {'0','2'}, os.environ['EXIT_CODE']
+
+          for candidate in m['candidates']:
+              if candidate['status'] == 'ELIGIBLE':
+                  applicable = [a for a in candidate['audit'] if a['status'] != 'N-A']
+                  assert applicable and all(a['status'] == 'PASS' for a in applicable), candidate
+              else:
+                  # Cualquier FAIL aplicable debe impedir elegibilidad.
+                  audit = candidate.get('audit', [])
+                  if audit:
+                      assert any(a['status'] == 'FAIL' for a in audit if a['status'] != 'N-A'), candidate
+
+          report = root / 'report.md'
+          if m['status'] == 'PROMOTED':
+              assert m.get('winner'), m
+              winner = next(c for c in m['candidates'] if c['id'] == m['winner'])
+              assert winner['status'] == 'ELIGIBLE'
+              assert report.exists(), 'PROMOTED sin reporte'
+              applicable = [a for a in winner['audit'] if a['status'] != 'N-A']
+              assert all(a['status'] == 'PASS' for a in applicable)
+              assert list((root/'candidates'/m['winner']/'evidence').glob('*.png'))
+              print('PASS: torneo promovió sólo un candidato unánime y publicó capturas')
+          else:
+              assert not m.get('winner')
+              assert not report.exists(), 'PLATEAU publicó reporte indebidamente'
+              assert all(c['status'] != 'ELIGIBLE' for c in m['candidates'])
+              print('PASS: torneo llegó a PLATEAU sin promoción ni reporte')
+          PY
+
+      - name: Resumen del torneo
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          manifests=list(Path('.copox/tournament').rglob('manifest.json'))
+          if not manifests:
+              print('## COPOX · torneo real\n\nNo se produjo manifiesto.')
+              raise SystemExit
+          m=json.loads(manifests[0].read_text())
+          print('## COPOX · torneo real')
+          print(f"\nEstado: **{m['status']}**")
+          print(f"\nCandidatos: {len(m['candidates'])}")
+          for c in m['candidates']:
+              fails=[a['id'] for a in c.get('audit',[]) if a.get('status')=='FAIL']
+              print(f"- `{c['id']}` — {c['status']} — score {c.get('score','—')} — FAIL: {', '.join(fails) or 'ninguno'}")
+          if m.get('winner'):
+              print(f"\nGanador: `{m['winner']}`")
+          PY
+
+      - name: Guardar evidencia del torneo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-alth-tournament-validation
+          path: .copox/tournament/
+          retention-days: 1
+          if-no-files-found: ignore
