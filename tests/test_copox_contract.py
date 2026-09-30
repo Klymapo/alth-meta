@@ -20,11 +20,14 @@ class CopoxContractTests(unittest.TestCase):
         self.assertEqual(c.kind, "alth_character")
         self.assertEqual(c.tournament_size, 3)
         self.assertEqual(c.max_candidates, 6)
+        self.assertEqual(c.data["variables"]["focus"], "hair,profile")
         applicable = {a["id"]: a.get("applicable", True) for a in c.auditors}
-        self.assertTrue(applicable["HeadAgent"])
-        self.assertTrue(applicable["FaceAgent"])
+        self.assertFalse(applicable["HeadAgent"])
+        self.assertFalse(applicable["FaceAgent"])
         self.assertTrue(applicable["HairAgent"])
         self.assertFalse(applicable["ArmsAgent"])
+        self.assertFalse(applicable["LegsAgent"])
+        self.assertFalse(applicable["FootwearAgent"])
         self.assertNotIn("theo", Path("copox/engine.py").read_text(encoding="utf-8").lower())
 
     def test_unanimity_is_mandatory(self):
