@@ -1,0 +1,109 @@
+name: COPOX · Material maturity
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/material_region_candidate.py"
+      - "copox/adapters/uv_region_probe.py"
+      - "copox/adapters/glb_structure_probe.py"
+      - "copox/learning/material_diagnosis.py"
+      - "copox/adapters/alth_glb_render.py"
+      - "copox/maturity/theo.json"
+      - "assets/joven_rubio/theo_alpha.glb"
+      - ".github/workflows/copox-material-maturity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  material-maturity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v6
+      - name: Preparar runtimes
+        run: |
+          python3 -m pip install -q numpy scipy trimesh Pillow
+          bash tools/ensure_blender.sh --strict
+      - name: Diagnosticar UV y generar hipótesis localizada
+        run: |
+          rm -rf .copox/material_maturity
+          mkdir -p .copox/material_maturity/candidate/evidence
+          python3 -m copox.adapters.uv_region_probe \
+            --input assets/joven_rubio/theo_alpha.glb \
+            --output .copox/material_maturity/uv_baseline.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          uv=json.loads(Path('.copox/material_maturity/uv_baseline.json').read_text())
+          color=uv['samples']['explicit_ears']['mean_rgb']
+          assert color and len(color)==3, color
+          params={
+              'color_rgb':color,
+              'source_nodes':['Oreja_derecha_perfil','Oreja_izquierda_perfil'],
+              'padding_ratio':0.60,
+              'roughness':0.72,
+          }
+          Path('.copox/material_maturity/params.json').write_text(json.dumps(params,indent=2))
+          PY
+          alth-python copox/adapters/material_region_candidate.py \
+            --input assets/joven_rubio/theo_alpha.glb \
+            --params .copox/material_maturity/params.json \
+            --output .copox/material_maturity/candidate/model.glb \
+            --report .copox/material_maturity/candidate/material.json
+      - name: Auditar candidato de material
+        run: |
+          python3 -m copox.adapters.glb_structure_probe \
+            --input .copox/material_maturity/candidate/model.glb \
+            --output .copox/material_maturity/candidate/structure.json
+          python3 -m copox.adapters.regional_reference_audit \
+            --prev assets/joven_rubio/theo_alpha.glb \
+            --curr .copox/material_maturity/candidate/model.glb \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --output .copox/material_maturity/candidate/regional.json \
+            --evidence-dir .copox/material_maturity/candidate/evidence
+          python3 -m copox.learning.material_diagnosis \
+            --uv .copox/material_maturity/uv_baseline.json \
+            --candidate-report .copox/material_maturity/candidate/material.json \
+            --output .copox/material_maturity/candidate/learning.json
+          alth-python copox/adapters/alth_glb_render.py \
+            --input .copox/material_maturity/candidate/model.glb \
+            --output-dir .copox/material_maturity/candidate/render \
+            --title "COPOX · Material hypothesis"
+      - name: Verificar M4 de material sin promoción
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('.copox/material_maturity/candidate')
+          mat=json.loads((root/'material.json').read_text())
+          structure=json.loads((root/'structure.json').read_text())
+          regional=json.loads((root/'regional.json').read_text())
+          learning=json.loads((root/'learning.json').read_text())
+          assert mat['promotion_allowed'] is False
+          assert mat['selected_polygons'] > 0
+          assert mat['geometry_unchanged'] is True
+          assert mat['scope_exact'] is True
+          assert float(mat['bounds_delta']) <= 1e-9
+          assert structure['counts']['materials'] >= 2, structure['counts']
+          assert learning['ready_for_m4_process'] is True, learning
+          assert learning['promotion_allowed'] is False
+          for name,data in regional['regions'].items():
+              assert abs(float(data['delta_pp'])) < 0.05, (name,data)
+          assert (root/'render'/'hoja.png').exists()
+          print('PASS: material/UV M4 learning-only; geometría congelada')
+          PY
+      - name: Evidencia material
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-material-maturity
+          path: .copox/material_maturity/
+          retention-days: 1
+          if-no-files-found: ignore
