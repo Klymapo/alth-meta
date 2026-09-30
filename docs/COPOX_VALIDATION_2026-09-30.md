@@ -21,6 +21,8 @@ Comprobado:
 - landmarks de referencia detectados automáticamente;
 - un cambio sólo de pelo no crea regresiones ficticias en torso/piernas y mantiene brazos dentro de tolerancia de prueba.
 
+Tras añadir state branches, la integración ALTH se volvió a ejecutar en `36744495107` y permaneció **PASS**.
+
 ## Torneo real de tres candidatos
 
 Run: `36743177348` — **PASS**.
