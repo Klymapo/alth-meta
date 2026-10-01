@@ -1,5 +1,5 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "fecha": "2026-10-01",
   "nota": "Vocabulario controlado de capacidades técnicas. tools/reconocer.py (solo código, sin IA) las deduce midiendo la imagen ('medible': true) o por palabras del nombre que da el usuario ('palabras'). Lo que no se mide ni aparece en el nombre sale como 'no_medible' en la ficha. El estado (dominada/parcial/fallida/desconocida) NO vive aquí: vive en kb/capacidades.json con evidencia.",
   "tipos": [
@@ -374,6 +374,14 @@
       "puente",
       "muro",
       "rascacielos"
+    ]
+  },
+  "requeridas_por_tipo": {
+    "personaje": [
+      {
+        "id": "dedos",
+        "motivo": "decisión del usuario (1 oct 2026): todo personaje lleva dedos separados, aunque la referencia los dibuje juntos"
+      }
     ]
   }
 }

@@ -312,16 +312,19 @@ def test_real_theo_es_personaje_sin_dedos_visibles():
     assert f["tipo"] == "personaje" and f["fuente_tipo"].startswith("medido")
     assert {"cuerpo_humanoide", "cabeza_cara", "calzado", "rig_esqueleto"} <= ids(f)
     assert f["medidas"]["personaje"]["pelo"] is True
-    # En esta referencia las manos están en los bolsillos: no hay dedos que ver.
-    assert "dedos" not in ids(f) and f["medidas"]["personaje"]["huecos_dedos"] == 0
+    # En esta referencia las manos están en los bolsillos: la medición no ve dedos (0 huecos)…
+    assert f["medidas"]["personaje"]["huecos_dedos"] == 0
+    # …pero la decisión de diseño del usuario los exige igual.
+    dedos = next(c for c in f["capacidades"] if c["id"] == "dedos")
+    assert dedos["confianza"] == 1.0 and "decisión del usuario" in dedos["motivo"]
     assert abs(f["tamano_alth_mm"]["alto"] - 95.7) < 0.1
 
 
 def test_real_alastor_lentes_y_abrigo():
     f = _real("refs/pendientes/alastor-1790548802009.jpg", "Alastor", "175cm")
     assert f["tipo"] == "personaje" and f["fuente_tipo"].startswith("medido")
-    assert {"accesorio_rigido", "ropa_holgada_tela", "cabeza_cara"} <= ids(f)
-    assert "dedos" not in ids(f)
+    assert {"accesorio_rigido", "ropa_holgada_tela", "cabeza_cara", "dedos"} <= ids(f)
+    assert f["medidas"]["personaje"]["huecos_dedos"] == 0
 
 
 def test_real_mano_abierta_tiene_cuatro_huecos():
@@ -446,3 +449,16 @@ def test_cli_reconocer_validar_y_capacidades():
         assert cap.main(["aprender", "caja", "--estado", "dominada", "--evidencia", "spec/capacidades_vocab.json",
                          "--motivo", "prueba", "--registro", str(reg)]) == 0
         assert cap.main(["aprender", "caja", "--estado", "dominada", "--registro", str(reg)]) == 2
+
+
+def test_objeto_no_hereda_la_regla_de_dedos_de_personaje():
+    im, dr = lienzo()
+    dr.ellipse((120, 110, 280, 290), fill=(168, 69, 59))
+    assert "dedos" not in ids(ficha_de(im, nombre="cosa"))
+
+
+def test_ficha_de_theo_marca_dedos_como_brecha_fallida():
+    f = _real("refs/personajes/joven-rubio.jpg", "Theo", "180cm")
+    r = cap.comparar(f, cap.cargar_registro(), VOCAB)
+    dedos = next(b for b in r["brechas"] if b["id"] == "dedos")
+    assert dedos["estado"] == "fallida" and len(dedos["no_repetir"]) == 3

@@ -714,6 +714,9 @@ def reconocer(imagen, nombre: str, tamano: str | None = None, tipo: str | None =
                     del caps[cid]
     for cid, motivo in capacidades_por_nombre(nombre, vocab).items():
         _cap(caps, cid, 0.9, motivo)
+    # Decisiones de diseño del usuario: se exigen aunque la imagen no las muestre.
+    for req in (vocab.get("requeridas_por_tipo") or {}).get(tipo_final, []):
+        _cap(caps, req["id"], 1.0, req["motivo"])
 
     medibles = {cid for cid, d in vocab["capacidades"].items() if d.get("medible")}
     no_medible = sorted(cid for cid, d in vocab["capacidades"].items()
