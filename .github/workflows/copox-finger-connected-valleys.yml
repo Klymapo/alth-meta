@@ -1,0 +1,38 @@
+name: COPOX · Connected valleys calibration
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/finger_connected_diagnostic.py"
+      - ".github/workflows/copox-finger-connected-valleys.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  connected-valleys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 36876087961
+          name: copox-finger-micro-valleys-36876087961
+          path: .copox/source
+      - name: Read-only real Valley parent calibration
+        run: python3 -m copox.adapters.finger_connected_diagnostic
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: copox-connected-calibration-${{ github.run_id }}
+          path: .copox/connected-diagnostic/
+          retention-days: 7
