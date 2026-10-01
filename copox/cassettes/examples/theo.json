@@ -6,7 +6,8 @@
   "baseline": "copox/baselines/joven_rubio_alpha.json",
   "maturity": {
     "coverage": "copox/maturity/theo.json",
-    "min_level": "M4",
+    "production_policy": "copox/production/theo_m5_policy.json",
+    "min_level": "M5",
     "critical_only": true,
     "block_execution": true
   },
