@@ -19,7 +19,8 @@ def main():
     p.add_argument("--input",required=True); p.add_argument("--config",required=True)
     p.add_argument("--output",required=True); p.add_argument("--report",required=True)
     p.add_argument("--slot",type=int,default=1)
-    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]\n    a=p.parse_args(argv); cfg=read(a.config)
+    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
+    a=p.parse_args(argv); cfg=read(a.config)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=str(Path(a.input).resolve()))
     meshes=[o for o in bpy.context.scene.objects if o.type=="MESH"]
