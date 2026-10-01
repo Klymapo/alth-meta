@@ -72,6 +72,8 @@ def aplicar(bm, tecnica: dict):
     import bmesh
     nombre = tecnica["name"]
     if nombre.startswith("bmesh.ops."):
+        if any(t == "puntero" for t in (tecnica.get("tipos") or {}).values()):
+            raise ValueError("pide un puntero (otra malla u objeto): no se ejecuta vacío")
         op = getattr(bmesh.ops, nombre.split(".")[-1])
         op(bm, **kwargs_para(bm, tecnica))
         return bm

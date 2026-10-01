@@ -488,8 +488,12 @@ def _principio(texto: str) -> str:
     return (re.split(r"(?<=\.)\s", t, maxsplit=1)[0] if t else "")[:240]
 
 
-def ejecutable(tecnica: str) -> tuple[bool, str]:
+def ejecutable(tecnica: str, tipos: dict | None = None) -> tuple[bool, str]:
     if tecnica.startswith("bmesh.ops."):
+        punteros = [p for p, t in (tipos or {}).items() if t == "puntero"]
+        if punteros:
+            return False, (f"pide un puntero ({', '.join(punteros)}: otra malla u objeto) que no se puede llenar de "
+                           "forma genérica; llamarlo vacío tumba Blender")
         return True, "bmesh.ops trabaja sobre datos (sin interfaz)"
     if tecnica.startswith("modificador:"):
         return True, "modificador evaluado por datos (sin interfaz)"
@@ -541,7 +545,7 @@ def puntuar(secciones: list[dict], ejemplos: list[dict], consulta: list[str], fa
         c["puntaje"] = round(c["puntaje_doc"] + 0.5 * c["puntaje_ejemplos"], 4)
         c["puntaje_doc"], c["puntaje_ejemplos"] = round(c["puntaje_doc"], 4), round(c["puntaje_ejemplos"], 4)
         f = repite_fallida(c["tecnica"], fallidas)
-        ok, motivo = ejecutable(c["tecnica"])
+        ok, motivo = ejecutable(c["tecnica"], c.get("tipos"))
         if f:
             descartadas.append({**c, "motivo": f"repite una técnica fallida: {f['tecnica']} ({f['motivo']})"})
         elif not ok:

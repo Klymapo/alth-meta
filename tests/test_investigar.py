@@ -225,3 +225,10 @@ def test_parsear_enum_en_lista():
     sec = iv.parsear_enum(html)
     assert [s["nombre"] for s in sec] == ["modificador:WELD", "modificador:DECIMATE"]
     assert "closer than dist" in sec[0]["texto"]
+
+
+def test_operadores_con_puntero_no_son_ejecutables():
+    sec = iv.parsear_opdefines(leer("bmesh_opdefines_v5.2.2.cc"))
+    b2m = next(s for s in sec if s["nombre"] == "bmesh.ops.bmesh_to_mesh")
+    assert not iv.ejecutable(b2m["nombre"], b2m["tipos"])[0]
+    assert iv.ejecutable("bmesh.ops.remove_doubles", {"verts": "elementos", "dist": "float"})[0]
