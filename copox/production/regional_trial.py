@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -16,6 +17,14 @@ from copox.production.module_gate import evaluate
 
 def _read(path: str | Path) -> dict[str, Any]:
     return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def _sha256(path: str | Path) -> str:
+    h = hashlib.sha256()
+    with Path(path).open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def _variant(module: str, slot: int, tournament: int = 1) -> dict[str, Any]:
@@ -111,6 +120,7 @@ def run_trial(
     evidence_complete = required <= labels
     result = {
         "module": module,
+        "baseline_sha256": _sha256(baseline),
         "mesh_integrity": bool(process["morph"].get("mesh_integrity")),
         "scope_safe": bool(process["morph"].get("safe_scope")),
         "regression_ok": bool(process["regression"].get("ok")),
