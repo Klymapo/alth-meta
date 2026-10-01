@@ -1,0 +1,131 @@
+{
+  "nombre": "manzana",
+  "imagen": "refs/infografias/objeto-01-manzana.png",
+  "tamano": "8cm",
+  "recorte": [
+    0.52,
+    0.1,
+    1.0,
+    1.0
+  ],
+  "pasos": {
+    "reconocer": 3.25,
+    "capacidades": 0.0,
+    "investigar": 0.0,
+    "receta": 3.13,
+    "construir": 18.97,
+    "ajustar": 139.04,
+    "auditoria": 1.45
+  },
+  "faltantes": [],
+  "salida": ".linea/crear/manzana",
+  "base": {
+    "hoja": ".linea/crear/manzana/base/hoja.png",
+    "iou": 0.881,
+    "iou_por_vista": {
+      "frente": 0.881,
+      "tres_cuartos": 0.474
+    },
+    "dimensiones_ok": true,
+    "dif_dimensiones": {
+      "ancho": -0.0101,
+      "alto": -0.0272
+    },
+    "verificacion_ok": false,
+    "tris": 228,
+    "ok": false
+  },
+  "ajuste": {
+    "estado": "AJUSTADO",
+    "rondas": 3,
+    "iou_base": 0.881,
+    "iou_final": 0.884,
+    "ganador": "t02-c02"
+  },
+  "final": {
+    "hoja": ".linea/crear/manzana/ajuste/t02-c02/hoja.png",
+    "iou": 0.884,
+    "iou_por_vista": {
+      "frente": 0.884,
+      "tres_cuartos": 0.468
+    },
+    "dimensiones_ok": true,
+    "dif_dimensiones": {
+      "ancho": 0.0018,
+      "alto": -0.0272
+    },
+    "dimensiones_mm": {
+      "ancho": 8.525,
+      "fondo": 8.357,
+      "alto": 9.358
+    },
+    "verificacion_ok": true,
+    "tris": 244,
+    "ok": true
+  },
+  "auditoria": {
+    "decision": "FAIL",
+    "fallas": [
+      "redondez_llenado",
+      "redondez_esquinas"
+    ],
+    "vista": "frente",
+    "medidas": {
+      "silueta_iou": 0.861,
+      "dice": 0.9253,
+      "contorno_p95": 0.0791,
+      "contorno_chamfer": 0.029,
+      "forma_hu": 0.3539,
+      "bandas_max": 0.2112,
+      "bandas_media": 0.0835,
+      "compacidad": 0.0106,
+      "aspecto": 0.005,
+      "redondez_llenado": 0.0709,
+      "redondez_esquinas": 0.2987,
+      "color_regiones": 10.36,
+      "color_dominante": 6.55,
+      "ssim_lum": 0.3478
+    },
+    "por_medida": {
+      "silueta_iou": "PASS",
+      "contorno_p95": "PASS",
+      "contorno_chamfer": "PASS",
+      "compacidad": "PASS",
+      "bandas_media": "PASS",
+      "aspecto": "PASS",
+      "redondez_llenado": "FAIL",
+      "redondez_esquinas": "FAIL",
+      "color_regiones": "PASS",
+      "color_dominante": "PASS",
+      "supera_aprobado": "PASS"
+    },
+    "calibrado": false,
+    "no_peor_que_aprobado": true,
+    "supera_aprobado": true,
+    "evidencia": {
+      "json": ".linea/crear/manzana/auditoria/auditoria.json",
+      "comparacion": ".linea/crear/manzana/auditoria/comparacion.png"
+    },
+    "aprobado": {
+      "vista": "frente",
+      "medidas": {
+        "silueta_iou": 0.8371,
+        "dice": 0.9113,
+        "contorno_p95": 0.1401,
+        "contorno_chamfer": 0.032,
+        "forma_hu": 0.5291,
+        "bandas_max": 0.249,
+        "bandas_media": 0.093,
+        "compacidad": 0.0144,
+        "aspecto": 0.0834,
+        "redondez_llenado": 0.011,
+        "redondez_esquinas": 0.1325,
+        "color_regiones": 11.9,
+        "color_dominante": 7.4,
+        "ssim_lum": 0.3767
+      }
+    }
+  },
+  "estado": "AUDITORIA_FALLIDA",
+  "segundos": 165.8
+}

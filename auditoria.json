@@ -1,0 +1,308 @@
+{
+  "vista": "frente",
+  "vista_mas_parecida": "frente",
+  "vista_contradice_declarada": false,
+  "medidas": {
+    "silueta_iou": 0.861,
+    "dice": 0.9253,
+    "contorno_p95": 0.0791,
+    "contorno_chamfer": 0.029,
+    "forma_hu": 0.3539,
+    "bandas_max": 0.2112,
+    "bandas_media": 0.0835,
+    "compacidad": 0.0106,
+    "aspecto": 0.005,
+    "redondez_llenado": 0.0709,
+    "redondez_esquinas": 0.2987,
+    "color_regiones": 10.36,
+    "color_regiones_celdas": [
+      [
+        null,
+        38.94,
+        10.25
+      ],
+      [
+        5.91,
+        8.15,
+        14.1
+      ],
+      [
+        7.17,
+        8.26,
+        6.11
+      ],
+      [
+        5.16,
+        4.33,
+        5.54
+      ]
+    ],
+    "color_dominante": 6.55,
+    "ssim_lum": 0.3478
+  },
+  "por_medida": {
+    "silueta_iou": "PASS",
+    "contorno_p95": "PASS",
+    "contorno_chamfer": "PASS",
+    "compacidad": "PASS",
+    "bandas_media": "PASS",
+    "aspecto": "PASS",
+    "redondez_llenado": "FAIL",
+    "redondez_esquinas": "FAIL",
+    "color_regiones": "PASS",
+    "color_dominante": "PASS",
+    "supera_aprobado": "PASS"
+  },
+  "por_vista": {
+    "frente": {
+      "medidas": {
+        "silueta_iou": 0.861,
+        "dice": 0.9253,
+        "contorno_p95": 0.0791,
+        "contorno_chamfer": 0.029,
+        "forma_hu": 0.3539,
+        "bandas_max": 0.2112,
+        "bandas_media": 0.0835,
+        "compacidad": 0.0106,
+        "aspecto": 0.005,
+        "redondez_llenado": 0.0709,
+        "redondez_esquinas": 0.2987,
+        "color_regiones": 10.36,
+        "color_regiones_celdas": [
+          [
+            null,
+            38.94,
+            10.25
+          ],
+          [
+            5.91,
+            8.15,
+            14.1
+          ],
+          [
+            7.17,
+            8.26,
+            6.11
+          ],
+          [
+            5.16,
+            4.33,
+            5.54
+          ]
+        ],
+        "color_dominante": 6.55,
+        "ssim_lum": 0.3478
+      },
+      "veredicto": {
+        "por_medida": {
+          "silueta_iou": "PASS",
+          "contorno_p95": "PASS",
+          "contorno_chamfer": "PASS",
+          "compacidad": "PASS",
+          "bandas_media": "PASS",
+          "aspecto": "PASS",
+          "redondez_llenado": "FAIL",
+          "redondez_esquinas": "FAIL",
+          "color_regiones": "PASS",
+          "color_dominante": "PASS",
+          "supera_aprobado": "PASS"
+        },
+        "fallas": [
+          "redondez_llenado",
+          "redondez_esquinas"
+        ],
+        "decision": "FAIL"
+      },
+      "separacion": {
+        "componentes": 1,
+        "fondo": "#E3E2E9",
+        "sombra_quitada": 0.0,
+        "fraccion_imagen": 0.1604,
+        "fraccion_principal": 0.996,
+        "sombra_pegada_quitada": 0.0012
+      }
+    },
+    "tres_cuartos": {
+      "medidas": {
+        "silueta_iou": 0.8332,
+        "dice": 0.909,
+        "contorno_p95": 0.1002,
+        "contorno_chamfer": 0.0367,
+        "forma_hu": 0.662,
+        "bandas_max": 0.2122,
+        "bandas_media": 0.0831,
+        "compacidad": 0.0255,
+        "aspecto": 0.0834,
+        "redondez_llenado": 0.0588,
+        "redondez_esquinas": 0.3662,
+        "color_regiones": 12.08,
+        "color_regiones_celdas": [
+          [
+            8.37,
+            32.71,
+            6.96
+          ],
+          [
+            7.02,
+            12.72,
+            24.47
+          ],
+          [
+            7.5,
+            17.79,
+            8.91
+          ],
+          [
+            4.57,
+            7.19,
+            6.74
+          ]
+        ],
+        "color_dominante": 7.53,
+        "ssim_lum": 0.3246
+      },
+      "veredicto": {
+        "por_medida": {
+          "silueta_iou": "PASS",
+          "contorno_p95": "PASS",
+          "contorno_chamfer": "PASS",
+          "compacidad": "PASS",
+          "bandas_media": "PASS",
+          "aspecto": "PASS",
+          "redondez_llenado": "PASS",
+          "redondez_esquinas": "FAIL",
+          "color_regiones": "PASS",
+          "color_dominante": "PASS"
+        },
+        "fallas": [
+          "redondez_esquinas"
+        ],
+        "decision": "FAIL"
+      },
+      "separacion": {
+        "componentes": 1,
+        "fondo": "#E2E1E8",
+        "sombra_quitada": 0.316,
+        "fraccion_imagen": 0.1658,
+        "fraccion_principal": 0.993,
+        "sombra_pegada_quitada": 0.0001
+      }
+    }
+  },
+  "umbrales": {
+    "silueta_iou": {
+      "min": 0.8,
+      "por_que": "único umbral publicado (snapwright, IoU >= 0.8); manzana aprobada 0.837 (frente), mejor negativo de manzana 0.744"
+    },
+    "contorno_p95": {
+      "max": 0.145,
+      "por_que": "p95 de la distancia entre bordes / alto de la figura; manzana aprobada 0.140 (su hoja es más chica que la de la ref), peor negativo de manzana 0.149: margen mínimo"
+    },
+    "contorno_chamfer": {
+      "max": 0.045,
+      "por_que": "media de esa distancia; positivos <= 0.040, negativos de manzana >= 0.061"
+    },
+    "compacidad": {
+      "max": 0.08,
+      "por_que": "primer momento de Hu (|ln| del cociente); positivos <= 0.055, vaso >= 0.115"
+    },
+    "bandas_media": {
+      "max": 0.12,
+      "por_que": "ancho medio por franja / alto; positivos <= 0.096, negativos de manzana >= 0.172"
+    },
+    "aspecto": {
+      "max": 0.15,
+      "por_que": "|ln| del cociente ancho/alto; positivos <= 0.122"
+    },
+    "redondez_llenado": {
+      "max": 0.06,
+      "por_que": "diferencia en cuánto llena el cuerpo (sin el 22 % superior) su caja; manzana aprobada 0.011, lata 0.051, manzana RECHAZADA por el dueño (caja de lados rectos) 0.071"
+    },
+    "redondez_esquinas": {
+      "max": 0.22,
+      "por_que": "diferencia media de ocupación de las 4 esquinas del cuerpo; manzana aprobada 0.13, lata 0.18, manzana RECHAZADA 0.30"
+    },
+    "color_regiones": {
+      "max": 15.0,
+      "por_que": "ΔE (L* a la mitad) por celda 4x3; positivos en su vista elegida <= 11.9, lata vs taza 15.8"
+    },
+    "color_dominante": {
+      "max": 10.5,
+      "por_que": "6 colores dominantes emparejados; positivos <= 8.8, lata vs taza 11.1"
+    }
+  },
+  "calibrado": false,
+  "aprobado": {
+    "vista": "frente",
+    "medidas": {
+      "silueta_iou": 0.8371,
+      "dice": 0.9113,
+      "contorno_p95": 0.1401,
+      "contorno_chamfer": 0.032,
+      "forma_hu": 0.5291,
+      "bandas_max": 0.249,
+      "bandas_media": 0.093,
+      "compacidad": 0.0144,
+      "aspecto": 0.0834,
+      "redondez_llenado": 0.011,
+      "redondez_esquinas": 0.1325,
+      "color_regiones": 11.9,
+      "color_regiones_celdas": [
+        [
+          null,
+          16.23,
+          null
+        ],
+        [
+          9.55,
+          10.48,
+          23.19
+        ],
+        [
+          10.81,
+          14.41,
+          8.42
+        ],
+        [
+          6.35,
+          10.66,
+          8.95
+        ]
+      ],
+      "color_dominante": 7.4,
+      "ssim_lum": 0.3767
+    },
+    "decision_propia": "PASS"
+  },
+  "no_peor_que_aprobado": true,
+  "supera_aprobado": true,
+  "fallas": [
+    "redondez_llenado",
+    "redondez_esquinas"
+  ],
+  "decision": "FAIL",
+  "entradas": {
+    "ref": "refs/infografias/objeto-01-manzana.png",
+    "recorte": [
+      0.52,
+      0.1,
+      1.0,
+      1.0
+    ],
+    "hoja": ".linea/crear/manzana/ajuste/t02-c02/hoja.png",
+    "render": null,
+    "aprobado": "/home/runner/work/alth-meta/alth-meta/assets/manzana/final.png",
+    "separacion_ref": {
+      "componentes": 1,
+      "fondo": "#EEEFF9",
+      "sombra_quitada": 0.0,
+      "fraccion_imagen": 0.5395,
+      "fraccion_principal": 0.988,
+      "sombra_pegada_quitada": 0.1543
+    }
+  },
+  "evidencia": {
+    "json": ".linea/crear/manzana/auditoria/auditoria.json",
+    "comparacion": ".linea/crear/manzana/auditoria/comparacion.png"
+  }
+}
