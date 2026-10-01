@@ -17,6 +17,7 @@ import os
 import re
 import sys
 import unicodedata
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -50,11 +51,39 @@ def campos(titulo: str, cuerpo: str) -> dict:
     return res
 
 
+# Solo a estos hosts (exactos) se les manda el token. Antes se comparaba por subcadena
+# ("github.com" in url), así que una dirección como https://github.com.sitio-ajeno.net/x.png
+# recibía el token con permiso de escritura. El repo es público y cualquiera abre issues.
+HOSTS_CON_TOKEN = {"github.com", "api.github.com"}
+SUFIJOS_CON_TOKEN = (".githubusercontent.com",)
+
+
+def lleva_token(url: str) -> bool:
+    u = urllib.parse.urlsplit(url)
+    host = (u.hostname or "").lower()
+    if u.scheme != "https" or not host:
+        return False
+    return host in HOSTS_CON_TOKEN or host.endswith(SUFIJOS_CON_TOKEN)
+
+
+class _SinTokenFuera(urllib.request.HTTPRedirectHandler):
+    """Si una redirección sale de los hosts permitidos, el token no viaja con ella."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        nuevo = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if nuevo is not None and not lleva_token(newurl):
+            nuevo.remove_header("Authorization")
+        return nuevo
+
+
 def descargar(url: str, destino: Path, nombre: str, token: str | None = None) -> Path:
+    if urllib.parse.urlsplit(url).scheme != "https":
+        raise ValueError(f"solo se descargan imágenes por https: {url}")
     h = {"User-Agent": "alth-meta-crear-asset"}
-    if token and ("github.com" in url or "githubusercontent.com" in url):
+    if token and lleva_token(url):
         h["Authorization"] = f"Bearer {token}"
-    with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=60) as r:
+    abridor = urllib.request.build_opener(_SinTokenFuera())
+    with abridor.open(urllib.request.Request(url, headers=h), timeout=60) as r:
         datos = r.read(25_000_000)
         tipo = r.headers.get("Content-Type", "")
     ext = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}.get(tipo.split(";")[0], ".png")

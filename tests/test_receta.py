@@ -87,3 +87,17 @@ def test_issue_formulario_y_titulo():
     c = ei.campos("crear: lata de atún, 10cm", '<img width="300" src="https://x.y/z.png">')
     assert c["nombre"] == "lata de atún" and c["tamano"] == "10cm" and c["imagen_url"] == "https://x.y/z.png"
     assert ei.campos("hola", "sin nada")["imagen_url"] is None
+
+
+def test_token_solo_a_hosts_de_github_exactos():
+    si = ["https://github.com/user-attachments/assets/a.png", "https://objects.githubusercontent.com/x"]
+    no = ["https://github.com.sitio-ajeno.net/a.png", "https://sitio-ajeno.net/github.com/a.png",
+          "http://github.com/a.png", "https://evilgithubusercontent.com/x", "https://a.githubusercontent.com.evil.net/x"]
+    assert all(ei.lleva_token(u) for u in si)
+    assert not any(ei.lleva_token(u) for u in no)
+
+
+def test_descargar_rechaza_http():
+    import pytest
+    with pytest.raises(ValueError):
+        ei.descargar("http://github.com/a.png", Path("/tmp"), "a", "token")

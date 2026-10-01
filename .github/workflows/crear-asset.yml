@@ -35,10 +35,17 @@ concurrency:   # abrir con la plantilla dispara "opened" y "labeled": solo sigue
 jobs:
   crear:
     # no reacciona a las etiquetas aprobado/rechazado (esas son de aprobar-linea.yml)
+    # Solo issues del dueño o de colaboradores: el repo es público y este job corre con un token
+    # de escritura, así que un issue de cualquier persona no debe disparar nada.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'crear-asset')) ||
-      (github.event.action == 'labeled' && github.event.label.name == 'crear-asset')
+      (
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) &&
+        (
+          (github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'crear-asset')) ||
+          (github.event.action == 'labeled' && github.event.label.name == 'crear-asset')
+        )
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

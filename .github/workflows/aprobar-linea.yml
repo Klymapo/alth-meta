@@ -20,7 +20,11 @@ concurrency:
 
 jobs:
   aprobar:
-    if: contains(github.event.issue.labels.*.name, 'crear-asset') && (github.event.label.name == 'aprobado' || github.event.label.name == 'rechazado')
+    # Publicar a main solo cuando la etiqueta la pone el dueño del repo (github.event.sender).
+    if: >-
+      contains(github.event.issue.labels.*.name, 'crear-asset') &&
+      (github.event.label.name == 'aprobado' || github.event.label.name == 'rechazado') &&
+      github.event.sender.login == github.repository_owner
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
