@@ -11,6 +11,7 @@ from typing import Any
 from copox.adapters.alth_character import ensure_runtime
 from copox.adapters.alth_character_audit import audit as audit_full
 from copox.adapters.finger_reference_fit import fit_fingers
+from copox.adapters.finger_valley_carve import carve_finger_valleys
 from copox.adapters.hand_detail_probe import probe as hand_probe
 from copox.adapters.mesh_topology_probe import probe as topology_probe
 from copox.adapters.regional_process import run_process
@@ -39,12 +40,18 @@ def _variant(module: str, slot: int, tournament: int = 1) -> dict[str, Any]:
         round_index = ((max(1, tournament) - 1) % 3) + 1
         if round_index == 1:
             strengths = (0.35, 0.65, 1.00)
-            return {"strength": float(strengths[(slot - 1) % 3]), "topology_refine": False, "refine_cuts": 0}
+            return {"strength": float(strengths[(slot - 1) % 3]), "topology_refine": False, "refine_cuts": 0, "valley_carve": False}
         if round_index == 2:
             strengths = (0.50, 0.80, 1.10)
-            return {"strength": float(strengths[(slot - 1) % 3]), "topology_refine": True, "refine_cuts": 1}
-        strengths = (0.45, 0.75, 1.00)
-        return {"strength": float(strengths[(slot - 1) % 3]), "topology_refine": True, "refine_cuts": 2}
+            return {"strength": float(strengths[(slot - 1) % 3]), "topology_refine": True, "refine_cuts": 1, "valley_carve": False}
+        variants = (
+            {"strength": 0.65, "valley_strength": 0.65, "valley_width_fraction": 0.045},
+            {"strength": 0.80, "valley_strength": 1.00, "valley_width_fraction": 0.055},
+            {"strength": 0.95, "valley_strength": 1.35, "valley_width_fraction": 0.065},
+        )
+        out = dict(variants[(slot - 1) % 3])
+        out.update({"topology_refine": True, "refine_cuts": 1, "valley_carve": True})
+        return out
     variants = [
         [0.98, 1.00, 1.00],
         [1.02, 1.00, 1.00],
@@ -91,13 +98,30 @@ def _finger_process(baseline: str, reference: str, config: str, params: dict[str
         fit_input, topology_refine = _refine_finger_topology(baseline, config, root, int(params.get("refine_cuts", 1)))
 
     model = root / "model.glb"
-    morph = fit_fingers(
-        fit_input, reference, config, str(model), str(root / "morph.json"),
-        float(params.get("strength", 0.65)),
-    )
+    if bool(params.get("valley_carve", False)):
+        contour_model = root / "contour_model.glb"
+        contour = fit_fingers(
+            fit_input, reference, config, str(contour_model), str(root / "contour_fit.json"),
+            float(params.get("strength", 0.80)),
+        )
+        valley = carve_finger_valleys(
+            str(contour_model), reference, config, str(model), str(root / "valley_carve.json"),
+            float(params.get("valley_strength", 1.0)),
+            float(params.get("valley_width_fraction", 0.055)),
+        )
+        morph = dict(valley)
+        morph["contour_fit"] = contour
+        morph["outside_scope_exact"] = bool(contour.get("outside_scope_exact") and valley.get("outside_scope_exact"))
+        morph["mesh_integrity"] = bool(contour.get("mesh_integrity") and valley.get("mesh_integrity"))
+    else:
+        morph = fit_fingers(
+            fit_input, reference, config, str(model), str(root / "morph.json"),
+            float(params.get("strength", 0.65)),
+        )
+
     if topology_refine is not None:
         morph["topology_refine"] = topology_refine
-        (root / "morph.json").write_text(json.dumps(morph, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (root / "morph.json").write_text(json.dumps(morph, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     regional = audit_regions(
         baseline, str(model), reference, config,
@@ -116,22 +140,26 @@ def _finger_process(baseline: str, reference: str, config: str, params: dict[str
             failures.append({"region": name, "delta_pp": delta})
     regression = {"ok": not failures, "freeze_tolerance_pp": tolerance, "failed_regions": failures, "coupled_regions": sorted(coupled)}
     safe_scope = bool(morph["outside_scope_exact"] and (topology_refine is None or topology_refine.get("safe_geometry_regression", False)))
+    mode = "reference_valley_learning" if params.get("valley_carve") else "reference_contour_learning"
     learning = {
-        "mode": "reference_contour_learning",
+        "mode": mode,
         "priority": [{
             "region": "fingers",
             "error_score": float(target.get("error_score", 0.0)),
             "delta_pp": float(target.get("delta_pp", 0.0)),
             "visible_delta_pct": float(target.get("visible_delta_pct", 0.0)),
             "strategy": "KEEP_DIRECTION" if float(target.get("delta_pp", 0.0)) > 0 else "ROTATE_TECHNIQUE",
-            "reason": "Contorno derivado de referencia; si topología base limita valles, el siguiente round subdivide localmente antes de ajustar.",
+            "reason": (
+                "Contorno + valles derivados de referencia; validar reducción del gap semántico de separaciones." if params.get("valley_carve")
+                else "Contorno derivado de referencia; si la topología limita valles, avanzar a carve local."
+            ),
         }],
         "next_region": "fingers",
         "ready_for_general_loop": False,
     }
     (root / "learning.json").write_text(json.dumps(learning, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     process = {
-        "mode": "finger_reference_fit_process",
+        "mode": "finger_reference_valley_process" if params.get("valley_carve") else "finger_reference_fit_process",
         "region": "fingers",
         "morph": {"region": "fingers", "mesh_integrity": bool(morph["mesh_integrity"]), "safe_scope": safe_scope, "detail": morph, "params": params},
         "target_metrics": target,
@@ -143,6 +171,36 @@ def _finger_process(baseline: str, reference: str, config: str, params: dict[str
     (root / "process.json").write_text(json.dumps(process, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (root / "params.json").write_text(json.dumps({"region": "fingers", **params}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return process
+
+
+def _semantic_hand_progress(baseline_detail: dict[str, Any], candidate_detail: dict[str, Any]) -> dict[str, Any]:
+    base_rows = {str(x["side"]): x for x in baseline_detail.get("hands", [])}
+    cand_rows = {str(x["side"]): x for x in candidate_detail.get("hands", [])}
+    rows = []
+    no_side_worse = True
+    for side in sorted(set(base_rows) & set(cand_rows)):
+        b = base_rows[side]
+        c = cand_rows[side]
+        base_gap = float(b.get("component_gap", 0)) + float(b.get("vertical_run_gap", 0))
+        cand_gap = float(c.get("component_gap", 0)) + float(c.get("vertical_run_gap", 0))
+        improved = cand_gap < base_gap
+        worsened = cand_gap > base_gap
+        no_side_worse = no_side_worse and not worsened
+        rows.append({"side": side, "baseline_gap": base_gap, "candidate_gap": cand_gap, "improved": improved, "worsened": worsened})
+    baseline_gap = float(baseline_detail.get("summary", {}).get("mean_component_gap", 0.0)) + float(baseline_detail.get("summary", {}).get("mean_vertical_run_gap", 0.0))
+    candidate_gap = float(candidate_detail.get("summary", {}).get("mean_component_gap", 0.0)) + float(candidate_detail.get("summary", {}).get("mean_vertical_run_gap", 0.0))
+    definition_match = bool(candidate_detail.get("summary", {}).get("definition_match", False))
+    improvement = baseline_gap - candidate_gap
+    semantic_improved = bool(improvement > 0.0 and no_side_worse)
+    return {
+        "baseline_gap": baseline_gap,
+        "candidate_gap": candidate_gap,
+        "gap_improvement": improvement,
+        "no_side_worse": no_side_worse,
+        "definition_match": definition_match,
+        "semantic_improved": semantic_improved,
+        "sides": rows,
+    }
 
 
 def run_trial(
@@ -180,8 +238,12 @@ def run_trial(
     extra: dict[str, Any] = {}
 
     if module in {"hands", "fingers"}:
+        baseline_detail = hand_probe(baseline, reference, config, str(root / "baseline_hand_detail.json"), str(root / "baseline_hand_detail_evidence"))
         detail = hand_probe(str(model), reference, config, str(root / "hand_detail.json"), str(root / "hand_detail_evidence"))
+        progress = _semantic_hand_progress(baseline_detail, detail)
+        extra["baseline_hand_detail"] = baseline_detail
         extra["hand_detail"] = detail
+        extra["semantic_progress"] = progress
         left = root / "hand_detail_evidence" / "hand_detail_left.png"
         right = root / "hand_detail_evidence" / "hand_detail_right.png"
         if left.exists():
@@ -195,10 +257,11 @@ def run_trial(
             topology = topology_probe(str(model), str(root / "topology_report.json"))
             extra["topology"] = topology
             labels.update({"finger_detail", "topology_report"})
-        definition_match = bool(detail.get("summary", {}).get("definition_match", False))
-        semantic_ready = definition_match
-        if not definition_match:
+        semantic_ready = bool(progress["definition_match"] or progress["semantic_improved"])
+        if not semantic_ready:
             flags.append("mitten_shape")
+        elif not progress["definition_match"]:
+            flags.append("mitten_shape_remaining")
 
     if module == "ears":
         uv = uv_probe(str(model), str(root / "uv_probe.json"))
@@ -227,6 +290,8 @@ def run_trial(
         "flags": flags,
         "params": params,
     }
+    if "semantic_progress" in extra:
+        result["semantic_progress"] = extra["semantic_progress"]
     (root / "module_result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     gate = evaluate(policy, result, baseline_model=baseline)
     (root / "gate.json").write_text(json.dumps(gate, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
