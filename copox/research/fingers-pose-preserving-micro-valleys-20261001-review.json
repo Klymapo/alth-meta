@@ -4,11 +4,16 @@
   "source_run": 36886096110,
   "reviewer": "Codex",
   "review_scope": [
-    "actual front render",
-    "actual three-quarter render",
-    "actual left-hand closeup"
+    "actual front",
+    "actual side",
+    "actual back",
+    "actual three-quarter",
+    "actual left hand front",
+    "actual left hand three-quarter",
+    "actual right hand",
+    "actual finger region"
   ],
-  "additional_multiview_review": "Pending read-only contact sheets; rejection already established by recorded gates and inspected primary renders",
+  "additional_multiview_review": "Completed on source run36886096110 using contact sheets in readonly review36887264686; all three REJECTED, no new geometry.",
   "decisions": [
     {
       "candidate": "c01",
@@ -73,5 +78,7 @@
   ],
   "winner": null,
   "best_metrics_candidate": "c01",
-  "promotion_executed": false
+  "promotion_executed": false,
+  "review_evidence_run": 36887264686,
+  "visual_learning": "La mano derecha coincide visualmente con Valley. Las muescas no recuperan el segundo valle ni el contorno rectangular estilizado. Un mayor IoU como el+19pp de la ronda vertical no implica mejor likeness."
 }

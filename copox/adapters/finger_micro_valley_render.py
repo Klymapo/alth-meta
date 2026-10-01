@@ -34,7 +34,9 @@ def main():
     p = argparse.ArgumentParser()
     for name in ("input", "config", "output-dir"):
         p.add_argument("--" + name, required=True)
+    p.add_argument("--only", help="Comma-separated captures; imports/renders existing GLB without editing its file")
     a = p.parse_args()
+    requested = set(a.only.split(",")) if a.only else None
     cfg = json.loads(Path(a.config).read_text())
     alth.nueva_escena()
     bpy.ops.import_scene.gltf(filepath=str(Path(a.input).resolve()))
@@ -63,6 +65,8 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     report = {"input": a.input, "coordinate_correction": "glb_to_alth_zup_mm", "files": {}, "orientation_ok": True}
     def capture(name, lower, upper, direction, resolution):
+        if requested is not None and name not in requested:
+            return
         cam = camera("COPOX_" + name, lower, upper, direction)
         scene.camera = cam
         scene.render.resolution_x = scene.render.resolution_y = resolution
@@ -83,10 +87,15 @@ def main():
         if side == "left":
             capture("hand_left_threeq", lower, upper, VIEWS["threeq"], 640)
     box = cfg["morph_regions"]["fingers"]["boxes"][0]
-    lower = Vector(tuple(lo[i] + box[i] * span[i] for i in range(3)))
-    upper = Vector(tuple(lo[i] + box[i + 3] * span[i] for i in range(3)))
+    finger_points = [pt for pt in points if all(box[i] <= (pt[i] - lo[i]) / span[i] <= box[i + 3] for i in range(3))]
+    if not finger_points:
+        raise RuntimeError("EVIDENCE_INCOMPLETE: measured finger region is empty")
+    lower = Vector(tuple(min(pt[i] for pt in finger_points) for i in range(3)))
+    upper = Vector(tuple(max(pt[i] for pt in finger_points) for i in range(3)))
+    report["finger_bounds_mm"] = [list(lower), list(upper)]
+    report["finger_frame"] = "actual selected surface bounds, not empty ROI volume"
     capture("finger_region", lower, upper, VIEWS["threeq"], 640)
-    (out / "render_report.json").write_text(json.dumps(report, indent=2) + "\n")
+    (out / ("partial_render_report.json" if requested is not None else "render_report.json")).write_text(json.dumps(report, indent=2) + "\n")
     return 0
 
 

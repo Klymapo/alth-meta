@@ -1,6 +1,17 @@
 name: COPOX · Pose preserving local notches
 on:
   workflow_dispatch:
+    inputs:
+      parent_run:
+        description: "Optional audited Valley artifact run; empty reproduces Valley c01 from protected Alpha"
+        required: false
+        default: ""
+        type: string
+      parent_artifact:
+        description: "Artifact name when parent_run is supplied"
+        required: false
+        default: ""
+        type: string
 permissions:
   contents: read
   actions: read
@@ -19,17 +30,27 @@ jobs:
           python-version: "3.11"
       - run: python3 -m pip install -q numpy scipy trimesh Pillow
       - uses: actions/download-artifact@v4
+        if: ${{ inputs.parent_run != '' }}
         with:
           github-token: ${{ github.token }}
-          run-id: 36886096110
-          name: copox-pose-preserving-notches-36886096110
+          run-id: ${{ inputs.parent_run }}
+          name: ${{ inputs.parent_artifact }}
           path: .copox/source
       - name: Syntax and research, sibling, shape protection contracts
         run: |
           python3 -m compileall -q copox
           python3 -m unittest tests.test_copox_research_iteration tests.test_copox_connected_notch -v
       - name: Generate and audit exactly three existing-parent siblings
-        run: python3 -m copox.production.finger_micro_valley_campaign --parent-source .copox/source
+        env:
+          COPOX_PARENT_RUN: ${{ inputs.parent_run }}
+        run: |
+          python3 - <<'PY'
+          import os,subprocess,sys
+          command=[sys.executable,'-m','copox.production.finger_micro_valley_campaign']
+          if os.environ.get('COPOX_PARENT_RUN'):
+              command += ['--parent-source','.copox/source']
+          subprocess.run(command,check=True)
+          PY
       - name: Verify sibling contract and protected Alpha
         if: always()
         run: |
