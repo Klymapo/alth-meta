@@ -1,0 +1,153 @@
+name: COPOX · Theo productive loop
+
+on:
+  pull_request:
+    paths:
+      - "copox/cassettes/examples/theo_model_m5_loop.json"
+      - "copox/cassettes/examples/theo_model_m5_validation.json"
+      - "copox/adapters/alth_model_m5.py"
+      - "copox/adapters/alth_model_m5_cycle.py"
+      - "copox/state_bundle.py"
+      - "copox/engine.py"
+      - "copox/production/**"
+      - ".github/workflows/copox-theo-model-loop.yml"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "shadow = valida sin persistir | persistent = continúa el estado productivo"
+        required: true
+        default: "shadow"
+        type: choice
+        options:
+          - shadow
+          - persistent
+  schedule:
+    - cron: "17 0,6,12,18 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: copox-theo-m5-loop
+  cancel-in-progress: false
+
+jobs:
+  loop:
+    if: github.event_name != 'schedule' || vars.COPOX_LOOPS_PAUSED != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+
+      - name: Elegir modo seguro
+        id: mode
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_MODE: ${{ inputs.mode }}
+        run: |
+          if [ "$EVENT" = "schedule" ]; then
+            echo "mode=persistent" >> "$GITHUB_OUTPUT"
+            echo "cassette=copox/cassettes/examples/theo_model_m5_loop.json" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT" = "workflow_dispatch" ] && [ "$INPUT_MODE" = "persistent" ]; then
+            echo "mode=persistent" >> "$GITHUB_OUTPUT"
+            echo "cassette=copox/cassettes/examples/theo_model_m5_loop.json" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=shadow" >> "$GITHUB_OUTPUT"
+            echo "cassette=copox/cassettes/examples/theo_model_m5_validation.json" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ejecutar un loop acotado
+        env:
+          CASSETTE: ${{ steps.mode.outputs.cassette }}
+        run: |
+          rm -rf .copox/theo-loop
+          set +e
+          python3 -m copox.engine "$CASSETTE" --output-root .copox/theo-loop
+          RC=$?
+          set -e
+          if [ "$RC" -ne 0 ] && [ "$RC" -ne 2 ]; then
+            echo "Loop terminó con código inesperado: $RC" >&2
+            exit "$RC"
+          fi
+          echo "$RC" > .copox/theo-loop/exit_code.txt
+
+      - name: Verificar contrato y estado
+        env:
+          LOOP_MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+
+          root=Path('.copox/theo-loop')
+          manifests=list(root.rglob('manifest.json'))
+          assert len(manifests)==1, manifests
+          manifest=json.loads(manifests[0].read_text())
+          assert manifest['status'] in {'PLATEAU','PROMOTED'}, manifest['status']
+          assert 1 <= len(manifest['candidates']) <= 3, len(manifest['candidates'])
+          assert all(c['status'] in {'REJECTED','ELIGIBLE','ERROR'} for c in manifest['candidates'])
+
+          mode='${{ steps.mode.outputs.mode }}'
+          run_dir=manifests[0].parent
+          if mode == 'shadow':
+              cassette=json.loads(Path('copox/cassettes/examples/theo_model_m5_validation.json').read_text())
+              assert 'promote' not in cassette['commands']
+              assert 'state_branch' not in cassette.get('variables',{})
+          else:
+              cassette=json.loads(Path('copox/cassettes/examples/theo_model_m5_loop.json').read_text())
+              branch=cassette['variables']['state_branch']
+              probe=subprocess.run(['git','ls-remote','--exit-code','origin',f'refs/heads/{branch}'],capture_output=True,text=True)
+              assert probe.returncode == 0, f'No se persistió state branch {branch}: {probe.stderr}'
+              if manifest['status'] == 'PROMOTED':
+                  winner=manifest['winner']
+                  promotion=run_dir/'candidates'/winner/'promotion.json'
+                  assert promotion.exists(), promotion
+                  pdata=json.loads(promotion.read_text())
+                  assert pdata['promotion_allowed'] is True
+                  assert pdata['state_branch'] == branch
+              else:
+                  learns=sorted(run_dir.glob('learning_t*.json'))
+                  assert learns, 'PLATEAU persistente sin aprendizaje'
+          print(json.dumps({'mode':mode,'status':manifest['status'],'candidates':len(manifest['candidates']),'winner':manifest.get('winner')},indent=2))
+          PY
+
+      - name: Resumen
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          print('## COPOX · Theo loop')
+          print()
+          print('- Modo: `${{ steps.mode.outputs.mode }}`')
+          manifests=list(Path('.copox/theo-loop').rglob('manifest.json'))
+          if not manifests:
+              print('- No se generó manifest.')
+              raise SystemExit
+          m=json.loads(manifests[0].read_text())
+          print(f"- Estado: **{m.get('status')}**")
+          print(f"- Candidatos: {len(m.get('candidates',[]))}/3")
+          if m.get('winner'):
+              print(f"- Ganador interno: `{m['winner']}`")
+          rejected=[c for c in m.get('candidates',[]) if c.get('status')=='REJECTED']
+          if rejected:
+              print('- Rechazos: ' + ', '.join(f"{c['id']} ({c.get('reason','')})" for c in rejected))
+          PY
+
+      - name: Evidencia del loop
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-loop-${{ steps.mode.outputs.mode }}
+          path: .copox/theo-loop/
+          retention-days: 3
+          if-no-files-found: ignore
