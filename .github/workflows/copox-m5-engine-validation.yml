@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "copox/adapters/alth_model_m5.py"
+      - "copox/adapters/alth_model_m5_cycle.py"
       - "copox/production/**"
       - "copox/profiles/alth_model_m5.json"
       - "copox/cassettes/examples/theo_model_m5_validation.json"
@@ -54,18 +55,25 @@ jobs:
           assert manifest['status'] in {'PLATEAU','PROMOTED'}, manifest['status']
           assert 1 <= len(manifest['candidates']) <= 6
           assert all(c['status'] in {'REJECTED','ELIGIBLE','ERROR'} for c in manifest['candidates'])
-          # Este cassette no contiene promote/state-branch: aun si hubiera un candidato elegible,
-          # la validación no puede escribir una baseline remota.
           cassette=json.loads(Path('copox/cassettes/examples/theo_model_m5_validation.json').read_text())
           assert 'promote' not in cassette['commands']
           assert 'state_branch' not in cassette.get('variables',{})
           sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
           assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b'
 
+          run_dir=manifests[0].parent
           tournaments=sorted({int(c['tournament']) for c in manifest['candidates']})
+          if 2 in tournaments:
+              specs1=[json.loads(p.read_text()) for p in sorted((run_dir/'candidates').glob('t01-c*/module_spec.json'))]
+              specs2=[json.loads(p.read_text()) for p in sorted((run_dir/'candidates').glob('t02-c*/module_spec.json'))]
+              assert specs1 and specs2
+              assert {s['module'] for s in specs1} == {'fingers'}, specs1
+              assert {s['module'] for s in specs2} == {'fingers'}, specs2
+              assert {int(s['technique_round']) for s in specs1} == {1}, specs1
+              assert {int(s['technique_round']) for s in specs2} == {2}, specs2
+              assert all(bool(json.loads((p.parent/'morph.json').read_text()).get('topology_refine')) for p in (run_dir/'candidates').glob('t02-c*/module_spec.json'))
           if manifest['status']=='PLATEAU':
               assert tournaments == [1,2], tournaments
-              run_dir=manifests[0].parent
               assert (run_dir/'learning_t01.json').exists()
               assert (run_dir/'learning_t02.json').exists()
           print(json.dumps({'status':manifest['status'],'candidates':len(manifest['candidates']),'tournaments':tournaments}, indent=2))
