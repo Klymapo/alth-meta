@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "target": "Theo Alpha",
   "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
   "min_target_gain_pp": 0.10,
@@ -19,7 +19,7 @@
     "arms": {"required_evidence": ["region_front", "region_side", "learning"]},
     "elbows_forearms": {"required_evidence": ["region_front", "region_side", "learning"]},
     "hands": {"required_evidence": ["hand_left", "hand_right", "hand_detail", "learning"], "forbidden_flags": ["mitten_shape", "thumb_unreadable"]},
-    "fingers": {"required_evidence": ["hand_left", "hand_right", "finger_detail", "topology_report", "learning"], "forbidden_flags": ["mitten_shape", "finger_merge_regression"]},
+    "fingers": {"technique_rounds": 3, "required_evidence": ["hand_left", "hand_right", "finger_detail", "topology_report", "learning"], "forbidden_flags": ["mitten_shape", "finger_merge_regression"]},
     "pelvis_hips": {"required_evidence": ["region_front", "region_back", "region_threeq", "learning"]},
     "legs": {"required_evidence": ["region_front", "region_side", "learning"]},
     "knees": {"required_evidence": ["region_front", "region_side", "learning"]},

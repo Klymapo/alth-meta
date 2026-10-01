@@ -24,11 +24,11 @@
     "max_candidates": 6
   },
   "commands": {
-    "prepare": ["python3", "-m", "copox.adapters.alth_model_m5", "prepare", "--repo-root", "{repo_root}", "--baseline-params", "{baseline_params}", "--baseline-model", "{baseline_model}", "--state-branch", "{state_branch}", "--reference", "{reference}", "--config", "{audit_config}", "--policy", "{production_policy}", "--run-dir", "{run_dir}"],
-    "mutate": ["python3", "-m", "copox.adapters.alth_model_m5", "mutate", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--candidate-id", "{candidate_id}"],
-    "capture": ["python3", "-m", "copox.adapters.alth_model_m5", "capture", "--repo-root", "{repo_root}", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--evidence-dir", "{evidence_dir}", "--reference", "{reference}", "--config", "{audit_config}", "--policy", "{production_policy}"],
-    "learn": ["python3", "-m", "copox.adapters.alth_model_m5", "learn", "--repo-root", "{repo_root}", "--run-dir", "{run_dir}", "--tournament", "{tournament}", "--state-branch", "{state_branch}", "--cassette-id", "{cassette_id}", "--target", "{target}", "--config", "{audit_config}", "--policy", "{production_policy}"],
-    "promote": ["python3", "-m", "copox.adapters.alth_model_m5", "promote", "--repo-root", "{repo_root}", "--candidate-dir", "{candidate_dir}", "--baseline-params", "{baseline_params}", "--state-branch", "{state_branch}", "--cassette-id", "{cassette_id}", "--target", "{target}"]
+    "prepare": ["python3", "-m", "copox.adapters.alth_model_m5_cycle", "prepare", "--repo-root", "{repo_root}", "--baseline-params", "{baseline_params}", "--baseline-model", "{baseline_model}", "--state-branch", "{state_branch}", "--reference", "{reference}", "--config", "{audit_config}", "--policy", "{production_policy}", "--run-dir", "{run_dir}"],
+    "mutate": ["python3", "-m", "copox.adapters.alth_model_m5_cycle", "mutate", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--candidate-id", "{candidate_id}"],
+    "capture": ["python3", "-m", "copox.adapters.alth_model_m5_cycle", "capture", "--repo-root", "{repo_root}", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--evidence-dir", "{evidence_dir}", "--reference", "{reference}", "--config", "{audit_config}", "--policy", "{production_policy}"],
+    "learn": ["python3", "-m", "copox.adapters.alth_model_m5_cycle", "learn", "--repo-root", "{repo_root}", "--run-dir", "{run_dir}", "--tournament", "{tournament}", "--state-branch", "{state_branch}", "--cassette-id", "{cassette_id}", "--target", "{target}", "--config", "{audit_config}", "--policy", "{production_policy}"],
+    "promote": ["python3", "-m", "copox.adapters.alth_model_m5_cycle", "promote", "--repo-root", "{repo_root}", "--candidate-dir", "{candidate_dir}", "--baseline-params", "{baseline_params}", "--state-branch", "{state_branch}", "--cassette-id", "{cassette_id}", "--target", "{target}"]
   },
   "promotion": {
     "unanimous": true

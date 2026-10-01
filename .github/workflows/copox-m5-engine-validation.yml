@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "copox/adapters/alth_model_m5.py"
+      - "copox/adapters/alth_model_m5_cycle.py"
       - "copox/production/**"
       - "copox/profiles/alth_model_m5.json"
       - "copox/cassettes/examples/theo_model_m5_validation.json"
@@ -28,7 +29,7 @@ jobs:
       - name: Instalar análisis
         run: python3 -m pip install -q numpy scipy trimesh Pillow
 
-      - name: Ejecutar máximo dos torneos sin persistencia
+      - name: Ejecutar hasta tres torneos sin persistencia
         run: |
           rm -rf .copox/engine-validation
           set +e
@@ -52,22 +53,44 @@ jobs:
           assert len(manifests)==1, manifests
           manifest=json.loads(manifests[0].read_text())
           assert manifest['status'] in {'PLATEAU','PROMOTED'}, manifest['status']
-          assert 1 <= len(manifest['candidates']) <= 6
+          assert 1 <= len(manifest['candidates']) <= 9
           assert all(c['status'] in {'REJECTED','ELIGIBLE','ERROR'} for c in manifest['candidates'])
-          # Este cassette no contiene promote/state-branch: aun si hubiera un candidato elegible,
-          # la validación no puede escribir una baseline remota.
           cassette=json.loads(Path('copox/cassettes/examples/theo_model_m5_validation.json').read_text())
           assert 'promote' not in cassette['commands']
           assert 'state_branch' not in cassette.get('variables',{})
           sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
           assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b'
 
+          run_dir=manifests[0].parent
           tournaments=sorted({int(c['tournament']) for c in manifest['candidates']})
+          expected_round={1:1,2:2,3:3}
+          for tournament in tournaments:
+              specs=[json.loads(p.read_text()) for p in sorted((run_dir/'candidates').glob(f't{tournament:02d}-c*/module_spec.json'))]
+              assert specs
+              assert {s['module'] for s in specs} == {'fingers'}, specs
+              assert {int(s['technique_round']) for s in specs} == {expected_round[tournament]}, specs
+              if tournament >= 2:
+                  for p in (run_dir/'candidates').glob(f't{tournament:02d}-c*/module_spec.json'):
+                      morph=json.loads((p.parent/'morph.json').read_text())
+                      assert bool(morph.get('topology_refine')), morph
+                      refine=morph['topology_refine']
+                      assert refine['topology_density_increased'] is True
+                      assert refine['safe_geometry_regression'] is True
+          if 3 in tournaments:
+              for p in (run_dir/'candidates').glob('t03-c*/params.json'):
+                  params=json.loads(p.read_text())
+                  m5=params.get('_m5') or {}
+                  history=m5.get('module_history') or []
+                  assert history and history[-1]['module']=='fingers'
           if manifest['status']=='PLATEAU':
-              assert tournaments == [1,2], tournaments
-              run_dir=manifests[0].parent
+              assert tournaments == [1,2,3], tournaments
               assert (run_dir/'learning_t01.json').exists()
               assert (run_dir/'learning_t02.json').exists()
+              assert (run_dir/'learning_t03.json').exists()
+              learning3=json.loads((run_dir/'learning_t03.json').read_text())
+              assert learning3['attempted_techniques'] == 3
+              assert learning3['next_technique_round'] is None
+              assert 'fingers' in learning3['cooldown_modules']
           print(json.dumps({'status':manifest['status'],'candidates':len(manifest['candidates']),'tournaments':tournaments}, indent=2))
           PY
 
