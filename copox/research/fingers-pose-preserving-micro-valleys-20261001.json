@@ -1,0 +1,181 @@
+{
+  "research_id": "fingers-pose-preserving-micro-valleys-20261001",
+  "module": "fingers",
+  "problem": "Corregir costuras del patch y rechazar ajuste vertical que levanta la mano. Ronda2 obtiene2/0pero visual claw y198boundaryedgesextra; conservarposeValleyyabrirsolomuescaslocalesderivadasdereferencia.",
+  "date": "2026-10-01",
+  "researched_at": "2026-10-01T15:36:08Z",
+  "status": "READY",
+  "web_research_performed": true,
+  "internet_checked": true,
+  "research_prepared_by": "Codex via connected GitHub; runtime validates stored research and does not claim browsing",
+  "access_limitations": [
+    "Executor cloud falló. Sólo conector GitHub disponible para navegación.",
+    "El sitio docs.blender.org no fue consultado en esta sesión. Manual consultado por espejo identificado.",
+    "No se verificó tutorial chibi específico ni receta de separación de mitten en esta sesión. Adaptación estilizada es hipótesis propia basada en principios genéricos oficiales, no hallazgo de tutorial."
+  ],
+  "sources": [
+    {
+      "title": "Blender Python API — BMesh introduction and CustomData",
+      "url": "https://github.com/blender/blender/blob/main/doc/python_api/rst/include__bmesh.rst",
+      "source_type": "official_docs",
+      "relevance": "Edición independiente de viewport; UV/weights por layers; liberar BMesh; script debe conservar estado válido.",
+      "verified_blob_sha": "93b4cac21cef4a0dae42ae6b35bd9f9fb231450e"
+    },
+    {
+      "title": "Blender Manual — Mesh structure (mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/meshes/structure.rst",
+      "source_type": "technical_article",
+      "relevance": "Mirror del Manual, no sitio oficial; quads para deformación, loops siguiendo contorno y mayor densidad local en articulaciones. Información de UI antigua no se usa como API.",
+      "verified_blob_sha": "bbebd383ad24f06ae40db189723630be7ffff0f6"
+    },
+    {
+      "title": "Blender Manual — Loop Cut and Slide (mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/meshes/editing/edge/loopcut_slide.rst",
+      "source_type": "technical_article",
+      "relevance": "Loops se detienen en tris/n-gons; sin smoothing puntos nuevos quedan sobre aristas existentes; corrección UV.",
+      "verified_blob_sha": "c3845326dd0e1e4370ed949a2daa72dd6cf73501"
+    },
+    {
+      "title": "Blender — BMesh operator definitions",
+      "url": "https://github.com/blender/blender/blob/main/source/blender/bmesh/intern/bmesh_opdefines.cc",
+      "source_type": "official_docs",
+      "relevance": "Fuente que genera documentación API: bisect_plane, subdivide_edges, bridge_loops y extrude_face_region.",
+      "verified_blob_sha": "24417aca14c29c8c3c2376c0b22b298d01bdad9d"
+    },
+    {
+      "title": "Blender BMesh — plane bisect implementation",
+      "url": "https://github.com/blender/blender/blob/main/source/blender/bmesh/tools/bmesh_bisect_plane.cc",
+      "source_type": "official_docs",
+      "relevance": "Corta sólo aristas etiquetadas; sus caras radiales también se dividen. Restringir selección a caras totalmente locales y comprobar fingerprint de caras externas; sin clear_inner/outer ni snapping."
+    },
+    {
+      "title": "Blender Manual — Bisect (identified mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/meshes/editing/mesh/bisect.rst",
+      "source_type": "technical_article",
+      "relevance": "Plano numérico y geometría interpolada; no borrar lados ni llenar cavidades. API oficial prevalece sobre instrucciones UI."
+    },
+    {
+      "title": "Blender Manual — Lattice Modifier (identified mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/modifiers/deform/lattice.rst",
+      "source_type": "technical_article",
+      "relevance": "Deformación restringida mediante vertex group, mezcla con forma original y conservación de coordenadas de textura. Se extrae principio de influencia acotada, no se copia ni ejecuta un modifier global."
+    },
+    {
+      "title": "Blender Manual — Mesh Deform (identified mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/modifiers/deform/mesh_deform.rst",
+      "source_type": "technical_article",
+      "relevance": "Cage continuo y grupo restringido; bind puede agotar memoria. Descarta cage global/binding, adapta interpolación local simple y explícita."
+    },
+    {
+      "title": "Blender BMesh — join triangles implementation",
+      "url": "https://github.com/blender/blender/blob/main/source/blender/bmesh/operators/bmo_join_triangles.cc",
+      "source_type": "official_docs",
+      "relevance": "Unión local de tris a quads con delimitadores de UV/material/normal; no unir aristas de secciones ni prometer all-quads."
+    },
+    {
+      "title": "Blender BMesh — remove doubles / weld implementation",
+      "url": "https://github.com/blender/blender/blob/main/source/blender/bmesh/operators/bmo_removedoubles.cc",
+      "source_type": "official_docs",
+      "relevance": "GLB duplica posiciones por corner attributes. Weld conserva datos de loop; conectividad BMesh sólo ve índices reales. Proteger alias geométricos de fronteras antes de soldar/cortar/deformar."
+    }
+  ],
+  "techniques": [
+    {
+      "name": "semantic_finish",
+      "applicable": true,
+      "principle": "Reproducir únicamente el parent ya medido."
+    },
+    {
+      "name": "valley_surface_sculpt",
+      "applicable": true,
+      "principle": "Valley c01 .55 permanece parent común."
+    },
+    {
+      "name": "pose_preserving_reference_notch_sections",
+      "applicable": true,
+      "principle": "Correspondencia intrínseca explícita entrebboxhandrefyboundsmodel; conserva pose global. Bloquear vertices yedgespor posición geométrica del borde; notch continuo en bandasyloopsindividuales."
+    }
+  ],
+  "techniques_found": [
+    "semantic_finish",
+    "valley_surface_sculpt",
+    "pose_preserving_reference_notch_sections"
+  ],
+  "techniques_rejected": [
+    {
+      "technique": "full_hand_rebuild",
+      "reason": "Evidencia Robust Scope: menor target gain y regresión, dedos proxy/bridge pendientes."
+    },
+    {
+      "technique": "simple_scaling",
+      "reason": "No abre separaciones."
+    },
+    {
+      "technique": "global_subdivision",
+      "reason": "Densidad innecesaria y no garantiza loops."
+    },
+    {
+      "technique": "realistic_hand_anatomy",
+      "reason": "Incompatible con chibi-soft; contar sólo valles visibles."
+    },
+    {
+      "technique": "whole_mesh_boolean",
+      "reason": "Evidencia campaña36876087961: scopefalso3/3,104nonmanifoldc02,artefactovisible."
+    },
+    {
+      "technique": "global_three_cycle_requirement",
+      "reason": "Tres ciclos en todas las X ignora raíces y longitudes distintas; no demuestra cada dedo."
+    },
+    {
+      "technique": "unverified_hand_bbox_registration",
+      "reason": "Distorsiona correspondencia respecto cámara de auditoría; diagnóstico previo debe comparar posiciones globales y material local."
+    },
+    {
+      "technique": "anchored_reference_contour_warp",
+      "reason": "Ronda36883548374:target+19pppero mano levantada/claw enrenders;worst3q≈-.185pp.Conservarposeantesdereesculpir."
+    },
+    {
+      "technique": "BMesh_index_only_boundary_lock",
+      "reason": "GLB corner aliases no comparten link_faces; costuras se abren aunque caras exteriores queden intactas. Protegerporposicionesgeométricas."
+    }
+  ],
+  "selected_technique": "pose_preserving_reference_notch_sections",
+  "chosen_direction": "Valleyc01idéntico→maparelativoexplícitodesdedosvallesrealessinwarppose→localBMeshconaliasfronterabloqueados→tresprofundidades. Revisargatesyvisual.",
+  "reason": "Los valles de referencia no pueden abrirse en coordenadas globales sin alterar la pose de la mano, lo cual empeora visualmente y supera regressions. Correspondencia local identifica rasgos sin reclamar que se corrigió la pose; el problema de pose queda pendiente para otra investigación de mano-muñeca.",
+  "risks": [
+    "Correspondencia local no arregla pose global: likenessfullcamera puedeno mejorar.",
+    "La topología existente es triangulada y contiene fronteras heredadas; loops limpiospuedenseguirfallando.",
+    "Variarprofundidadno resuelvebase incompatible; gates detienen técnica agotada.",
+    "Proteccióngeométricafronterapuede limitarloops; no borrarla paraforzarPASS."
+  ],
+  "implementation_notes": [
+    "Correspondencia localbybbox declarada: fuentespixel originalesguardadas ydiagnóstico global conservado; no inventar posiciones ni claim coincidencia espacial absoluta.",
+    "No ejecutarwarp vertical ni borrar caras; Y/posición de palma preservadas.",
+    "Bloquear verticesconposicionescompartidasconcarasprotegidas yedgesconmismosendpoints; evita aliases corner atravesandoscope.",
+    "Definir scope por preservación de caras+UV, existencia de posiciones protegidas yGLBtransportaudit; multiplicidad de verticesdocumentadacomo representación,no geometría.",
+    "Exactamente3hermanosdepth_scale .75/1/1.25 relativos a mano medidaywidthpxdelvalle, resto fijo.",
+    "Bisectlocalplanes,sin modifiersglobales; ciclos individualespor4secciones; no rig_ready ni bridge_ready.",
+    "No relajarregresiones niintegridad paraaceptar geometría. Revisiónvisualobligatoria; rechazadosnuncapadres."
+  ],
+  "technique_rounds": [
+    {
+      "round": 3,
+      "name": "pose_preserving_reference_notch_sections",
+      "applicable": true
+    }
+  ],
+  "diagnostic_evidence": {
+    "run_id": 36883548374,
+    "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+    "all_semantic_ready": true,
+    "all_model_valleys": {
+      "left": 2,
+      "right": 0
+    },
+    "exterior_triangles_preserved_after_glb": true,
+    "parent_boundary_edges": 228,
+    "candidate_boundary_edges": 426,
+    "visual_decision": "REJECTED",
+    "conclusion": "IoU alto no compensa mano levantada ycosturas. Repararaliasesymantenerposeoriginal."
+  }
+}
