@@ -18,7 +18,7 @@
     "audit_config": "copox/reference_configs/joven_rubio_alpha.json",
     "production_policy": "copox/production/theo_m5_policy.json"
   },
-  "strategy": {"tournament_size": 3, "max_candidates": 6},
+  "strategy": {"tournament_size": 3, "max_candidates": 9},
   "commands": {
     "prepare": ["python3", "-m", "copox.adapters.alth_model_m5_cycle", "prepare", "--repo-root", "{repo_root}", "--baseline-params", "{baseline_params}", "--baseline-model", "{baseline_model}", "--reference", "{reference}", "--config", "{audit_config}", "--policy", "{production_policy}", "--run-dir", "{run_dir}"],
     "mutate": ["python3", "-m", "copox.adapters.alth_model_m5_cycle", "mutate", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--candidate-id", "{candidate_id}"],
