@@ -34,6 +34,17 @@ class CopoxContractTests(unittest.TestCase):
         self.assertFalse(applicable["FootwearAgent"])
         self.assertNotIn("theo", Path("copox/engine.py").read_text(encoding="utf-8").lower())
 
+    def test_theo_integral_m5_contract_loads_without_enabling_scheduler(self):
+        c = load_cassette("copox/cassettes/examples/theo_model_m5.json")
+        self.assertEqual(c.kind, "alth_model_m5")
+        self.assertEqual(c.data["maturity"]["min_level"], "M5")
+        self.assertEqual(c.data["maturity"]["production_policy"], "copox/production/theo_m5_policy.json")
+        self.assertEqual(c.data["variables"]["state_branch"], "copox/state/theo-character")
+        self.assertIn("copox.adapters.alth_model_m5", c.data["commands"]["prepare"])
+        self.assertIn("copox.adapters.alth_model_m5", c.data["commands"]["capture"])
+        self.assertTrue(all(a.get("applicable", True) for a in c.auditors))
+        self.assertEqual(list(Path("copox/cassettes/enabled").glob("*.json")), [])
+
     def test_unanimity_is_mandatory(self):
         src = json.loads(Path("copox/cassettes/examples/smoke.json").read_text(encoding="utf-8"))
         src["promotion"]["unanimous"] = False
