@@ -36,6 +36,7 @@ def test_muestreo_determinista_y_respeta_literales():
 
 def test_tipos_por_nombre_sin_tabla():
     assert cd._tipo("use_snap_center", {}) == "bool" and cd._tipo("faces", {}) == "elementos"
+    assert cd._tipo("use_verts", {}) == "bool"                 # bool aunque termine en _verts
     assert cd._tipo("plane_no", {}) == "vector" and cd._tipo("cuts", {}) == "int" and cd._tipo("dist", {}) == "float"
 
 

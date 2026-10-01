@@ -49,10 +49,10 @@ def _tipo(nombre: str, tipos: dict) -> str:
     if t:
         return t
     n = nombre.lower()
-    if n in ("geom", "verts", "edges", "faces", "input") or n.endswith(("_verts", "_edges", "_faces")):
-        return "elementos"
     if n.startswith("use_") or n.startswith("is_"):
         return "bool"
+    if n in ("geom", "verts", "edges", "faces", "input") or n.endswith(("_verts", "_edges", "_faces")):
+        return "elementos"
     if any(k in n for k in ("_no", "normal", "axis", "_co", "cent", "vec", "dir")):
         return "vector"
     if any(k in n for k in ("segments", "steps", "cuts", "count", "num")):
@@ -70,6 +70,13 @@ def muestrear_params(tecnica: dict, mf: dict, rng: random.Random) -> dict:
         if t in NO_AJUSTABLES:
             continue
         lit = (tecnica.get("parametros") or {}).get(p)
+        if t.startswith("enum"):
+            ops_ = t.split(":", 1)[1].split("|") if ":" in t else []
+            if isinstance(lit, str):
+                out[p] = lit
+            elif ops_:
+                out[p] = rng.choice(ops_)
+            continue                                    # enum sin valores conocidos: se deja el de Blender
         if t == "elementos":
             out[p] = {"region": rng.choice(["toda", "distal", "franja"]), "f": round(rng.uniform(-0.45, 0.45), 3),
                       "eje": rng.choice([1, 2])}

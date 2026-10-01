@@ -232,3 +232,21 @@ def test_operadores_con_puntero_no_son_ejecutables():
     b2m = next(s for s in sec if s["nombre"] == "bmesh.ops.bmesh_to_mesh")
     assert not iv.ejecutable(b2m["nombre"], b2m["tipos"])[0]
     assert iv.ejecutable("bmesh.ops.remove_doubles", {"verts": "elementos", "dist": "float"})[0]
+
+
+def test_tipos_de_la_doc_oficial():
+    html = ('<dl class="py function"><dt class="sig sig-object py" id="bmesh.ops.split_edges">'
+            '<span class="sig-name descname"><span class="pre">split_edges</span></span>('
+            '<em class="sig-param"><span class="n"><span class="pre">bm</span></span></em>, '
+            '<em class="sig-param"><span class="n"><span class="pre">edges</span></span></em>, '
+            '<em class="sig-param"><span class="n"><span class="pre">use_verts</span></span></em>, '
+            '<em class="sig-param"><span class="n"><span class="pre">direction</span></span></em>)</dt>'
+            '<dd><p>Edge Split.</p><ul class="simple"><li><p><strong>bm</strong> (<a href="x"><code>'
+            '<span class="pre">bmesh.types.BMesh</span></code></a>) – The bmesh to operate on.</p></li>'
+            '<li><p><strong>edges</strong> (<em>list of</em> (<a href="x"><code><span class="pre">bmesh.types.BMEdge'
+            '</span></code></a>)) – input edges</p></li><li><p><strong>use_verts</strong> (<em>bool</em>) – Use verts.</p>'
+            '</li><li><p><strong>direction</strong> (<em>enum in</em> [<code>\'-X\'</code>, <code>\'X\'</code>]) – Axis.'
+            '</p></li></ul></dd></dl>')
+    s = iv.parsear_sphinx(html, "bmesh.ops")[0]
+    assert s["params"] == ["edges", "use_verts", "direction"]
+    assert s["tipos"] == {"edges": "elementos", "use_verts": "bool", "direction": "enum:-X|X"}

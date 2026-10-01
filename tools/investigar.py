@@ -207,7 +207,48 @@ def parsear_sphinx(pagina: str, prefijo: str) -> list[dict]:
         if not params:
             params = re.findall(r'<span class="pre">(\w+)</span></span><span class="o"><span class="pre">=', firma)
         params = [x for x in params if x not in ("bm", "self")]
-        out.append({"nombre": m.group(1), "texto": _texto_html(bloque)[:3000], "params": params, "tipos": {}})
+        texto = _texto_html(bloque)
+        out.append({"nombre": m.group(1), "texto": texto[:3000], "params": params, "tipos": tipos_sphinx(texto, params)})
+    return out
+
+
+def _tipo_doc(t: str) -> str | None:
+    """Tipo de un parámetro según la doc oficial: '(bool)', '(list of BMVert)', '(enum in [...])'…"""
+    tl = t.lower()
+    m = re.search(r"enum in \[([^\]]*)\]", t)
+    if m:
+        valores = re.findall(r"['‘’\"]([^'‘’\"]+)['‘’\"]", m.group(1))
+        return "enum:" + "|".join(valores) if valores else "enum"
+    if "list of" in tl and any(k in t for k in ("BMVert", "BMEdge", "BMFace", "BMElem")):
+        return "elementos"
+    if any(k in t for k in ("BMesh", "bpy.types.Mesh", "bpy.types.Object", "Object", "Mesh")):
+        return "puntero"
+    if "dict" in tl:
+        return "mapa"
+    if "matrix" in tl:
+        return "matriz"
+    if "vector" in tl:
+        return "vector"
+    if tl.strip() in ("bool", "boolean"):
+        return "bool"
+    if tl.strip().startswith("int"):
+        return "int"
+    if tl.strip().startswith("float"):
+        return "float"
+    if tl.strip() in ("str", "string"):
+        return "enum"
+    return None
+
+
+def tipos_sphinx(texto: str, params: list[str]) -> dict:
+    """{parámetro: tipo} de la lista de parámetros de la doc ('nombre (tipo) – descripción')."""
+    out = {}
+    for m in re.finditer(r"\b(\w+) \(\s*([^()]*(?:\([^()]*\)[^()]*)*?)\s*\) [–-]", texto):
+        nombre, t = m.group(1), m.group(2)
+        if nombre in params or nombre == "bm":
+            tt = _tipo_doc(t)
+            if tt and nombre != "bm":
+                out[nombre] = tt
     return out
 
 

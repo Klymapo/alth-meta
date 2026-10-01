@@ -93,6 +93,8 @@ def aplicar(bm, tecnica: dict, valores: dict, protegido, escala_mm: float):
                     libres_f if p.endswith("faces") else libres_v + libres_e + libres_f
             elif p in valores:
                 kw[p] = valores[p] * escala_mm if t == "float" and not p.startswith(("use_", "angle")) else valores[p]
+            elif t is None or t in ("puntero", "mapa", "matriz", "vector"):
+                continue                     # sin tipo conocido o no muestreable: se deja el valor de Blender
         getattr(bmesh.ops, nombre.split(".")[-1])(nuevo, **kw)
         return nuevo
     if nombre.startswith("modificador:"):
@@ -160,7 +162,9 @@ def muestrear(tecnica: dict, rng: random.Random) -> dict:
     for p in tecnica.get("params_doc") or []:
         t = (tecnica.get("tipos") or {}).get(p)
         lit = (tecnica.get("parametros") or {}).get(p)
-        if t == "bool":
+        if t and t.startswith("enum:"):
+            out[p] = lit if isinstance(lit, str) else rng.choice(t.split(":", 1)[1].split("|"))
+        elif t == "bool":
             out[p] = lit if isinstance(lit, bool) else rng.random() < 0.5
         elif t == "int":
             out[p] = rng.randint(1, 4)
