@@ -11,7 +11,7 @@ def _read(path: str | Path) -> dict[str, Any]:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def validate_research(brief: dict[str, Any], module: str, technique_round: int | None = None, max_age_days: int = 45) -> dict[str, Any]:
+def validate_research(brief: dict[str, Any], module: str, technique_round: int | None = None, max_age_days: int = 45, technique: str | None = None) -> dict[str, Any]:
     reasons: list[str] = []
     if str(brief.get("module")) != module:
         reasons.append("module_mismatch")
@@ -19,6 +19,13 @@ def validate_research(brief: dict[str, Any], module: str, technique_round: int |
         reasons.append("status_not_ready")
     if brief.get("internet_checked") is not True:
         reasons.append("internet_not_checked")
+
+    if technique is not None:
+        if brief.get("web_research_performed") is not True:
+            reasons.append("web_research_not_performed")
+        for field in ("research_id", "problem", "date", "techniques_found", "techniques_rejected", "selected_technique", "reason", "risks", "implementation_notes"):
+            if field not in brief:
+                reasons.append(f"missing_{field}")
 
     sources = list(brief.get("sources") or [])
     if len(sources) < 2:
@@ -33,6 +40,14 @@ def validate_research(brief: dict[str, Any], module: str, technique_round: int |
     applicable = [t for t in techniques if bool(t.get("applicable"))]
     if not applicable:
         reasons.append("no_applicable_technique")
+
+    if technique is not None and technique not in {str(t.get("name")) for t in applicable}:
+        reasons.append("technique_not_researched:" + technique)
+    if technique is not None:
+        allowed_types = {"official_docs", "technical_article", "community", "paper"}
+        for i, src in enumerate(sources):
+            if src.get("source_type") not in allowed_types or not src.get("relevance"):
+                reasons.append(f"source_{i+1}_incomplete")
 
     researched_at = str(brief.get("researched_at") or "")
     age_days = None
@@ -53,6 +68,9 @@ def validate_research(brief: dict[str, Any], module: str, technique_round: int |
             reasons.append(f"technique_round_{technique_round}_not_applicable")
 
     return {
+        "status": "READY" if not reasons else "RESEARCH_REQUIRED",
+        "research_id": brief.get("research_id"),
+        "technique": technique,
         "module": module,
         "technique_round": technique_round,
         "research_ready": not reasons,
@@ -65,7 +83,7 @@ def validate_research(brief: dict[str, Any], module: str, technique_round: int |
     }
 
 
-def require_research(brief_path: str | Path, module: str, technique_round: int | None = None, output: str | Path | None = None) -> dict[str, Any]:
+def require_research(brief_path: str | Path, module: str, technique_round: int | None = None, output: str | Path | None = None, *, technique: str | None = None) -> dict[str, Any]:
     path = Path(brief_path)
     if not path.exists():
         result = {
@@ -76,14 +94,21 @@ def require_research(brief_path: str | Path, module: str, technique_round: int |
             "brief": str(path),
         }
     else:
-        result = validate_research(_read(path), module, technique_round=technique_round)
+        try:
+            brief = _read(path)
+            if not isinstance(brief, dict):
+                raise ValueError("brief debe ser objeto JSON")
+            result = validate_research(brief, module, technique_round=technique_round, technique=technique)
+        except (ValueError, TypeError, AttributeError, OSError) as exc:
+            result = {"module": module, "research_ready": False, "reasons": ["invalid_research_brief"], "error": str(exc)}
         result["brief"] = str(path)
+    result["status"] = "READY" if result["research_ready"] else "RESEARCH_REQUIRED"
     if output:
         out = Path(output)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if not result["research_ready"]:
-        raise RuntimeError("Research gate bloqueó mutación: " + ", ".join(result["reasons"]))
+        raise RuntimeError("RESEARCH_REQUIRED: " + ", ".join(result["reasons"]))
     return result
 
 
@@ -93,9 +118,10 @@ def main() -> int:
     p.add_argument("--module", required=True)
     p.add_argument("--technique-round", type=int)
     p.add_argument("--output")
+    p.add_argument("--technique")
     a = p.parse_args()
     try:
-        result = require_research(a.brief, a.module, a.technique_round, a.output)
+        result = require_research(a.brief, a.module, a.technique_round, a.output, technique=a.technique)
     except RuntimeError as exc:
         print(str(exc))
         return 9
