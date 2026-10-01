@@ -1,4 +1,5 @@
 name: COPOX · Finger full-depth
+# Phase 4: prueba explícita de tapas residuales en profundidad
 
 on:
   pull_request:
