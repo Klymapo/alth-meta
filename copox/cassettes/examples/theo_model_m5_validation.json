@@ -1,0 +1,33 @@
+{
+  "id": "theo-model-m5-validation",
+  "kind": "alth_model_m5",
+  "profile": "copox/profiles/alth_model_m5.json",
+  "target": "joven_rubio",
+  "baseline": "copox/baselines/joven_rubio_alpha.json",
+  "maturity": {
+    "coverage": "copox/maturity/theo.json",
+    "production_policy": "copox/production/theo_m5_policy.json",
+    "min_level": "M5",
+    "critical_only": true,
+    "block_execution": true
+  },
+  "variables": {
+    "baseline_params": "copox/baselines/joven_rubio_alpha.json",
+    "baseline_model": "assets/joven_rubio/theo_alpha.glb",
+    "reference": "refs/personajes/joven-rubio-4-vistas.jpg",
+    "audit_config": "copox/reference_configs/joven_rubio_alpha.json",
+    "production_policy": "copox/production/theo_m5_policy.json"
+  },
+  "strategy": {"tournament_size": 3, "max_candidates": 6},
+  "commands": {
+    "prepare": ["python3", "-m", "copox.adapters.alth_model_m5", "prepare", "--repo-root", "{repo_root}", "--baseline-params", "{baseline_params}", "--baseline-model", "{baseline_model}", "--reference", "{reference}", "--config", "{audit_config}", "--policy", "{production_policy}", "--run-dir", "{run_dir}"],
+    "mutate": ["python3", "-m", "copox.adapters.alth_model_m5", "mutate", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--candidate-id", "{candidate_id}"],
+    "capture": ["python3", "-m", "copox.adapters.alth_model_m5", "capture", "--repo-root", "{repo_root}", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--evidence-dir", "{evidence_dir}", "--reference", "{reference}", "--config", "{audit_config}", "--policy", "{production_policy}"],
+    "learn": ["python3", "-m", "copox.adapters.alth_model_m5", "learn", "--repo-root", "{repo_root}", "--run-dir", "{run_dir}", "--tournament", "{tournament}", "--cassette-id", "{cassette_id}", "--target", "{target}", "--config", "{audit_config}", "--policy", "{production_policy}"]
+  },
+  "promotion": {"unanimous": true},
+  "reporting": {
+    "required_evidence": ["gate.json", "module_result.json", "*.png"],
+    "publish_only_unanimous": true
+  }
+}
