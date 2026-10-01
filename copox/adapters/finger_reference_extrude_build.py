@@ -38,6 +38,7 @@ def main() -> int:
     p.add_argument("--depth-scale", type=float, default=0.82)
     p.add_argument("--tip-scale", type=float, default=0.82)
     p.add_argument("--length-scale", type=float, default=1.0)
+    p.add_argument("--delete-distal-fraction", type=float, default=1.0)
     args = p.parse_args()
 
     if args.segments < 2 or args.segments > 5:
@@ -48,6 +49,8 @@ def main() -> int:
         raise ValueError("tip-scale fuera de rango")
     if not (0.80 <= args.length_scale <= 1.10):
         raise ValueError("length-scale fuera de rango")
+    if not (0.35 <= args.delete_distal_fraction <= 1.0):
+        raise ValueError("delete-distal-fraction fuera de rango")
 
     plan = _read(args.plan)
     if not plan.get("research_prototype") or plan.get("promotion_allowed"):
@@ -73,22 +76,13 @@ def main() -> int:
     canonical_matrix = rotation @ obj.matrix_world
     inv_obj = obj.matrix_world.inverted()
     canonical_vertices = [canonical_matrix @ v.co for v in mesh.vertices]
-    lo = Vector((
-        min(v.x for v in canonical_vertices),
-        min(v.y for v in canonical_vertices),
-        min(v.z for v in canonical_vertices),
-    ))
-    hi = Vector((
-        max(v.x for v in canonical_vertices),
-        max(v.y for v in canonical_vertices),
-        max(v.z for v in canonical_vertices),
-    ))
+    lo = Vector((min(v.x for v in canonical_vertices), min(v.y for v in canonical_vertices), min(v.z for v in canonical_vertices)))
+    hi = Vector((max(v.x for v in canonical_vertices), max(v.y for v in canonical_vertices), max(v.z for v in canonical_vertices)))
     span = Vector((max(hi.x-lo.x, 1e-12), max(hi.y-lo.y, 1e-12), max(hi.z-lo.z, 1e-12)))
 
     def norm_point(c: Vector) -> Vector:
         return Vector(((c.x-lo.x)/span.x, (c.y-lo.y)/span.y, (c.z-lo.z)/span.z))
 
-    # Medir el espesor REAL de la mano existente antes de reemplazar la zona distal.
     sampled_y = []
     for c in canonical_vertices:
         n = norm_point(c)
@@ -102,9 +96,13 @@ def main() -> int:
     y_center = (float(y_lo) + float(y_hi)) * 0.5
     half_depth = max((float(y_hi) - float(y_lo)) * 0.5 * float(args.depth_scale), float(span.y) * 0.008)
 
-    # Retirar sólo las caras cuyo centro cae en la caja distal de fingers. Este
-    # prototipo NO intenta cerrar/bridgear el agujero: la pregunta de esta fase es
-    # visual, "¿una topología extruida desde la referencia elimina mitten_shape?".
+    full_length = max(float(box[3] - box[0]), 1e-9)
+    distal_fraction = float(args.delete_distal_fraction)
+    if side == "left":
+        delete_cutoff = float(box[0] + full_length * distal_fraction)
+    else:
+        delete_cutoff = float(box[3] - full_length * distal_fraction)
+
     bm = bmesh.new()
     bm.from_mesh(mesh)
     bm.faces.ensure_lookup_table()
@@ -112,7 +110,9 @@ def main() -> int:
     for f in bm.faces:
         c = canonical_matrix @ f.calc_center_median()
         n = norm_point(c)
-        if _inside_norm(n, box):
+        in_box = _inside_norm(n, box)
+        in_distal_slice = (n.x <= delete_cutoff) if side == "left" else (n.x >= delete_cutoff)
+        if in_box and in_distal_slice:
             delete_faces.append(f)
     deleted_faces = len(delete_faces)
     if delete_faces:
@@ -124,7 +124,6 @@ def main() -> int:
     proxy_verts: list[tuple[float, float, float]] = []
     proxy_faces: list[tuple[int, ...]] = []
     digit_reports = []
-    full_length = max(float(box[3] - box[0]), 1e-9)
 
     for digit in digits:
         za_n, zb_n = [float(v) for v in digit["z_range_normalized"]]
@@ -152,10 +151,8 @@ def main() -> int:
             hz = base_half_h * taper
             hy = half_depth * taper
             canonical_ring = [
-                Vector((x, y_center - hy, z_center - hz)),
-                Vector((x, y_center + hy, z_center - hz)),
-                Vector((x, y_center + hy, z_center + hz)),
-                Vector((x, y_center - hy, z_center + hz)),
+                Vector((x, y_center - hy, z_center - hz)), Vector((x, y_center + hy, z_center - hz)),
+                Vector((x, y_center + hy, z_center + hz)), Vector((x, y_center - hy, z_center + hz)),
             ]
             for c in canonical_ring:
                 raw_world = inv_rotation @ c
@@ -166,15 +163,7 @@ def main() -> int:
             proxy_faces.extend(_ring_faces(first + ring * 4, first + (ring + 1) * 4))
         end = first + (rings - 1) * 4
         proxy_faces.append((end + 0, end + 1, end + 2, end + 3))
-        digit_reports.append({
-            "id": digit["id"],
-            "rings": rings,
-            "segments": int(args.segments),
-            "base_x_normalized": base_n,
-            "tip_x_normalized": tip_n,
-            "z_range_normalized": [za_n, zb_n],
-            "distal_fraction": frac,
-        })
+        digit_reports.append({"id": digit["id"], "rings": rings, "segments": int(args.segments), "base_x_normalized": base_n, "tip_x_normalized": tip_n, "z_range_normalized": [za_n, zb_n], "distal_fraction": frac})
 
     if len(digit_reports) < 2:
         raise RuntimeError("No se construyeron suficientes dedos")
@@ -187,8 +176,6 @@ def main() -> int:
     proxy_obj.matrix_world = obj.matrix_world.copy()
     if len(mesh.materials):
         proxy_mesh.materials.append(mesh.materials[0])
-
-    # Normales coherentes y sin transforms destructivos sobre el cuerpo.
     for poly in proxy_mesh.polygons:
         poly.use_smooth = True
     bpy.context.view_layer.update()
@@ -199,7 +186,7 @@ def main() -> int:
 
     finite = all(math.isfinite(c) for v in proxy_mesh.vertices for c in v.co)
     result = {
-        "mode": "reference_visible_digit_extrusion_build_v1",
+        "mode": "reference_visible_digit_extrusion_build_v2",
         "research_prototype": True,
         "reference_driven": bool(plan.get("reference_driven")),
         "invented_finger_count": bool(plan.get("invented_finger_count")),
@@ -208,6 +195,8 @@ def main() -> int:
         "digit_reports": digit_reports,
         "loop_rings_per_digit": int(args.segments) + 1,
         "deleted_baseline_faces": int(deleted_faces),
+        "delete_distal_fraction": distal_fraction,
+        "delete_cutoff_normalized": delete_cutoff,
         "baseline_vertices_before": int(before_vertices),
         "baseline_faces_before": int(before_faces),
         "baseline_faces_after_distal_delete": int(len(mesh.polygons)),
@@ -221,18 +210,10 @@ def main() -> int:
         "bridge_to_palm_validated": False,
         "scope_safe": False,
         "promotion_allowed": False,
-        "learning": (
-            "Cada banda visible se reconstruye como un volumen con anillos regulares a lo largo del dedo. "
-            "La unión final a la palma queda deliberadamente pendiente: si mejora la silueta, la siguiente fase debe bridgear esos loops al wrist/palm sin cambiar proporciones."
-        ),
+        "learning": "El borrado distal ahora puede acotarse sin cambiar la extrusión ni las bandas derivadas de referencia. La unión final a palma sigue pendiente.",
     }
     Path(args.report).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({
-        "digits_built": result["digits_built"],
-        "loop_rings_per_digit": result["loop_rings_per_digit"],
-        "deleted_baseline_faces": result["deleted_baseline_faces"],
-        "mesh_integrity": result["mesh_integrity"],
-    }, ensure_ascii=False))
+    print(json.dumps({"digits_built": result["digits_built"], "loop_rings_per_digit": result["loop_rings_per_digit"], "deleted_baseline_faces": result["deleted_baseline_faces"], "delete_distal_fraction": distal_fraction, "mesh_integrity": result["mesh_integrity"]}, ensure_ascii=False))
     return 0 if result["mesh_integrity"] else 8
 
 
