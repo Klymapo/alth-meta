@@ -43,6 +43,7 @@ genera la matriz y el learning backlog ordenado por madurez y prioridad.
 - malla/topología;
 - orientación;
 - preparación para rig.
+- controles de ojos y boca animables.
 
 Las regiones no implementadas no se ocultan con `N-A`: quedan con su nivel real (M0/M1/M2...).
 
@@ -91,3 +92,19 @@ Así el concepto de madurez se reutiliza con cualquier cassette futuro: personaj
 ## Política para Theo Alpha
 
 Antes de arrancar el loop general de Theo, todas las áreas críticas deben alcanzar al menos **M4**. El objetivo estable es M5. Una campaña local puede desarrollarse y validarse mientras tanto, pero no puede presentarse como mejora integral del personaje.
+
+## Validación M4 de Theo Alpha
+
+La cobertura actual contiene 23 áreas: 22 en M4 y pelo en M5. Los procesos globales,
+materiales, topología, rig y controles faciales fueron ejercitados con el GLB aprobado.
+Los workflows reproducen evidencia, auditoría, mutación, diagnóstico y regresión.
+
+M4 certifica la disponibilidad del proceso técnico. La aprobación artística y la
+calidad final de pesos, dedos, ojos y boca requieren revisión de sus resultados.
+El cassette de Theo continúa fuera de `copox/cassettes/enabled/`.
+
+Orientación tiene un gate de render; su corrección/promoción autónoma todavía
+no tiene una validación completa. Por eso su capacidad `loop_gate` queda en
+`false` y su nivel es M4.
+
+Resultados y limitaciones: [COPOX_M4_VALIDATION_2026-09-30.md](COPOX_M4_VALIDATION_2026-09-30.md).

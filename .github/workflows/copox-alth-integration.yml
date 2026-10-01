@@ -6,6 +6,8 @@ on:
       - "copox/adapters/alth_character*.py"
       - "copox/adapters/alth_glb_*.py"
       - "copox/adapters/model_inventory.py"
+      - "copox/adapters/topology_local_refine.py"
+      - "copox/learning/topology_diagnosis.py"
       - "copox/state_bundle.py"
       - "copox/maturity/**"
       - "copox/baselines/**"
@@ -116,6 +118,47 @@ jobs:
           for frozen in ('torso','arms_hands','legs_feet'):
               assert abs(float(detail[frozen]['delta_pp'])) < 0.05, (frozen, detail[frozen])
           print('PASS: Theo Alpha seed + orientación + inventario + frozen regions + evidencia')
+          PY
+
+      - name: Validar subdivisión local de dedos sin deformación
+        run: |
+          mkdir -p .copox/integration/topology_fingers/evidence
+          alth-python copox/adapters/topology_local_refine.py \
+            --input assets/joven_rubio/theo_alpha.glb \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --region fingers \
+            --output .copox/integration/topology_fingers/model.glb \
+            --report .copox/integration/topology_fingers/topology.json
+          python3 -m copox.adapters.regional_reference_audit \
+            --prev assets/joven_rubio/theo_alpha.glb \
+            --curr .copox/integration/topology_fingers/model.glb \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --output .copox/integration/topology_fingers/regional.json \
+            --evidence-dir .copox/integration/topology_fingers/evidence
+          python3 -m copox.learning.topology_diagnosis \
+            --candidate-report .copox/integration/topology_fingers/topology.json \
+            --regional .copox/integration/topology_fingers/regional.json \
+            --output .copox/integration/topology_fingers/learning.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('.copox/integration/topology_fingers')
+          t=json.loads((root/'topology.json').read_text())
+          r=json.loads((root/'regional.json').read_text())
+          learning=json.loads((root/'learning.json').read_text())
+          assert t['topology_density_increased'] is True, t
+          assert t['original_vertices_unchanged'] is True, t
+          assert t['safe_geometry_regression'] is True, t
+          assert t['surface_unchanged'] is True, t
+          assert t['uv_layers_preserved'] is True, t
+          assert learning['ready_for_m4_process'] is True, learning
+          assert learning['promotion_allowed'] is False
+          assert t['uv_layers'] >= 1, t
+          # subdividir sin mover la superficie no debe cambiar de forma materialmente
+          for name,data in r['regions'].items():
+              assert abs(float(data['delta_pp'])) < 0.05, (name, data)
+          print('PASS: topología local de dedos aumenta densidad sin alterar silueta')
           PY
 
       - name: Guardar evidencia de integración

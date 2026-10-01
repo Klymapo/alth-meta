@@ -1,3 +1,4 @@
+import hashlib
 import json
 import subprocess
 import tempfile
@@ -13,6 +14,11 @@ from copox.state_bundle import load_bundle, save_bundle
 
 
 class CopoxAlphaTests(unittest.TestCase):
+    def test_seed_matches_the_artistic_approval(self):
+        approved = json.loads(Path("copox/approved/theo.json").read_text())["approved_artistic_version"]
+        self.assertEqual(approved["status"], "APPROVED")
+        self.assertEqual(hashlib.sha256(Path(approved["repo_path"]).read_bytes()).hexdigest(), approved["sha256"])
+
     def test_theo_cassette_uses_approved_alpha_glb(self):
         cassette = load_cassette("copox/cassettes/examples/theo.json")
         variables = cassette.data["variables"]

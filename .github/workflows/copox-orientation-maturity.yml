@@ -1,0 +1,61 @@
+name: COPOX · Orientation maturity
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/alth_glb_render.py"
+      - "copox/learning/orientation_diagnosis.py"
+      - "copox/maturity/theo.json"
+      - "assets/joven_rubio/theo_alpha.glb"
+      - ".github/workflows/copox-orientation-maturity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  orientation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v6
+      - name: Preparar Blender
+        run: bash tools/ensure_blender.sh --strict
+      - name: Renderizar y diagnosticar orientación
+        run: |
+          rm -rf .copox/orientation
+          mkdir -p .copox/orientation
+          alth-python copox/adapters/alth_glb_render.py \
+            --input assets/joven_rubio/theo_alpha.glb \
+            --output-dir .copox/orientation \
+            --title "COPOX · Orientation maturity"
+          python3 -m copox.learning.orientation_diagnosis \
+            --report .copox/orientation/reporte.json \
+            --output .copox/orientation/learning.json
+      - name: Verificar invariantes
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('.copox/orientation/reporte.json').read_text())
+          l=json.loads(Path('.copox/orientation/learning.json').read_text())
+          assert r['orientation']['ok'] is True
+          assert r['orientation']['vertical_ok'] is True
+          assert r['orientation']['hair_above_body'] is True
+          assert l['ready'] is True
+          assert l['action'] == 'KEEP_CANONICAL_CORRECTION'
+          assert l['promotion_allowed'] is False
+          print('PASS: orientación auditable, corregible y con learning')
+          PY
+      - name: Evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-orientation-maturity
+          path: .copox/orientation/
+          retention-days: 1
+          if-no-files-found: ignore

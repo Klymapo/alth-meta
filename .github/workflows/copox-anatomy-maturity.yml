@@ -1,0 +1,182 @@
+name: COPOX · Anatomy maturity
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/regional_*.py"
+      - "copox/adapters/hand_detail_probe.py"
+      - "copox/adapters/glb_structure_probe.py"
+      - "copox/adapters/uv_region_probe.py"
+      - "copox/adapters/mesh_topology_probe.py"
+      - "copox/auditors/regional_gate.py"
+      - "copox/learning/regional_*.py"
+      - "copox/hypotheses/**"
+      - "copox/maturity/**"
+      - "copox/reference_configs/joven_rubio_alpha.json"
+      - "assets/joven_rubio/theo_alpha.glb"
+      - ".github/workflows/copox-anatomy-maturity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  anatomy-maturity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias de análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+
+      - name: Diagnóstico regional absoluto de Alpha
+        run: |
+          rm -rf .copox/anatomy
+          mkdir -p .copox/anatomy/baseline
+          python3 -m copox.adapters.regional_reference_audit \
+            --prev assets/joven_rubio/theo_alpha.glb \
+            --curr assets/joven_rubio/theo_alpha.glb \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --output .copox/anatomy/baseline/regional_metrics.json \
+            --evidence-dir .copox/anatomy/baseline/evidence
+          python3 -m copox.learning.regional_diagnosis \
+            --metrics .copox/anatomy/baseline/regional_metrics.json \
+            --output .copox/anatomy/baseline/learning.json
+          python3 -m copox.adapters.glb_structure_probe \
+            --input assets/joven_rubio/theo_alpha.glb \
+            --output .copox/anatomy/baseline/structure.json
+          python3 -m copox.adapters.uv_region_probe \
+            --input assets/joven_rubio/theo_alpha.glb \
+            --output .copox/anatomy/baseline/uv_regions.json
+          python3 -m copox.adapters.mesh_topology_probe \
+            --input assets/joven_rubio/theo_alpha.glb \
+            --output .copox/anatomy/baseline/topology.json
+          python3 -m copox.adapters.hand_detail_probe \
+            --model assets/joven_rubio/theo_alpha.glb \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --output .copox/anatomy/baseline/hand_detail.json \
+            --evidence-dir .copox/anatomy/baseline/hand_detail_evidence
+
+      - name: Estudio de hipótesis de orejas
+        run: |
+          python3 -m copox.learning.regional_hypothesis_study \
+            --baseline assets/joven_rubio/theo_alpha.glb \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --hypotheses copox/hypotheses/theo_ears.json \
+            --output-dir .copox/anatomy/ears
+
+      - name: Validar proceso M4 en todas las regiones deformables
+        run: |
+          python3 - <<'PY'
+          import json, shutil
+          from pathlib import Path
+          from copox.adapters.regional_process import run_process
+
+          baseline='assets/joven_rubio/theo_alpha.glb'
+          reference='refs/personajes/joven-rubio-4-vistas.jpg'
+          config='copox/reference_configs/joven_rubio_alpha.json'
+          cfg=json.loads(Path(config).read_text())
+          regions=sorted((cfg.get('morph_regions') or {}).keys())
+          root=Path('.copox/anatomy/processes')
+          results={}
+          for region in regions:
+              out=root/region
+              result=run_process(
+                  baseline, reference, config, region,
+                  {'scale':[0.995,0.995,0.995], 'shift_mm':[0.0,0.0,0.0]},
+                  str(out),
+              )
+              assert result['technically_m4_ready'] is True, (region, result)
+              assert result['morph']['mesh_integrity'] is True, region
+              assert result['morph']['safe_scope'] is True, region
+              assert result['learning']['priority'], region
+              results[region]={
+                  'technically_m4_ready': result['technically_m4_ready'],
+                  'safe_scope': result['morph']['safe_scope'],
+                  'regression': result['regression'],
+                  'target_metrics': result['target_metrics'],
+                  'next_learning': result['learning']['priority'][0],
+              }
+              (out/'model.glb').unlink(missing_ok=True)
+              shutil.rmtree(out/'evidence', ignore_errors=True)
+          (root/'summary.json').write_text(json.dumps(results, indent=2), encoding='utf-8')
+          print('Validated regions:', ', '.join(regions))
+          PY
+
+      - name: Verificar cobertura y aprendizaje sin promoción
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('.copox/anatomy')
+          regional = json.loads((root/'baseline'/'regional_metrics.json').read_text())
+          required = {
+              'whole_body_silhouette','head_shape','hair','ears','face','neck','torso','shoulders',
+              'arms','elbows_forearms','hands','fingers','pelvis_hips','legs','knees','ankles','feet_footwear'
+          }
+          assert required <= set(regional['regions']), sorted(required - set(regional['regions']))
+          learning = json.loads((root/'baseline'/'learning.json').read_text())
+          assert learning['mode'] == 'learning_first'
+          assert learning['priority']
+
+          structure = json.loads((root/'baseline'/'structure.json').read_text())
+          assert structure['counts']['nodes'] > 0
+          assert len(structure['rig']['ear_nodes']) == 2, structure['rig']['ear_nodes']
+          assert len(structure['rig']['hair_nodes']) >= 10, structure['rig']['hair_nodes']
+          assert structure['rig']['basic_skin_present'] is False
+          assert structure['counts']['joints'] == 0
+          assert structure['materials']['hair_and_explicit_ears_share_material'] is True
+
+          uv = json.loads((root/'baseline'/'uv_regions.json').read_text())
+          assert uv['learning']['automatic_fix_allowed'] is False
+          assert uv['samples']['explicit_ears']['count'] > 0
+          assert uv['samples']['body_ear_neighborhood']['count'] > 0
+
+          topology = json.loads((root/'baseline'/'topology.json').read_text())
+          assert topology['summary']['geometry_count'] >= 16
+          assert topology['dominant']['vertices'] > 0
+          assert topology['dominant']['welded_topology']['nonmanifold_edges'] == 0
+          assert topology['learning']['naive_vertex_merge_allowed'] is False
+
+          hand = json.loads((root/'baseline'/'hand_detail.json').read_text())
+          assert len(hand['hands']) == 2
+          assert all(x['reference']['occupied_pixels'] > 0 for x in hand['hands'])
+          assert all(x['model']['occupied_pixels'] > 0 for x in hand['hands'])
+
+          ears = json.loads((root/'ears'/'study.json').read_text())
+          assert ears['promotion_allowed'] is False
+          assert len(ears['results']) == 4
+          changed = [x for x in ears['results'] if x['id'] != 'baseline']
+          assert all(x['morph']['detail']['mode'] == 'named_nodes' for x in changed)
+          assert all(x['morph']['detail']['changed'] == 2 for x in changed)
+
+          processes=json.loads((root/'processes'/'summary.json').read_text())
+          expected={
+              'head_shape','face','ears','neck','torso','shoulders','arms','elbows_forearms',
+              'hands','fingers','pelvis_hips','legs','knees','ankles','feet_footwear'
+          }
+          assert expected <= set(processes), sorted(expected-set(processes))
+          assert all(v['technically_m4_ready'] and v['safe_scope'] for v in processes.values())
+
+          closeups = list((root/'baseline'/'evidence').glob('region_*.png'))
+          assert len(closeups) >= 20, len(closeups)
+          print('PASS: M4 regional + manos + UV orejas + topología + rig/material diagnostics')
+          PY
+
+      - name: Guardar evidencia anatómica
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-anatomy-maturity
+          path: .copox/anatomy/
+          retention-days: 1
+          if-no-files-found: ignore
