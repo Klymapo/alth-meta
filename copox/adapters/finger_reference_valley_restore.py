@@ -14,6 +14,8 @@ from copox.adapters.alth_character_audit import (
     load_config,
     load_scene,
     person_mask,
+    raster_silhouette,
+    region_mask,
     registration_from_baseline,
 )
 
@@ -32,6 +34,20 @@ def _dominant(scene: trimesh.Scene):
     if not rows:
         raise RuntimeError("GLB sin geometría editable")
     return max(rows, key=lambda x: len(x[3].vertices))
+
+
+def _yrange(mask: np.ndarray) -> tuple[float, float]:
+    ys, _ = np.where(mask)
+    if not len(ys):
+        raise RuntimeError("Máscara local de mano vacía")
+    return float(ys.min()), float(ys.max())
+
+
+def _map_y(y: float, src: tuple[float, float], dst: tuple[float, float]) -> float:
+    s0, s1 = src
+    d0, d1 = dst
+    t = (float(y) - s0) / max(s1 - s0, 1e-9)
+    return d0 + t * (d1 - d0)
 
 
 def restore_valleys(
@@ -57,6 +73,18 @@ def restore_valleys(
     front = crop_norm(sheet, cfg["views"]["front"])
     ref_mask = person_mask(front)
     registration = registration_from_baseline(audit_mesh, "front", ref_mask, cfg)
+    model_mask = raster_silhouette(audit_mesh, "front", front.shape[:2], registration, cfg)
+
+    # Retarget vertical local: cada valle se expresa dentro del bbox de la propia
+    # mano de referencia y se lleva a la misma fracción del bbox de la mano modelo.
+    hand_specs = [s for s in ((cfg.get("regions_by_view") or {}).get("hands") or []) if str(s.get("view", "front")) == "front"]
+    if len(hand_specs) < 2:
+        raise RuntimeError("Se requieren dos ROIs frontales de manos")
+    left_roi = region_mask(ref_mask, [float(v) for v in hand_specs[0]["box"]])
+    ref_hand = ref_mask & left_roi
+    model_hand = model_mask & left_roi
+    ref_hand_y = _yrange(ref_hand)
+    model_hand_y = _yrange(model_hand)
 
     scene = trimesh.load(str(input_glb), force="scene")
     node_name, geom_name, node_matrix, geom = _dominant(scene)
@@ -73,7 +101,6 @@ def restore_valleys(
     v_axis = int(coord["vertical_axis"])
     d_axis = int(coord["depth_axis"])
     h_sign = float(coord.get("front_sign", 1.0))
-    px = registration["pixel_center_x"] + ((world[:, h_axis] * scale_mm * h_sign) - registration["horizontal_center"]) * registration["scale"]
     py = registration["pixel_bottom_y"] - ((world[:, v_axis] * scale_mm) - registration["vertical_min"]) * registration["scale"]
 
     morph = cfg.get("morph_regions") or {}
@@ -84,10 +111,6 @@ def restore_valleys(
 
     finger_box = np.asarray(finger_boxes[0], dtype=float)
     hand_box = np.asarray(hand_boxes[0], dtype=float)
-
-    # La profundidad 3D permanece limitada al contexto de mano. La altura NO usa
-    # una caja Z predefinida: la propia fila py de cada valle de la referencia es el
-    # límite vertical, evitando que una ROI 3D antigua contradiga la evidencia 2D.
     depth_lo = float(hand_box[d_axis])
     depth_hi = float(hand_box[d_axis + 3])
     inside_depth = (norm[:, d_axis] >= depth_lo) & (norm[:, d_axis] <= depth_hi)
@@ -111,8 +134,11 @@ def restore_valleys(
     for idx, valley in enumerate(valleys, 1):
         bbox = [float(v) for v in valley["bbox_px"]]
         x0, y0, x1, y1 = bbox
-        yc = 0.5 * (y0 + y1)
-        half = max(1.5, 0.5 * (y1 - y0 + 1.0))
+        mapped_y0 = _map_y(y0, ref_hand_y, model_hand_y)
+        mapped_y1 = _map_y(y1, ref_hand_y, model_hand_y)
+        ma, mb = sorted((mapped_y0, mapped_y1))
+        yc = 0.5 * (ma + mb)
+        half = max(1.5, 0.5 * (mb - ma + 1.0))
         feather = max(1.5, half * 0.45)
         dy = np.abs(py - yc)
         vertical = np.clip((half + feather - dy) / feather, 0.0, 1.0)
@@ -124,9 +150,10 @@ def restore_valleys(
                 "distal_scope_vertices": int(distal_scope.sum()),
                 "py_scope_min": py_scope_min,
                 "py_scope_max": py_scope_max,
-                "valley_bbox": bbox,
-                "horizontal_norm": [fx0, fx1],
-                "depth_norm": [depth_lo, depth_hi],
+                "reference_valley_bbox": bbox,
+                "reference_hand_y": list(ref_hand_y),
+                "model_hand_y": list(model_hand_y),
+                "mapped_model_y": [ma, mb],
             }
             raise RuntimeError(f"Valle {idx} no seleccionó vértices: {debug}")
 
@@ -138,13 +165,13 @@ def restore_valleys(
         weights = distal_weight * vertical * active.astype(float)
         applied = shift_model * weights
 
-        # Mano izquierda: desplazar hacia interior crea la muesca entre bandas.
         updated[:, h_axis] += applied * h_sign
         selected_total |= active
         max_shift = max(max_shift, float(np.max(applied)))
         valley_reports.append({
             "id": idx,
-            "bbox_px": bbox,
+            "reference_bbox_px": bbox,
+            "mapped_model_y_px": [float(ma), float(mb)],
             "area_px": int(valley.get("area_px", 0)),
             "selected_vertices": int(active.sum()),
             "reference_width_px": float(valley_width_px),
@@ -168,7 +195,9 @@ def restore_valleys(
         "geometry": geom_name,
         "selection_coordinates": "trimesh_world_z_up_no_extra_rotation",
         "coordinate_axes": {"horizontal": h_axis, "vertical": v_axis, "depth": d_axis},
-        "vertical_scope_source": "reference_projected_py",
+        "vertical_scope_source": "local_hand_bbox_retarget",
+        "reference_hand_y": list(ref_hand_y),
+        "model_hand_y": list(model_hand_y),
         "depth_scope_source": "hands",
         "distal_horizontal_source": "fingers",
         "distal_scope_vertices": int(distal_scope.sum()),
@@ -183,7 +212,7 @@ def restore_valleys(
         "max_shift_mm": float(max_shift * scale_mm),
         "valleys": valley_reports,
         "promotion_allowed": False,
-        "note": "La referencia gobierna la altura; hands limita profundidad y fingers limita X distal. La auditoría regional veta cualquier fuga a muñeca/antebrazo.",
+        "note": "Cada valle conserva su posición relativa dentro de la mano; hands limita profundidad y fingers limita X distal. Nunca promociona por sí mismo.",
     }
     Path(report_path).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return result
