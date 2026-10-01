@@ -60,13 +60,22 @@ def _candidate_state(baseline_state: dict[str, Any], result: dict[str, Any], can
         "params": result.get("params") or {},
         "baseline_sha256": result.get("baseline_sha256"),
     })
-    # Mantener el JSON acotado; la historia completa vive también en commits de state branch.
     m5["module_history"] = history[-50:]
     m5["last_module"] = result["module"]
     m5.setdefault("module_params", {})[result["module"]] = result.get("params") or {}
     m5["format"] = "model-state-v1"
     state["_m5"] = m5
     return state
+
+
+def _learning_files(run_dir: Path) -> list[dict[str, Any]]:
+    rows = []
+    for p in sorted(run_dir.glob("learning_t*.json")):
+        try:
+            rows.append(_read(p))
+        except Exception:
+            continue
+    return rows
 
 
 def cmd_prepare(args: argparse.Namespace) -> int:
@@ -96,20 +105,26 @@ def cmd_prepare(args: argparse.Namespace) -> int:
     diagnostics = build_diagnostics(regional)
     learning_meta = dict(source.get("learning") or {})
     cooldown = set(str(x) for x in learning_meta.get("cooldown_modules", []))
+    attempt_counts = {str(k): int(v) for k, v in (learning_meta.get("attempt_counts") or {}).items()}
     cfg = _read((repo / args.config).resolve())
     diagnostics = _route_supported(diagnostics, cfg, cooldown)
     policy = _read((repo / args.policy).resolve())
     route = choose_module(policy, diagnostics)
+    cycle_reset = False
     if not route.get("selected"):
+        # Todos los módulos soportados están en cooldown: abre un nuevo ciclo de técnicas.
         diagnostics = build_diagnostics(regional)
         diagnostics = _route_supported(diagnostics, cfg, set())
         route = choose_module(policy, diagnostics)
         cooldown = set()
+        cycle_reset = True
     _write(run_dir / "diagnostics.json", diagnostics)
     _write(run_dir / "route.json", route)
     _write(run_dir / "learning_state.json", {
         "source_learning": learning_meta,
         "cooldown_applied": sorted(cooldown),
+        "attempt_counts": attempt_counts,
+        "cycle_reset": cycle_reset,
         "selected": route.get("selected"),
     })
     if not route.get("selected"):
@@ -122,11 +137,15 @@ def cmd_mutate(args: argparse.Namespace) -> int:
     candidate = Path(args.candidate_dir).resolve()
     candidate.mkdir(parents=True, exist_ok=True)
     route = _read(run_dir / "route.json")
+    learning_state = _read(run_dir / "learning_state.json")
+    module = str(route["selected"])
+    attempts = dict(learning_state.get("attempt_counts") or {})
     spec = {
-        "module": route["selected"],
+        "module": module,
         "candidate_id": args.candidate_id,
         "slot": _slot(args.candidate_id),
         "tournament": _tournament(args.candidate_id),
+        "technique_round": int(attempts.get(module, 0)) + 1,
     }
     _write(candidate / "module_spec.json", spec)
     return 0
@@ -137,18 +156,19 @@ def cmd_capture(args: argparse.Namespace) -> int:
     run_dir = Path(args.run_dir).resolve()
     candidate = Path(args.candidate_dir).resolve()
     spec = _read(candidate / "module_spec.json")
+    effective_tournament = int(spec["tournament"]) + max(0, int(spec.get("technique_round", 1)) - 1)
     trial = run_trial(
         str(run_dir / "baseline" / "model.glb"),
         str((repo / args.reference).resolve()),
         str((repo / args.config).resolve()),
         str((repo / args.policy).resolve()),
-        str(spec["module"]), int(spec["slot"]), str(candidate), int(spec["tournament"]),
+        str(spec["module"]), int(spec["slot"]), str(candidate), effective_tournament,
     )
     result = trial["result"]
+    result["technique_round"] = int(spec.get("technique_round", 1))
+    _write(candidate / "module_result.json", result)
     gate = trial["gate"]
 
-    # El trial puede escribir params operativos locales. Los convertimos a estado acumulativo
-    # antes de cualquier posible promoción para no borrar hair/u otros módulos históricos.
     baseline_state = _read(run_dir / "baseline" / "params.json")
     _write(candidate / "params.json", _candidate_state(baseline_state, result, str(spec["candidate_id"])))
 
@@ -161,10 +181,7 @@ def cmd_capture(args: argparse.Namespace) -> int:
             "worst_view_delta_pp": float(result["worst_view_delta_pp"]),
             "reasons": list(gate.get("reasons") or []),
         },
-        "technical": {
-            "mesh_integrity": bool(result["mesh_integrity"]),
-            "scope_safe": bool(result["scope_safe"]),
-        },
+        "technical": {"mesh_integrity": bool(result["mesh_integrity"]), "scope_safe": bool(result["scope_safe"])},
         "regression": {"ok": bool(result["regression_ok"])},
         "evidence": {"complete": bool(result["evidence_complete"])},
         "semantic": {"ready": bool(result["semantic_ready"])},
@@ -203,12 +220,25 @@ def cmd_learn(args: argparse.Namespace) -> int:
     failed_module = str(route.get("selected"))
     new_route = _reroute(run_dir, (repo / args.policy).resolve(), failed_module)
 
+    state = _read(run_dir / "learning_state.json")
+    source_learning = dict(state.get("source_learning") or {})
+    cooldown = set(str(x) for x in source_learning.get("cooldown_modules", []))
+    attempts = {str(k): int(v) for k, v in (source_learning.get("attempt_counts") or {}).items()}
+    for previous in _learning_files(run_dir):
+        if previous.get("failed_module"):
+            cooldown.add(str(previous["failed_module"]))
+        for key, value in (previous.get("attempt_counts") or {}).items():
+            attempts[str(key)] = max(attempts.get(str(key), 0), int(value))
+    cooldown.add(failed_module)
+    attempts[failed_module] = attempts.get(failed_module, 0) + 1
+
     learning = {
         "failed_module": failed_module,
         "next_module": new_route.get("selected"),
         "tournament": int(args.tournament),
-        "cooldown_modules": [failed_module],
-        "reason": "Ningún hermano obtuvo gate M5; rotar módulo/técnica, no promover baseline.",
+        "cooldown_modules": sorted(cooldown),
+        "attempt_counts": attempts,
+        "reason": "Ningún hermano obtuvo gate M5; acumular aprendizaje y rotar módulo/técnica sin promover baseline.",
     }
     _write(run_dir / f"learning_t{int(args.tournament):02d}.json", learning)
 
@@ -251,16 +281,11 @@ def cmd_promote(args: argparse.Namespace) -> int:
                 "candidate": candidate.name,
                 "promotion": True,
                 "gate": gate,
-                "learning": {"cooldown_modules": []},
+                "learning": {"cooldown_modules": [], "attempt_counts": {}},
                 "github_run_id": os.environ.get("GITHUB_RUN_ID"),
             },
         )
-    _write(candidate / "promotion.json", {
-        "promotion_allowed": True,
-        "state_branch": args.state_branch,
-        "state_commit": state_commit,
-        "module": result["module"],
-    })
+    _write(candidate / "promotion.json", {"promotion_allowed": True, "state_branch": args.state_branch, "state_commit": state_commit, "module": result["module"]})
     return 0
 
 
