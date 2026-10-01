@@ -36,7 +36,7 @@ crear_asset.py → hoja final (4 vistas) → auditoria_visual.py ─┬─ PASS 
    | `aspecto` | ancho/alto de la caja |
    | `color_regiones` | color por celda de una rejilla 4×3 (Lab con L* a la mitad: la luz del render no es la de la ref) |
    | `color_dominante` | los 6 colores dominantes emparejados |
-   | `no_peor_que_aprobado` | si ya hay un asset aprobado, el nuevo no puede quedar peor en silueta ni contorno |
+   | `supera_aprobado` | si ya hay un asset aprobado, reemplazarlo exige superarlo: más IoU y menos contorno p95 que él (`no_peor_que_aprobado` queda como dato) |
 
    Informativas: Dice, Hu completos, banda máxima, SSIM de luminancia.
 3. **Vista**: se audita cada vista del render y se usa la más parecida; con `--vista` se fuerza una y se

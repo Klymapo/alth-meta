@@ -4,8 +4,8 @@
 
 Criterios sobre la corrida de tools/crear_asset.py (resumen.json):
   dimensiones dadas ±2 %, tris ≤ tope, paleta, sin flotantes, apoyo Z=0 (verificación alth),
-  AUDITORÍA VISUAL PASS contra la referencia (tools/auditoria_visual.py, la que decide), no quedar peor
-  que el asset aprobado medido IGUAL (mismo encuadre y mismas medidas) y tiempo de corrida < max-minutos.
+  AUDITORÍA VISUAL PASS contra la referencia (tools/auditoria_visual.py, la que decide), SUPERAR al
+  asset aprobado medido IGUAL (mismo encuadre y mismas medidas) y tiempo de corrida < max-minutos.
 Si la corrida no trae auditoría (corridas viejas), se audita aquí. Sin Blender: sólo numpy/scipy/Pillow.
 Código de salida: 0 = aceptado, 1 = no.
 """
@@ -53,7 +53,7 @@ def evaluar(carpeta: Path, contra: Path | None, max_minutos: float = 15.0) -> di
         "sin_flotantes": checks.get("flotantes", False),
         "apoyo_z0": checks.get("apoyo", False),
         "auditoria_visual": au.get("decision") == "PASS",
-        "no_peor_que_aprobado": au.get("no_peor_que_aprobado") if contra else None,
+        "supera_aprobado": au.get("supera_aprobado") if contra else None,
         "tiempo": resumen["segundos"] / 60.0 < max_minutos,
     }
     return {"criterios": criterios, "aceptado": all(v for v in criterios.values() if v is not None),

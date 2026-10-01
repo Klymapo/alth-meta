@@ -133,7 +133,7 @@ def test_peor_que_aprobado_falla():
     solo = A.auditar(ref, ref_m, regular, U)
     assert solo["decision"] == "PASS", solo["fallas"]
     r = A.auditar(ref, ref_m, regular, U, aprobado=bueno)
-    assert r["no_peor_que_aprobado"] is False and r["decision"] == "FAIL"
+    assert r["no_peor_que_aprobado"] is False and r["decision"] == "FAIL" and "supera_aprobado" in r["fallas"]
     r2 = A.auditar(ref, ref_m, bueno, U, aprobado=regular)
     assert r2["no_peor_que_aprobado"] and r2["supera_aprobado"] and r2["decision"] == "PASS"
 
@@ -188,11 +188,14 @@ def test_matriz_real_aprobados_pasan_y_cruces_fallan():
     assert not malos, malos
 
 
-def test_manzana_aprobada_no_es_peor_que_si_misma():
+def test_reemplazar_al_aprobado_exige_superarlo():
+    """La misma manzana contra sí misma no es peor, pero tampoco lo supera: no la reemplaza."""
     rgb, m, _ = M.cargar_con_mascara(RAIZ / MANZANA[0], MANZANA[1])
     v = A.vistas_de_hoja(RAIZ / "assets" / "manzana" / "final.png")
     r = A.auditar(rgb, m, v, U, aprobado=v)
-    assert r["no_peor_que_aprobado"] and not r["supera_aprobado"] and r["decision"] == "PASS"
+    assert r["no_peor_que_aprobado"] and not r["supera_aprobado"]
+    assert r["decision"] == "FAIL" and r["fallas"] == ["supera_aprobado"]
+    assert A.auditar(rgb, m, v, U)["decision"] == "PASS"          # como asset nuevo sí pasa
 
 
 # ---------------------------------------------------------------- calibración

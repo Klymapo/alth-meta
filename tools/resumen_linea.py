@@ -36,8 +36,8 @@ def markdown(r: dict, url_hoja: str | None = None) -> str:
             lineas += ["", "| medida | valor | |", "|---|---|---|"] + [
                 f"| {k} | {md.get(k, '')} | {v} |" for k, v in pm.items()]
         if au.get("aprobado"):
-            lineas.append(f"\nContra el aprobado anterior: no peor {au.get('no_peor_que_aprobado')}, "
-                          f"lo supera {au.get('supera_aprobado')}.")
+            lineas.append(f"\nContra el aprobado anterior: lo supera {au.get('supera_aprobado')} "
+                          f"(no peor {au.get('no_peor_que_aprobado')}). Reemplazarlo exige superarlo.")
     aj = r.get("ajuste")
     if aj:
         lineas += ["", f"Ajuste numérico: **{aj['estado']}** en {aj['rondas']} ronda(s), IoU {aj['iou_base']} → {aj['iou_final']}."]

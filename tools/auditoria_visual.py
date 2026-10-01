@@ -19,8 +19,9 @@ Cómo compara (diseño de docs/AUDITORIA_VISUAL.md):
      banda máxima, SSIM de luminancia.
   4. Un FAIL veta; ningún puntaje compensa un FAIL (regla COPOX). Medidas sin datos = N-A.
   5. Vista: se audita cada vista del render y se elige la más parecida (o la declarada con --vista).
-  6. Con --aprobado (hoja del asset aprobado, mismo encuadre): el candidato no puede quedar PEOR que el
-     aprobado en silueta ni contorno (RegressionGuard). `supera_aprobado` dice si lo mejora.
+  6. Con --aprobado (hoja del asset aprobado, mismo encuadre): para REEMPLAZAR un asset aprobado el
+     candidato tiene que superarlo (más IoU y menos desvío de contorno p95 que él); `no_peor_que_aprobado`
+     queda como dato (tolerancia de spec/auditoria_visual.json).
 
 Salida: auditoria.json + comparacion.png (azul = sólo referencia, naranja = sólo render, gris = ambos).
 Código de salida: 0 PASS · 1 FAIL · 2 entrada inválida.
@@ -330,11 +331,14 @@ def auditar(ref_rgb, ref_m, vistas: dict, umbrales: dict, vista_declarada: str |
         no_peor = (cm["silueta_iou"] >= am["silueta_iou"] - tol["silueta_iou"]
                    and cm["contorno_p95"] <= am["contorno_p95"] + tol["contorno_p95"])
         out["aprobado"] = {"vista": ap["vista"], "medidas": am, "decision_propia": ap["decision"]}
+        supera = bool(cm["silueta_iou"] > am["silueta_iou"] and cm["contorno_p95"] < am["contorno_p95"])
         out["no_peor_que_aprobado"] = bool(no_peor)
-        out["supera_aprobado"] = bool(cm["silueta_iou"] > am["silueta_iou"] and cm["contorno_p95"] < am["contorno_p95"])
-        out["por_medida"]["no_peor_que_aprobado"] = "PASS" if no_peor else "FAIL"
-        if not no_peor:
-            fallas.append("no_peor_que_aprobado")
+        out["supera_aprobado"] = supera
+        # Reemplazar un asset aprobado exige SUPERARLO (decisión del dueño: "el chiste es superar la
+        # manzana"); quedar igual o apenas peor no justifica cambiarlo.
+        out["por_medida"]["supera_aprobado"] = "PASS" if supera else "FAIL"
+        if not supera:
+            fallas.append("supera_aprobado")
             decision = "FAIL"
     out["fallas"], out["decision"] = fallas, decision
     return out

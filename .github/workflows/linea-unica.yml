@@ -134,6 +134,17 @@ jobs:
           echo "salida=$code" | tee -a "$GITHUB_OUTPUT"
           test -f .linea/crear/manzana/resumen.json
           alth-python tools/resumen_linea.py .linea/crear/manzana/resumen.json | tee -a "$GITHUB_STEP_SUMMARY"
+          # medidas de la auditoría como anotación: se leen sin bajar el artifact (API pública de checks)
+          alth-python - <<'PY'
+          import json
+          a = json.load(open(".linea/crear/manzana/resumen.json")).get("auditoria") or {}
+          def corto(m): return ", ".join(f"{k}={v}" for k, v in (m or {}).items() if k in (
+              "silueta_iou", "contorno_p95", "contorno_chamfer", "compacidad", "bandas_media", "aspecto",
+              "color_regiones", "color_dominante", "ssim_lum"))
+          print(f"::notice title=auditoria manzana {a.get('decision')} ({a.get('vista')})::fallas={a.get('fallas')} | {corto(a.get('medidas'))}")
+          if a.get("aprobado"):
+              print(f"::notice title=manzana aprobada ({a['aprobado'].get('vista')})::{corto(a['aprobado'].get('medidas'))}")
+          PY
           # 0 = aprobado por la auditoría, 3 = la auditoría lo rechazó: las dos son corridas completas.
           # Cualquier otro código es un fallo de la línea y pone el job en rojo.
           case "$code" in 0|3) ;; *) echo "::error::crear_asset salió con $code"; exit "$code" ;; esac

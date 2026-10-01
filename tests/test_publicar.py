@@ -74,8 +74,11 @@ def _corrida(tmp_path, hoja, verif_ok=True):
 
 def test_aceptacion_exige_auditoria_visual(tmp_path):
     import aceptacion as ac
-    ok = ac.evaluar(_corrida(tmp_path / "a", RAIZ / "assets" / "manzana" / "final.png"), RAIZ / "assets" / "manzana")
-    assert ok["criterios"]["auditoria_visual"] and ok["criterios"]["no_peor_que_aprobado"] and ok["aceptado"]
+    ok = ac.evaluar(_corrida(tmp_path / "a", RAIZ / "assets" / "manzana" / "final.png"), None)
+    assert ok["criterios"]["auditoria_visual"] and ok["aceptado"]
+    # contra la manzana aprobada, la misma manzana no la supera: no se acepta como reemplazo
+    igual = ac.evaluar(_corrida(tmp_path / "a2", RAIZ / "assets" / "manzana" / "final.png"), RAIZ / "assets" / "manzana")
+    assert not igual["criterios"]["supera_aprobado"] and not igual["aceptado"]
     mal = ac.evaluar(_corrida(tmp_path / "b", RAIZ / "assets" / "taza" / "final.png"), RAIZ / "assets" / "manzana")
     assert not mal["criterios"]["auditoria_visual"] and not mal["aceptado"]
 
