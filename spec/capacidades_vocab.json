@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "fecha": "2026-10-01",
+  "nota": "Vocabulario controlado de capacidades técnicas. tools/reconocer.py obliga al modelo de visión a elegir de aquí; lo que no esté se registra como capacidad nueva (a investigar), nunca se acepta sin más. Estado (dominada/parcial/fallida/desconocida) NO vive aquí: vive en kb/capacidades.json con evidencia.",
+  "tipos": ["objeto", "personaje", "mueble", "animal", "vehiculo", "arquitectura", "escena"],
+  "capacidades": {
+    "torno":            {"descripcion": "Objetos de revolución: frutas, latas, tazas, vasos, botellas.", "modulo_alth": "alth.torno"},
+    "prisma":           {"descripcion": "Cuerpos alargados de pocas caras: tallos, palos, columnas, picos.", "modulo_alth": "alth.prisma"},
+    "hoja":             {"descripcion": "Formas laminares delgadas: hojas, pétalos, alas, tela plana.", "modulo_alth": "alth.hoja"},
+    "anillo":           {"descripcion": "Aros y asas: asas de taza, argollas, lengüetas, rosquillas.", "modulo_alth": "alth.anillo"},
+    "caja":             {"descripcion": "Volúmenes rectangulares con bisel: cajas, muebles simples, libros.", "modulo_alth": "alth.caja"},
+    "calcomania":       {"descripcion": "Dibujo, etiqueta o motivo aplicado sobre una superficie curva o plana.", "modulo_alth": "alth.calcomania"},
+    "contorno_libre":   {"descripcion": "Silueta irregular extruida o aplicada: óvalos, gotas, tiras, formas orgánicas planas.", "modulo_alth": "alth.contorno_ovalo/contorno_gota/contorno_tira"},
+    "texto_legible":    {"descripcion": "Texto que debe poder leerse en el modelo (letreros, etiquetas con palabras).", "modulo_alth": null},
+    "simetria_bilateral": {"descripcion": "El objeto o personaje es simétrico izquierda/derecha y puede modelarse en espejo.", "modulo_alth": null},
+    "material_metal":   {"descripcion": "Superficie metálica o brillante (usa material metal_suave de la paleta).", "modulo_alth": "alth.anillo(metal=True)"},
+    "transparencia_vidrio": {"descripcion": "Vidrio, plástico transparente, cristal.", "modulo_alth": null},
+    "liquido":          {"descripcion": "Líquido visible dentro de un recipiente o derramado.", "modulo_alth": null},
+    "cuerpo_humanoide": {"descripcion": "Cuerpo humano completo en proporción chibi-soft (cabeza, torso, brazos, piernas).", "modulo_alth": "alth.personaje"},
+    "cabeza_cara":      {"descripcion": "Cara con ojos, cejas, nariz y boca legibles y compatibles con animación.", "modulo_alth": "alth.personaje"},
+    "dedos":            {"descripcion": "Manos con dedos individuales visibles y modelables.", "modulo_alth": null},
+    "pelo_corto":       {"descripcion": "Cabello corto o peinado compacto.", "modulo_alth": "alth.pelo"},
+    "pelo_largo":       {"descripcion": "Cabello largo, mechones, trenzas o flequillo extenso.", "modulo_alth": "alth.pelo"},
+    "ropa_ajustada":    {"descripcion": "Ropa pegada al cuerpo: playera, pantalón, chaleco.", "modulo_alth": "alth.ropa"},
+    "ropa_holgada_tela": {"descripcion": "Tela suelta o con caída: abrigo largo, capa, falda, bufanda.", "modulo_alth": null},
+    "calzado":          {"descripcion": "Zapatos, botas, tenis.", "modulo_alth": "alth.personaje"},
+    "accesorio_rigido": {"descripcion": "Objeto rígido pegado al cuerpo: lentes, sombrero, reloj, mochila, arma de mano.", "modulo_alth": null},
+    "animal_cuadrupedo": {"descripcion": "Animal de cuatro patas.", "modulo_alth": null},
+    "vehiculo":         {"descripcion": "Coche, bicicleta, barco u otro vehículo.", "modulo_alth": null},
+    "arquitectura":     {"descripcion": "Edificio, puerta, ventana, estructura a escala de personaje.", "modulo_alth": null},
+    "rig_esqueleto":    {"descripcion": "Debe poder animarse con esqueleto (huesos, pesos, poses).", "modulo_alth": null}
+  }
+}
