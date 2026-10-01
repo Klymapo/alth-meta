@@ -44,7 +44,6 @@ jobs:
           shutil.rmtree(root, ignore_errors=True)
           root.mkdir(parents=True, exist_ok=True)
 
-          # Reproduce exactamente el mejor scope anterior (85 %) una sola vez.
           base_root=root/'base_scope'
           base_trial=run_scope(baseline, reference, config, policy_path, 3, str(base_root))
           source=base_root/'model.glb'
@@ -82,7 +81,7 @@ jobs:
 
           cfg=_read(config); policy=_read(policy_path)
           tol=float((cfg.get('approval') or {}).get('freeze_tolerance_pp',-0.20))
-          shifts=(-0.50,0.0,0.50)
+          shifts=(0.75,1.0,1.5)
           rows=[]
           for idx,shift in enumerate(shifts,1):
               out=root/f'c0{idx}'; out.mkdir(parents=True,exist_ok=True)
