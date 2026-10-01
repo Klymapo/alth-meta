@@ -8,9 +8,9 @@
     "alto": 105
   },
   "medidas_alth_mm": {
-    "diametro": 8.16,
-    "alto": 11.74,
-    "formula": "mm_real * 0.0559 * 2.0"
+    "diametro": 7.76,
+    "alto": 11.16,
+    "formula": "mm_real * 0.05316 * 2.0"
   },
   "colores": {
     "metal": {
@@ -77,6 +77,11 @@
     {
       "vuelta": 5,
       "nota": "re-exportada con calcomanías v2 (374 tris); rayita de canto en vista lateral aceptada"
+    },
+    {
+      "vuelta": "escala v2",
+      "nota": "×0.9510 (s0 0.0559 → 0.05316); solo tamaño, aprobado sin rehacer",
+      "fecha": "2026-10-01"
     }
   ],
   "tris_max": 530,
@@ -84,14 +89,20 @@
     {
       "pieza": "Lata_cuerpo",
       "eje": "W",
-      "mm": 8.16
+      "mm": 7.76
     },
     {
       "pieza": "Lata_cuerpo",
       "eje": "H",
-      "mm": 11.74
+      "mm": 11.16
     }
   ],
   "nota_cotas": "W es de arista a arista con giro frente e incluye los rebordes (RB = R × 1.04): da ≈ 8.20, dentro de ±2 % del diámetro 8.16",
-  "nota_tris_max": "dibujo por calcomanías; 500 era estimado"
+  "nota_tris_max": "dibujo por calcomanías; 500 era estimado",
+  "escala": {
+    "version": "v2.0",
+    "s0": 0.05316,
+    "factor": 0.95098,
+    "nota": "re-dimensionado uniforme con tools/redimensionar.py; forma sin cambios"
+  }
 }

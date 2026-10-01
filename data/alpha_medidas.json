@@ -1,0 +1,131 @@
+{
+  "suelo_glb_mm": -0.37,
+  "alto_cuerpo_mm": 95.69,
+  "alto_total_con_pelo_mm": 97.07,
+  "cabeza": {
+    "W": 46.92,
+    "D": 43.06,
+    "H": 45.03,
+    "min": [
+      -23.26,
+      -22.26,
+      50.65
+    ],
+    "max": [
+      23.67,
+      20.8,
+      95.68
+    ],
+    "z_cuello": 50.65,
+    "pelo_frac": 0.63,
+    "nota": "H va del cuello al tope e incluye el volumen de pelo esculpido en la malla de SAM 3D"
+  },
+  "cuello_W": 23.64,
+  "torso": {
+    "z0": 18.4,
+    "z1": 50.65,
+    "H": 32.25,
+    "ancho_max_W": 33.17,
+    "D": 19.16,
+    "cintura_z": 33.65,
+    "cintura_W": 21.85,
+    "pecho_W": 33.17,
+    "cadera_W": 28.67
+  },
+  "piernas": {
+    "L": 18.4,
+    "tobillo_z": 9.25,
+    "pierna_sin_zapato_L": 9.15
+  },
+  "brazos": {
+    "pose": "T",
+    "por_lado": {
+      "izq": {
+        "z_min": 37.24,
+        "z_max": 50.65
+      },
+      "der": {
+        "z_min": 37.59,
+        "z_max": 50.65
+      }
+    },
+    "envergadura_W": 92.54,
+    "hombro_x": 16.58,
+    "largo_hasta_muneca": 14.51
+  },
+  "manos": {
+    "izq": {
+      "x_muneca": 31.09,
+      "x_punta": 46.2,
+      "largo": 15.11,
+      "ancho_D": 14.61,
+      "grosor_H": 10.1,
+      "z_centro": 44.16
+    },
+    "der": {
+      "x_muneca": 31.09,
+      "x_punta": 46.34,
+      "largo": 15.25,
+      "ancho_D": 14.85,
+      "grosor_H": 10.12,
+      "z_centro": 44.14
+    }
+  },
+  "largo_mano_mm": 15.18,
+  "zapatos": {
+    "W": 36.18,
+    "D": 19.58,
+    "H": 9.25,
+    "min": [
+      -18.02,
+      -24.44,
+      0.0
+    ],
+    "max": [
+      18.16,
+      -4.86,
+      9.25
+    ]
+  },
+  "anclas_z": {
+    "tobillo": 9.25,
+    "cadera": 18.4,
+    "cintura": 33.65,
+    "hombro": 44.03,
+    "cuello": 50.65,
+    "cabeza_tope": 95.69
+  },
+  "clases_vertices": {
+    "piel": 39601,
+    "pelo": 52176,
+    "camisa": 17364,
+    "chaleco": 20517,
+    "pantalon": 20359,
+    "corbata": 317,
+    "zapato": 22804
+  },
+  "s0": 0.05316,
+  "fuente": {
+    "glb": "assets/joven_rubio/theo_alpha.glb",
+    "sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+    "malla_cuerpo": "theo_v3_v11",
+    "tris": {
+      "Capa_lateral_media": 36,
+      "Capa_lateral_media_espejo": 36,
+      "Capa_lateral_superior": 36,
+      "Capa_lateral_superior_espejo": 36,
+      "Capa_posterior_central": 36,
+      "Capa_posterior_derecha": 36,
+      "Capa_posterior_izquierda": 36,
+      "Corona_posterior": 26,
+      "Fleco_derecho": 46,
+      "Fleco_izquierdo": 46,
+      "Mechon_central": 36,
+      "Mechon_frontal_corto": 36,
+      "Oreja_derecha_perfil": 64,
+      "Oreja_izquierda_perfil": 64,
+      "theo_v3_1_v11": 719,
+      "theo_v3_v11": 25624
+    }
+  }
+}

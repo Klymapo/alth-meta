@@ -8,9 +8,9 @@
     "alto": 95
   },
   "medidas_alth_mm": {
-    "diametro": 8.94,
-    "alto": 10.62,
-    "formula": "mm_real * 0.0559 * 2.0"
+    "diametro": 8.5,
+    "alto": 10.1,
+    "formula": "mm_real * 0.05316 * 2.0"
   },
   "colores": {
     "ceramica": {
@@ -40,12 +40,12 @@
     {
       "pieza": "Taza_cuerpo",
       "eje": "W",
-      "mm": 8.94
+      "mm": 8.5
     },
     {
       "pieza": "Taza_cuerpo",
       "eje": "H",
-      "mm": 10.62
+      "mm": 10.1
     }
   ],
   "historial": [
@@ -60,6 +60,17 @@
     {
       "vuelta": 2,
       "nota": "aprobada (franja terracota, con café)"
+    },
+    {
+      "vuelta": "escala v2",
+      "nota": "×0.9510 (s0 0.0559 → 0.05316); solo tamaño, aprobado sin rehacer",
+      "fecha": "2026-10-01"
     }
-  ]
+  ],
+  "escala": {
+    "version": "v2.0",
+    "s0": 0.05316,
+    "factor": 0.95098,
+    "nota": "re-dimensionado uniforme con tools/redimensionar.py; forma sin cambios"
+  }
 }

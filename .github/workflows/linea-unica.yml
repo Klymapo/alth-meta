@@ -1,0 +1,55 @@
+name: Línea única · pruebas por bloque
+
+# Corrida real de cada bloque de docs/BRIEF_LINEA_UNICA.md (T0…T6) en un runner gratuito.
+# Sin IA ni claves: Blender headless, numpy, scipy y Pillow.
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "tools/**"
+      - "alth/**"
+      - "spec/**"
+      - "kb/**"
+      - "data/**"
+      - "assets/**"
+      - "tests/**"
+      - ".github/workflows/linea-unica.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  t0-escala:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+      - name: Blender headless
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          bash tools/ensure_blender.sh --strict
+          uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" pytest numpy scipy trimesh Pillow pyyaml
+      - name: T0 · Alpha intacto y medido igual que en la spec
+        run: |
+          mkdir -p .linea
+          echo "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b  assets/joven_rubio/theo_alpha.glb" | sha256sum -c -
+          /usr/bin/time -f "medir_alpha %e s" alth-python tools/medir_alpha.py --comprobar 2>&1 | grep -v INFO | tee .linea/t0_medir.txt
+      - name: T0 · Assets en escala v2 (redimensionar debe decir "ya en v2.0")
+        run: |
+          alth-python tools/redimensionar.py | tee .linea/t0_redimensionar.txt
+          test "$(grep -c '"estado": "ya en v2.0"' .linea/t0_redimensionar.txt)" -eq 5
+      - name: Pruebas
+        run: /usr/bin/time -f "pytest %e s" alth-python -m pytest tests -q 2>&1 | tail -5 | tee .linea/pytest.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linea-unica-${{ github.run_id }}
+          path: .linea/
+          retention-days: 7

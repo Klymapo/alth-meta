@@ -1,22 +1,28 @@
 {
-  "version": "1.3",
-  "fecha": "2026-09-26",
+  "version": "2.0",
+  "fecha": "2026-10-01",
   "escala_congelada": {
-    "version": "v1.0",
-    "fecha": "2026-09-26",
-    "nota": "Aprobada por el usuario con la foto de familia (tools/escala.py final): maniquí estándar 95 mm + manzana, lata, taza, vaso y vaso de café. Cambiar escala, arquetipos o k de mano requiere nueva versión."
+    "version": "v2.0",
+    "fecha": "2026-10-01",
+    "nota": "Escala de 95 mm descartada (decisión del usuario, 1 oct 2026). La base es Theo Alpha (assets/joven_rubio/theo_alpha.glb) medido con tools/medir_alpha.py.",
+    "anterior": {
+      "version": "v1.0",
+      "fecha": "2026-09-26",
+      "nota": "Aprobada por el usuario con la foto de familia (tools/escala.py final): maniquí estándar 95 mm + manzana, lata, taza, vaso y vaso de café. Cambiar escala, arquetipos o k de mano requiere nueva versión."
+    }
   },
   "unidades": {
     "blender_unit": "1 BU = 1 mm de maqueta",
     "cabeza_C_mm": 34.5,
-    "humano_real_mm": 1700,
-    "s0_real_a_alth": 0.0559,
+    "humano_real_mm": 1800.0,
+    "s0_real_a_alth": 0.05316,
     "export_godot": {
       "formato": "GLB",
       "escala_raiz": 0.01,
-      "nota": "estándar de 95 mm llega a Godot como 0.95 m"
+      "nota": "la raíz ×0.01 deja 1 mm de maqueta = 1 cm en Godot"
     },
-    "orientacion": "pies en Z=0, frente hacia -Y, centrado en X=0"
+    "orientacion": "pies en Z=0, frente hacia -Y, centrado en X=0",
+    "s0_nota": "copia de escala_alpha.s0 (la fuente es escala_alpha)"
   },
   "arquetipos_mm": {
     "menuda": {
@@ -156,7 +162,7 @@
       "k": 1.0,
       "min_puerta": "1.3 x altura personaje"
     },
-    "formula": "mm_alth = mm_real * 0.0559 * k"
+    "formula": "mm_alth = mm_real * escala_alpha.s0 * k"
   },
   "paleta": {
     "rojo_calido": [
@@ -335,5 +341,118 @@
     "crema_etiqueta": "#EADCC4 · de la referencia objeto-02 (crema etiqueta); banda crema de la lata de aceitunas",
     "carton_kraft": "#B08A62 · cartón de funda (vaso_cafe); reemplaza a taza_cafe para cartón",
     "rubio_arena": "#D2AE72 · pelo rubio arena, menos saturado que cabello_rubio; propuesto y aprobado para el prototipo de alth/pelo.py (joven_rubio)"
-  }
+  },
+  "escala_alpha": {
+    "s0": 0.05316,
+    "formula_s0": "alto_cuerpo_alpha_mm / alto_real_theo_mm",
+    "alto_cuerpo_alpha_mm": 95.69,
+    "alto_cuerpo_nota": "malla theo_v3_v11 sin las mallas de pelo ni orejas, de la suela al tope (el tope incluye el volumen esculpido de SAM 3D en la coronilla)",
+    "alto_total_con_pelo_mm": 97.07,
+    "alto_real_theo_mm": 1800.0,
+    "alto_real_nota": "parámetro: Theo mide ≈1.80 m sin contar el pelo (confirmado por el usuario); cambiarlo cambia s0",
+    "fuente": "assets/joven_rubio/theo_alpha.glb",
+    "sha256_fuente": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+    "medidas": "data/alpha_medidas.json",
+    "piezas_mm": {
+      "cabeza_WHD": [
+        46.92,
+        45.03,
+        43.06
+      ],
+      "cuello_z": 50.65,
+      "cuello_W": 23.64,
+      "torso_H": 32.25,
+      "torso_W": 33.17,
+      "torso_D": 19.16,
+      "piernas_L": 18.4,
+      "tobillo_z": 9.25,
+      "brazo_hasta_muneca_L": 14.51,
+      "hombro_x": 16.58,
+      "envergadura_T": 92.54,
+      "mano_L": 15.18
+    },
+    "anclas_z_mm": {
+      "tobillo": 9.25,
+      "cadera": 18.4,
+      "cintura": 33.65,
+      "hombro": 44.03,
+      "cuello": 50.65,
+      "cabeza_tope": 95.69
+    },
+    "anclas_nota": "Alpha está en pose T: muñeca y punta de mano no tienen altura de pie; se miden en X.",
+    "mano_mm": {
+      "factor_vs_95": 1.1244,
+      "palma_LW": [
+        8.43,
+        6.97
+      ],
+      "dedos_L": {
+        "indice": 6.18,
+        "medio": 6.75,
+        "anular": 6.18,
+        "menique": 5.28,
+        "pulgar": 5.73
+      },
+      "medida_en_alpha": {
+        "L": 15.18,
+        "ancho": 14.73,
+        "grosor": 10.11
+      },
+      "nota": "cotas del estándar de 95 mm (palma 7.5 + dedo medio 6.0) reescaladas al largo de mano medido en Alpha; las referencias de Theo dibujan dedos juntos y no sirven para esto"
+    }
+  },
+  "arquetipos_alpha": {
+    "menuda": {
+      "factor_vs_alpha": 0.9263,
+      "alto_mm": 88.64,
+      "alto_real_mm": 1667,
+      "personajes": [
+        "mujer rubia",
+        "mujer suéter verde"
+      ],
+      "delta_rel": {
+        "piernas": -0.0421,
+        "torso": -0.0316
+      }
+    },
+    "media": {
+      "factor_vs_alpha": 0.9474,
+      "alto_mm": 90.65,
+      "alto_real_mm": 1705,
+      "personajes": [
+        "punk pelirroja"
+      ],
+      "delta_rel": {
+        "piernas": -0.0316,
+        "torso": -0.0211
+      }
+    },
+    "estandar": {
+      "factor_vs_alpha": 1.0,
+      "alto_mm": 95.69,
+      "alto_real_mm": 1800,
+      "personajes": [
+        "joven rubio",
+        "detective",
+        "policías",
+        "extras"
+      ],
+      "delta_rel": {}
+    },
+    "alta": {
+      "factor_vs_alpha": 1.0526,
+      "alto_mm": 100.73,
+      "alto_real_mm": 1895,
+      "personajes": [
+        "hombre mayor",
+        "rey"
+      ],
+      "delta_rel": {
+        "piernas": 0.0316,
+        "torso": 0.0211,
+        "ancho_pecho": 0.0211
+      }
+    }
+  },
+  "cuerpo_base_95mm_nota": "Historial v1 (escala de 95 mm descartada). Para medidas nuevas usa escala_alpha."
 }

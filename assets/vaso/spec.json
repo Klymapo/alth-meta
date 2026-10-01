@@ -9,10 +9,10 @@
     "alto": 120
   },
   "medidas_alth_mm": {
-    "diametro_boca": 8.94,
-    "diametro_base": 6.71,
-    "alto": 13.42,
-    "formula": "mm_real * 0.0559 * 2.0"
+    "diametro_boca": 8.5,
+    "diametro_base": 6.38,
+    "alto": 12.76,
+    "formula": "mm_real * 0.05316 * 2.0"
   },
   "colores": {
     "plastico": {
@@ -37,12 +37,12 @@
     {
       "pieza": "Vaso_cuerpo",
       "eje": "W",
-      "mm": 8.94
+      "mm": 8.5
     },
     {
       "pieza": "Vaso_cuerpo",
       "eje": "H",
-      "mm": 13.42
+      "mm": 12.76
     }
   ],
   "nota_cotas": "giro 0 deja vértices en ±X: W de vértice a vértice = diámetro de boca, con el borde incluido",
@@ -54,6 +54,17 @@
     {
       "vuelta": 1,
       "nota": "aprobada"
+    },
+    {
+      "vuelta": "escala v2",
+      "nota": "×0.9510 (s0 0.0559 → 0.05316); solo tamaño, aprobado sin rehacer",
+      "fecha": "2026-10-01"
     }
-  ]
+  ],
+  "escala": {
+    "version": "v2.0",
+    "s0": 0.05316,
+    "factor": 0.95098,
+    "nota": "re-dimensionado uniforme con tools/redimensionar.py; forma sin cambios"
+  }
 }
