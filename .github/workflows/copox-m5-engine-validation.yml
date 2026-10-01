@@ -9,6 +9,8 @@ on:
       - "copox/profiles/alth_model_m5.json"
       - "copox/cassettes/examples/theo_model_m5_validation.json"
       - "copox/adapters/finger_reference_fit.py"
+      - "copox/adapters/finger_valley_carve.py"
+      - "copox/adapters/hand_detail_probe.py"
       - "copox/adapters/regional_vertex_morph.py"
       - ".github/workflows/copox-m5-engine-validation.yml"
   workflow_dispatch:
@@ -43,7 +45,7 @@ jobs:
           fi
           echo "$RC" > .copox/engine-validation/exit_code.txt
 
-      - name: Verificar contrato real del loop
+      - name: Verificar contrato real y progreso semántico
         run: |
           python3 - <<'PY'
           import hashlib, json
@@ -76,12 +78,19 @@ jobs:
                       refine=morph['topology_refine']
                       assert refine['topology_density_increased'] is True
                       assert refine['safe_geometry_regression'] is True
+
           if 3 in tournaments:
-              for p in (run_dir/'candidates').glob('t03-c*/params.json'):
-                  params=json.loads(p.read_text())
-                  m5=params.get('_m5') or {}
-                  history=m5.get('module_history') or []
-                  assert history and history[-1]['module']=='fingers'
+              progress=[]
+              for p in (run_dir/'candidates').glob('t03-c*/module_spec.json'):
+                  morph=json.loads((p.parent/'morph.json').read_text())
+                  result=json.loads((p.parent/'module_result.json').read_text())
+                  assert morph['mode']=='finger_reference_valley_carve', morph.get('mode')
+                  assert morph['total_reference_valleys'] >= 1, morph
+                  assert morph['outside_scope_exact'] is True
+                  sem=result.get('semantic_progress') or {}
+                  progress.append(float(sem.get('gap_improvement',0.0)))
+              assert progress and max(progress) > 0.0, f'Valley carve no redujo gap semántico: {progress}'
+
           if manifest['status']=='PLATEAU':
               assert tournaments == [1,2,3], tournaments
               assert (run_dir/'learning_t01.json').exists()
