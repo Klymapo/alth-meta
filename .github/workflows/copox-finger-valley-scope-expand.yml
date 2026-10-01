@@ -1,10 +1,6 @@
 name: COPOX · Finger valley scope expand
 
 on:
-  pull_request:
-    paths:
-      - "copox/production/finger_valley_scope_expand_trial.py"
-      - ".github/workflows/copox-finger-valley-scope-expand.yml"
   workflow_dispatch:
 
 permissions:

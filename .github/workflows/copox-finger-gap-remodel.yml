@@ -1,15 +1,6 @@
 name: COPOX · Finger gap remodel
 
 on:
-  pull_request:
-    paths:
-      - "copox/adapters/finger_gap_plan.py"
-      - "copox/adapters/finger_gap_carve.py"
-      - "copox/production/finger_gap_trial.py"
-      - "copox/reference_configs/joven_rubio_alpha.json"
-      - "copox/production/theo_m5_policy.json"
-      - "assets/joven_rubio/theo_alpha.glb"
-      - ".github/workflows/copox-finger-gap-remodel.yml"
   workflow_dispatch:
 
 permissions:

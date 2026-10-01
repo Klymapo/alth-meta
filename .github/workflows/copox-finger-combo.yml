@@ -1,18 +1,6 @@
 name: COPOX · Finger combo finish
 
 on:
-  pull_request:
-    paths:
-      - "copox/production/finger_combo_trial.py"
-      - "copox/production/finger_gap_trial.py"
-      - "copox/production/regional_trial.py"
-      - "copox/adapters/finger_gap_plan.py"
-      - "copox/adapters/finger_gap_carve.py"
-      - "copox/adapters/finger_reference_fit.py"
-      - "copox/adapters/topology_local_refine.py"
-      - "copox/adapters/hand_detail_probe.py"
-      - "copox/production/theo_m5_policy.json"
-      - ".github/workflows/copox-finger-combo.yml"
   workflow_dispatch:
 
 permissions:

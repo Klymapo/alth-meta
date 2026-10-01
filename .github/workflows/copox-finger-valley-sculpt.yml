@@ -1,11 +1,6 @@
 name: COPOX · Finger valley sculpt
 
 on:
-  pull_request:
-    paths:
-      - "copox/adapters/finger_valley_sculpt.py"
-      - "copox/production/finger_valley_sculpt_trial.py"
-      - ".github/workflows/copox-finger-valley-sculpt.yml"
   workflow_dispatch:
 
 permissions:

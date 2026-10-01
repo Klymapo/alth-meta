@@ -1,11 +1,6 @@
 name: COPOX · Finger robust scope
 
 on:
-  pull_request:
-    paths:
-      - "copox/adapters/finger_reference_extrude_build.py"
-      - "copox/production/finger_robust_scope_trial.py"
-      - ".github/workflows/copox-finger-robust-scope.yml"
   workflow_dispatch:
 
 permissions:

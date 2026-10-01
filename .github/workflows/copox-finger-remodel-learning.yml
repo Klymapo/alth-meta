@@ -1,12 +1,6 @@
 name: COPOX · Finger remodel learning
 
 on:
-  pull_request:
-    paths:
-      - "copox/adapters/finger_valley_probe.py"
-      - "copox/adapters/finger_reference_fit.py"
-      - "copox/production/regional_trial.py"
-      - ".github/workflows/copox-finger-remodel-learning.yml"
   workflow_dispatch:
 
 permissions:

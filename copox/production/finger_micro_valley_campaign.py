@@ -25,7 +25,7 @@ from copox.production.research_gate import require_research
 from copox.production.research_iteration_loop import run_generations, write_json
 
 ALPHA_SHA = "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b"
-TECHNIQUE = "connected_reference_notch_sections"
+TECHNIQUE = "pose_preserving_reference_notch_sections"
 
 
 def protect(alpha, parent=None, expected_parent=None):
@@ -114,7 +114,7 @@ def audit_candidate(root, params, parent_sha, *, alpha, parent, reference, confi
         labels = ["hand_left", "hand_right", "finger_detail", "topology_report", "learning"]
         flags = ([] if semantic else ["mitten_shape"]) + ([] if mesh_ok else ["finger_merge_regression"])
         learning = {"module": "fingers", "technique": TECHNIQUE, "parent_sha": parent_sha,
-                    "research_id": "fingers-connected-micro-valleys-20261001", "parameters": params,
+                    "research_id": "fingers-pose-preserving-micro-valleys-20261001", "parameters": params,
                     "reference_valleys": reference_valleys, "model_valleys": model_valleys,
                     "frozen_region_failures": frozen, "parent_frozen_region_failures": parent_frozen,
                     "valley_structural_advantage_preserved": valley_advantage,
@@ -127,7 +127,7 @@ def audit_candidate(root, params, parent_sha, *, alpha, parent, reference, confi
                   "mesh_integrity": mesh_ok, "scope_safe": bool(mutation["outside_scope_exact"] and transport["scope_safe"]),
                   "regression_ok": regression_ok, "evidence_complete": evidence_complete,
                   "semantic_ready": semantic, "target_gain_pp": target, "global_gain_pp": global_gain,
-                  "worst_view_delta_pp": worst, "evidence": labels, "flags": flags, "params": params,
+                  "worst_view_delta_pp": worst, "evidence": labels, "flags": flags, "params": params, "visual_review": "PENDING",
                   "reference_valleys": reference_valleys, "model_valleys": model_valleys,
                   "parent_target_delta_pp": parent_target, "parent_global_delta_pp": parent_global,
                   "alpha_locked_target_difference_to_valley_pp": alpha_locked_target_difference,
@@ -188,15 +188,15 @@ def main():
     p.add_argument("--reference", default="refs/personajes/joven-rubio-4-vistas.jpg")
     p.add_argument("--config", default="copox/reference_configs/joven_rubio_alpha.json")
     p.add_argument("--policy", default="copox/production/theo_m5_policy.json")
-    p.add_argument("--research", default="copox/research/fingers-connected-micro-valleys-20261001.json")
+    p.add_argument("--research", default="copox/research/fingers-pose-preserving-micro-valleys-20261001.json")
     p.add_argument("--parent-source", help="Existing audited Valley artifact; never rejected candidate lineage")
-    p.add_argument("--output", default=".copox/finger-connected-valleys")
+    p.add_argument("--output", default=".copox/finger-local-notches")
     a = p.parse_args()
     root = Path(a.output)
     root.mkdir(parents=True, exist_ok=True)
     protect(a.alpha)
     try:
-        for technique in ("semantic_finish", "valley_surface_sculpt", "anchored_reference_contour_warp", TECHNIQUE):
+        for technique in ("semantic_finish", "valley_surface_sculpt", TECHNIQUE):
             require_research(a.research, "fingers", output=root / ("research_" + technique + ".json"), technique=technique)
         python = ensure_runtime(Path.cwd())
         # Reproduce measured Valley Sculpt c01 once; never overwrite or promote it.

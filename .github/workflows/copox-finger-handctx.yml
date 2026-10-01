@@ -1,17 +1,6 @@
 name: COPOX · Finger hand-context
 
 on:
-  pull_request:
-    paths:
-      - "copox/adapters/finger_gap_hands_plan.py"
-      - "copox/production/finger_handctx_trial.py"
-      - "copox/adapters/finger_gap_plan.py"
-      - "copox/adapters/finger_gap_carve.py"
-      - "copox/production/finger_gap_trial.py"
-      - "copox/reference_configs/joven_rubio_alpha.json"
-      - "copox/production/theo_m5_policy.json"
-      - "assets/joven_rubio/theo_alpha.glb"
-      - ".github/workflows/copox-finger-handctx.yml"
   workflow_dispatch:
 
 permissions:

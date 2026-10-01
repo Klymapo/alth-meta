@@ -1,11 +1,6 @@
 name: COPOX · Micro valleys evidence review
 
 on:
-  pull_request:
-    paths:
-      - "copox/production/finger_micro_valley_review.py"
-      - "copox/research/fingers-micro-valleys-20261001-review.json"
-      - ".github/workflows/copox-finger-micro-review.yml"
   workflow_dispatch:
 
 permissions:

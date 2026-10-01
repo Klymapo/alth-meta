@@ -1,16 +1,6 @@
 name: COPOX · Finger reference extrusion
 
 on:
-  pull_request:
-    paths:
-      - "copox/adapters/finger_reference_extrude_plan.py"
-      - "copox/adapters/finger_reference_extrude_build.py"
-      - "copox/production/finger_reference_extrude_trial.py"
-      - "copox/adapters/hand_detail_probe.py"
-      - "copox/reference_configs/joven_rubio_alpha.json"
-      - "assets/joven_rubio/theo_alpha.glb"
-      - "refs/personajes/joven-rubio-4-vistas.jpg"
-      - ".github/workflows/copox-finger-reference-extrude.yml"
   workflow_dispatch:
 
 permissions:

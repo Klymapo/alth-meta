@@ -1,12 +1,6 @@
 name: COPOX · Finger robust direct
 
 on:
-  pull_request:
-    paths:
-      - "copox/production/finger_robust_direct_trial.py"
-      - "copox/adapters/finger_robust_extrude_plan.py"
-      - "copox/adapters/finger_reference_extrude_build.py"
-      - ".github/workflows/copox-finger-robust-direct.yml"
   workflow_dispatch:
 
 permissions:

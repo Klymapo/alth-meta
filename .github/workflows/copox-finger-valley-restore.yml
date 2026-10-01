@@ -1,11 +1,6 @@
 name: COPOX · Finger reference valley restore
 
 on:
-  pull_request:
-    paths:
-      - "copox/adapters/finger_reference_valley_restore.py"
-      - "copox/production/finger_valley_restore_trial.py"
-      - ".github/workflows/copox-finger-valley-restore.yml"
   workflow_dispatch:
 
 permissions:

@@ -1,12 +1,6 @@
 name: COPOX · Finger valley topology
 
 on:
-  pull_request:
-    paths:
-      - "copox/production/finger_valley_topology_trial.py"
-      - "copox/adapters/topology_local_refine.py"
-      - "copox/adapters/finger_valley_sculpt.py"
-      - ".github/workflows/copox-finger-valley-topology.yml"
   workflow_dispatch:
 
 permissions:

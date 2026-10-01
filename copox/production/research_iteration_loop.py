@@ -50,9 +50,10 @@ def run_generations(*, parent_sha, module, specs, output, mutate_and_audit, max_
         ranked = sorted(rows, key=lambda row: (bool(row.get("audit_passed")),
                         bool(row.get("semantic_ready")), bool(row.get("mesh_integrity")),
                         metric(row, "target_gain_pp"), metric(row, "global_gain_pp")), reverse=True)
-        eligible = [row for row in ranked if row.get("audit_passed")]
+        eligible = [row for row in ranked if row.get("audit_passed") and row.get("visual_review", "PASS") == "PASS"]
+        pending_visual = [row["candidate"] for row in ranked if row.get("audit_passed") and row.get("visual_review") == "PENDING"]
         winner = eligible[0]["candidate"] if eligible else None
-        rejected = [row["candidate"] for row in rows if not row.get("audit_passed")]
+        rejected = [row["candidate"] for row in rows if not row.get("audit_passed") or row.get("visual_review") == "REJECTED"]
         gains = [metric(row, "parent_target_delta_pp") for row in rows]
         improved = any(math.isfinite(gain) and gain > float(spec.get("significant_gain_pp", 0.10)) for gain in gains)
         mesh_failed = any(not row.get("mesh_integrity") for row in rows)
@@ -71,13 +72,15 @@ def run_generations(*, parent_sha, module, specs, output, mutate_and_audit, max_
             "research_id": research["research_id"], "module": module, "technique": spec["technique"],
             "parameters": parameters, "candidate_metrics": rows, "winner": winner,
             "best_diagnostic_candidate": ranked[0]["candidate"],
-            "rejected_candidates": rejected, "learning": learning,
+            "rejected_candidates": rejected, "pending_visual_candidates": pending_visual, "learning": learning,
             "next_hypothesis": spec["next_hypothesis"],
             "stages": ["RESEARCH", "DIAGNOSTIC", "SELECT_MODULE", "GENERATE_3_SIBLINGS", "AUDIT", "RANK", "LEARN"],
             "promotion_allowed": False, "promotion_executed": False,
         }
         if eligible:
             stop = "CANDIDATE_PASSED_GATES"
+        elif pending_visual:
+            stop = "VISUAL_REVIEW_REQUIRED"
         elif mesh_failed:
             stop = "MESH_INTEGRITY_FAILED"
         elif failures_in_a_row >= 2:

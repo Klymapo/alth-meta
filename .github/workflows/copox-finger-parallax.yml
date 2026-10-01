@@ -1,9 +1,6 @@
 name: COPOX · Finger parallax probe
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/copox-finger-parallax.yml"
   workflow_dispatch:
 
 permissions:

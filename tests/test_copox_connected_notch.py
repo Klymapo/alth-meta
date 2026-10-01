@@ -25,5 +25,28 @@ class ConnectedNotchContract(unittest.TestCase):
         self.assertEqual(notch_weight(.47,.45,.49),1.)
         self.assertEqual(len(DEPTH_SCALES),3)
 
+
+class ExteriorTransportContract(unittest.TestCase):
+    def test_local_hand_change_preserves_exterior_but_right_hand_drift_is_vetoed(self):
+        import tempfile
+        from pathlib import Path
+        import trimesh
+        from copox.adapters.finger_connected_scope import exterior_transport
+        plan={"canonical_bounds":[[0,0,0],[1,1,1]],"scope_box":[0,0,0,.1,1,1]}
+        with tempfile.TemporaryDirectory() as td:
+            left=trimesh.creation.box(extents=[.04,.08,.08]); left.apply_translation([.05,.5,.5])
+            right=trimesh.creation.box(extents=[.04,.08,.08]); right.apply_translation([.95,.5,.5])
+            parent=Path(td,"parent.glb")
+            trimesh.Scene([left,right]).export(str(parent))
+            changed=left.copy(); changed.apply_translation([.01,0,0])
+            candidate=Path(td,"candidate.glb")
+            trimesh.Scene([changed,right]).export(str(candidate))
+            self.assertTrue(exterior_transport(str(parent),str(candidate),plan)["scope_safe"])
+            drift=right.copy(); drift.apply_translation([0,.001,0])
+            trimesh.Scene([changed,drift]).export(str(candidate))
+            report=exterior_transport(str(parent),str(candidate),plan)
+            self.assertFalse(report["scope_safe"])
+            self.assertGreater(report["missing_protected_triangles"],0)
+
 if __name__=="__main__":
     unittest.main()

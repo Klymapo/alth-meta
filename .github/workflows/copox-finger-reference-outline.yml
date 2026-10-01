@@ -1,16 +1,6 @@
 name: COPOX · Finger reference outline
 
 on:
-  pull_request:
-    paths:
-      - "copox/adapters/finger_reference_outline_plan.py"
-      - "copox/adapters/finger_reference_outline_build.py"
-      - "copox/production/finger_reference_outline_trial.py"
-      - "copox/adapters/hand_detail_probe.py"
-      - "copox/reference_configs/joven_rubio_alpha.json"
-      - "assets/joven_rubio/theo_alpha.glb"
-      - "refs/personajes/joven-rubio-4-vistas.jpg"
-      - ".github/workflows/copox-finger-reference-outline.yml"
   workflow_dispatch:
 
 permissions:

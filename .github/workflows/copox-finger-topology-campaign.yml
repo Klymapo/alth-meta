@@ -1,12 +1,5 @@
 name: COPOX · Finger topology campaign
 on:
-  pull_request:
-    paths:
-      - "copox/production/regional_trial.py"
-      - "copox/adapters/finger_reference_fit.py"
-      - "copox/adapters/topology_local_refine.py"
-      - "copox/adapters/hand_detail_probe.py"
-      - ".github/workflows/copox-finger-topology-campaign.yml"
   workflow_dispatch:
 permissions:
   contents: read

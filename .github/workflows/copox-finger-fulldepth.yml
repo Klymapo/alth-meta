@@ -2,17 +2,6 @@ name: COPOX · Finger full-depth
 # Phase 4: prueba explícita de tapas residuales en profundidad
 
 on:
-  pull_request:
-    paths:
-      - "copox/adapters/finger_gap_full_depth_plan.py"
-      - "copox/production/finger_fulldepth_trial.py"
-      - "copox/adapters/finger_gap_plan.py"
-      - "copox/adapters/finger_gap_carve.py"
-      - "copox/production/finger_gap_trial.py"
-      - "copox/reference_configs/joven_rubio_alpha.json"
-      - "copox/production/theo_m5_policy.json"
-      - "assets/joven_rubio/theo_alpha.glb"
-      - ".github/workflows/copox-finger-fulldepth.yml"
   workflow_dispatch:
 
 permissions:

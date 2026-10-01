@@ -1,12 +1,6 @@
 name: COPOX · Finger robust narrow
 
 on:
-  pull_request:
-    paths:
-      - "copox/production/finger_robust_narrow_trial.py"
-      - "copox/production/finger_robust_extrude_trial.py"
-      - "copox/adapters/finger_robust_extrude_plan.py"
-      - ".github/workflows/copox-finger-robust-narrow.yml"
   workflow_dispatch:
 
 permissions:

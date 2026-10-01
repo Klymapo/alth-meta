@@ -1,10 +1,6 @@
 name: COPOX · Web-informed hand rebuild
 
 on:
-  pull_request:
-    paths:
-      - "copox/adapters/hand_rebuild_experiment.py"
-      - ".github/workflows/copox-hand-rebuild-experiment.yml"
   workflow_dispatch:
 
 permissions:

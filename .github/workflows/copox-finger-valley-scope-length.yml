@@ -1,10 +1,6 @@
 name: COPOX · Finger valley scope length
 
 on:
-  pull_request:
-    paths:
-      - "copox/production/finger_valley_scope_length_trial.py"
-      - ".github/workflows/copox-finger-valley-scope-length.yml"
   workflow_dispatch:
 
 permissions:

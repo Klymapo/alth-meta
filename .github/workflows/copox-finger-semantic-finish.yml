@@ -1,16 +1,6 @@
 name: COPOX · Finger semantic finish
 
 on:
-  pull_request:
-    paths:
-      - "copox/production/finger_semantic_finish_trial.py"
-      - "copox/production/regional_trial.py"
-      - "copox/adapters/finger_reference_fit.py"
-      - "copox/adapters/topology_local_refine.py"
-      - "copox/adapters/hand_detail_probe.py"
-      - "copox/production/theo_m5_policy.json"
-      - "assets/joven_rubio/theo_alpha.glb"
-      - ".github/workflows/copox-finger-semantic-finish.yml"
   workflow_dispatch:
 
 permissions:

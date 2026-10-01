@@ -2,7 +2,7 @@
 from __future__ import annotations
 import math
 
-DEPTH_SCALES = (0.85, 1.0, 1.15)
+DEPTH_SCALES = (0.75, 1.0, 1.25)
 SECTION_FRACTIONS = (("distal", .20), ("middle", .40), ("proximal", .60), ("base", .80))
 
 def notch_weight(z, za, zb):

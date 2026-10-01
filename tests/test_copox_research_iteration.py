@@ -86,6 +86,22 @@ class ResearchIterationTests(unittest.TestCase):
             self.assertFalse(result["promotion_executed"])
             self.assertTrue(all(row["winner"] is None for row in result["generations"]))
 
+    def test_pending_visual_audit_cannot_become_winner(self):
+        with tempfile.TemporaryDirectory() as td:
+            brief=Path(td,"brief.json")
+            brief.write_text(json.dumps(self.brief))
+            spec={"brief":brief,"technique":"micro_valley_cut_local_sections",
+                  "parameters":[{"depth_scale":x} for x in (.75,1,1.25)],"next_hypothesis":"inspect evidence"}
+            def mutate(directory,params,parent):
+                return {"candidate":directory.name,"parent_sha":parent,"audit_passed":True,
+                        "mesh_integrity":True,"semantic_ready":True,"regression_ok":True,
+                        "visual_review":"PENDING","target_gain_pp":1,"global_gain_pp":.2,"parent_target_delta_pp":.5}
+            result=run_generations(parent_sha="immutable",module="fingers",specs=[spec],output=td,mutate_and_audit=mutate)
+            self.assertIsNone(result["generations"][0]["winner"])
+            self.assertEqual(result["stop_reason"],"VISUAL_REVIEW_REQUIRED")
+            self.assertEqual(len(result["generations"][0]["pending_visual_candidates"]),3)
+            self.assertFalse(result["promotion_executed"])
+
     def test_passing_gate_stops_after_exactly_three_and_never_promotes(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td, "brief.json")

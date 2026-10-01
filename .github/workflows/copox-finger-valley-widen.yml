@@ -1,11 +1,6 @@
 name: COPOX · Finger valley widen
 
 on:
-  pull_request:
-    paths:
-      - "copox/production/finger_valley_widen_trial.py"
-      - "copox/adapters/finger_valley_sculpt.py"
-      - ".github/workflows/copox-finger-valley-widen.yml"
   workflow_dispatch:
 
 permissions:
