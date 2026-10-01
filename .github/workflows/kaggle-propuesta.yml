@@ -1,0 +1,108 @@
+name: Propuesta en Kaggle (TripoSG, GPU gratuita)
+run-name: "Kaggle · ${{ inputs.nombre }}"
+
+# Genera una malla densa con TripoSG (MIT) en la GPU gratuita de Kaggle a partir de una imagen ya subida
+# al repo. Es un PROVEEDOR DE PROPUESTAS: el GLB que sale no es un asset ni hereda aprobación; queda como
+# artifact para la post-producción clásica y la auditoría visual de la línea única.
+#
+# Solo se lanza a mano (Actions → "Propuesta en Kaggle" → Run workflow; también desde la app de GitHub),
+# así que nadie de fuera puede gastar tu cuota.
+#
+# Requiere dos secrets (Settings → Secrets and variables → Actions):
+#   KAGGLE_USERNAME  tu usuario de Kaggle
+#   KAGGLE_KEY       la clave del token de API de Kaggle (Settings de Kaggle → API → Create New Token)
+# Detalles en docs/KAGGLE.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      imagen:
+        description: "Ruta de la imagen en el repo (p. ej. refs/personajes/joven-rubio.jpg)"
+        required: true
+      nombre:
+        description: "Nombre del asset (p. ej. theo, manzana)"
+        required: true
+      caras:
+        description: "Caras tras reducir en Kaggle (-1 = sin reducir). La post-producción baja al tope ALTH después."
+        default: "20000"
+      recorte:
+        description: "Opcional: x0,y0,x1,y1 en fracciones para aislar el objeto de una infografía"
+        default: ""
+      semilla:
+        description: "Semilla de TripoSG"
+        default: "42"
+      minutos:
+        description: "Tiempo máximo esperando a Kaggle"
+        default: "90"
+
+permissions:
+  contents: read
+
+concurrency:   # una corrida a la vez: comparten la misma cuota y el mismo kernel en Kaggle
+  group: kaggle-propuesta
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash   # activa pipefail: un fallo dentro de "| tee" sí pone el job en rojo
+
+jobs:
+  propuesta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dependencias (sin Blender)
+        run: python3 -m pip install -q numpy scipy Pillow kaggle
+      - name: Credenciales presentes
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          if [ -z "$KAGGLE_USERNAME" ] || [ -z "$KAGGLE_KEY" ]; then
+            echo "::error::Faltan los secrets KAGGLE_USERNAME y KAGGLE_KEY (ver docs/KAGGLE.md)"
+            exit 7
+          fi
+      - name: Lanzar en Kaggle y esperar
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+          IN_IMAGEN: ${{ inputs.imagen }}
+          IN_NOMBRE: ${{ inputs.nombre }}
+          IN_CARAS: ${{ inputs.caras }}
+          IN_RECORTE: ${{ inputs.recorte }}
+          IN_SEMILLA: ${{ inputs.semilla }}
+          IN_MINUTOS: ${{ inputs.minutos }}
+        run: |
+          args=(lanzar "$IN_IMAGEN" --nombre "$IN_NOMBRE" --caras "$IN_CARAS" --semilla "$IN_SEMILLA"
+                --minutos "$IN_MINUTOS" --salida "propuestas/$IN_NOMBRE")
+          [ -n "$IN_RECORTE" ] && args+=(--recorte "$IN_RECORTE")
+          python3 tools/kaggle_proveedor.py "${args[@]}" 2>&1 | tee kaggle.txt
+      - name: Resumen
+        if: always()
+        env:
+          IN_NOMBRE: ${{ inputs.nombre }}
+        run: |
+          r="propuestas/$IN_NOMBRE/resumen.json"
+          {
+            echo "## Propuesta Kaggle · $IN_NOMBRE"
+            if [ -f "$r" ]; then
+              python3 -c "import json,sys; d=json.load(open(sys.argv[1])); m=d.get('meta') or {}; print(f\"- estado: **{d.get('estado')}**\"); print(f\"- minutos en Kaggle: {d.get('minutos')}\"); print(f\"- caras: {m.get('caras')} (crudas {m.get('caras_crudas')}), watertight: {m.get('watertight')}\"); print(f\"- GPU: {m.get('gpu')}\"); print(f\"- pasos (s): {m.get('pasos')}\"); print(f\"- error: {m.get('error')}\" if m.get('error') else '')" "$r"
+            else
+              echo "- sin resumen (ver el log del paso anterior)"
+            fi
+            echo
+            echo "La malla es una **propuesta**: falta post-producción y auditoría visual antes de cualquier aprobación."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: propuesta-kaggle-${{ inputs.nombre }}-${{ github.run_id }}
+          path: |
+            propuestas/
+            kaggle.txt
+          retention-days: 14
+          if-no-files-found: warn
