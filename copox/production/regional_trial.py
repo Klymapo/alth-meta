@@ -4,9 +4,11 @@ import argparse
 import hashlib
 import json
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
+from copox.adapters.alth_character import ensure_runtime
 from copox.adapters.alth_character_audit import audit as audit_full
 from copox.adapters.finger_reference_fit import fit_fingers
 from copox.adapters.hand_detail_probe import probe as hand_probe
@@ -34,8 +36,15 @@ def _variant(module: str, slot: int, tournament: int = 1) -> dict[str, Any]:
         scales = ([0.70, 0.70, 0.70], [0.40, 0.40, 0.40], [0.10, 0.10, 0.10])
         return {"scale": list(scales[(slot - 1) % 3]), "shift_mm": [0.0, 0.0, 0.0]}
     if module == "fingers":
-        strengths = (0.35, 0.65, 1.00) if tournament % 2 else (0.50, 0.80, 1.15)
-        return {"strength": float(strengths[(slot - 1) % 3])}
+        round_index = ((max(1, tournament) - 1) % 3) + 1
+        if round_index == 1:
+            strengths = (0.35, 0.65, 1.00)
+            return {"strength": float(strengths[(slot - 1) % 3]), "topology_refine": False, "refine_cuts": 0}
+        if round_index == 2:
+            strengths = (0.50, 0.80, 1.10)
+            return {"strength": float(strengths[(slot - 1) % 3]), "topology_refine": True, "refine_cuts": 1}
+        strengths = (0.45, 0.75, 1.00)
+        return {"strength": float(strengths[(slot - 1) % 3]), "topology_refine": True, "refine_cuts": 2}
     variants = [
         [0.98, 1.00, 1.00],
         [1.02, 1.00, 1.00],
@@ -53,13 +62,43 @@ def _copy_region_evidence(root: Path, module: str, labels: set[str]) -> None:
             labels.add(f"region_{view}")
 
 
+def _refine_finger_topology(baseline: str, config: str, root: Path, cuts: int) -> tuple[str, dict[str, Any]]:
+    repo = Path.cwd().resolve()
+    alth_python = ensure_runtime(repo)
+    refined = root / "refined_input.glb"
+    report = root / "topology_refine.json"
+    script = repo / "copox" / "adapters" / "topology_local_refine.py"
+    subprocess.run([
+        alth_python, str(script),
+        "--input", str(Path(baseline).resolve()),
+        "--config", str(Path(config).resolve()),
+        "--region", "fingers",
+        "--output", str(refined.resolve()),
+        "--report", str(report.resolve()),
+        "--cuts", str(max(1, int(cuts))),
+    ], cwd=repo, check=True)
+    data = _read(report)
+    if not bool(data.get("topology_density_increased")) or not bool(data.get("safe_geometry_regression")):
+        raise RuntimeError(f"Refinamiento topológico no seguro: {data}")
+    return str(refined), data
+
+
 def _finger_process(baseline: str, reference: str, config: str, params: dict[str, Any], root: Path) -> dict[str, Any]:
     root.mkdir(parents=True, exist_ok=True)
+    fit_input = baseline
+    topology_refine = None
+    if bool(params.get("topology_refine", False)):
+        fit_input, topology_refine = _refine_finger_topology(baseline, config, root, int(params.get("refine_cuts", 1)))
+
     model = root / "model.glb"
     morph = fit_fingers(
-        baseline, reference, config, str(model), str(root / "morph.json"),
+        fit_input, reference, config, str(model), str(root / "morph.json"),
         float(params.get("strength", 0.65)),
     )
+    if topology_refine is not None:
+        morph["topology_refine"] = topology_refine
+        (root / "morph.json").write_text(json.dumps(morph, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
     regional = audit_regions(
         baseline, str(model), reference, config,
         str(root / "regional_metrics.json"), str(root / "evidence"),
@@ -76,6 +115,7 @@ def _finger_process(baseline: str, reference: str, config: str, params: dict[str
         if delta < tolerance:
             failures.append({"region": name, "delta_pp": delta})
     regression = {"ok": not failures, "freeze_tolerance_pp": tolerance, "failed_regions": failures, "coupled_regions": sorted(coupled)}
+    safe_scope = bool(morph["outside_scope_exact"] and (topology_refine is None or topology_refine.get("safe_geometry_regression", False)))
     learning = {
         "mode": "reference_contour_learning",
         "priority": [{
@@ -84,7 +124,7 @@ def _finger_process(baseline: str, reference: str, config: str, params: dict[str
             "delta_pp": float(target.get("delta_pp", 0.0)),
             "visible_delta_pct": float(target.get("visible_delta_pct", 0.0)),
             "strategy": "KEEP_DIRECTION" if float(target.get("delta_pp", 0.0)) > 0 else "ROTATE_TECHNIQUE",
-            "reason": "El contorno distal se deriva directamente de la referencia; conservar sólo si mejora fingers sin regresión congelada.",
+            "reason": "Contorno derivado de referencia; si topología base limita valles, el siguiente round subdivide localmente antes de ajustar.",
         }],
         "next_region": "fingers",
         "ready_for_general_loop": False,
@@ -93,17 +133,11 @@ def _finger_process(baseline: str, reference: str, config: str, params: dict[str
     process = {
         "mode": "finger_reference_fit_process",
         "region": "fingers",
-        "morph": {
-            "region": "fingers",
-            "mesh_integrity": bool(morph["mesh_integrity"]),
-            "safe_scope": bool(morph["outside_scope_exact"]),
-            "detail": morph,
-            "params": params,
-        },
+        "morph": {"region": "fingers", "mesh_integrity": bool(morph["mesh_integrity"]), "safe_scope": safe_scope, "detail": morph, "params": params},
         "target_metrics": target,
         "learning": learning,
         "regression": regression,
-        "technically_m4_ready": bool(morph["mesh_integrity"] and morph["outside_scope_exact"] and not failures),
+        "technically_m4_ready": bool(morph["mesh_integrity"] and safe_scope and not failures),
         "promotion_allowed": False,
     }
     (root / "process.json").write_text(json.dumps(process, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -196,15 +230,7 @@ def run_trial(
     (root / "module_result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     gate = evaluate(policy, result, baseline_model=baseline)
     (root / "gate.json").write_text(json.dumps(gate, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    summary = {
-        "module": module,
-        "slot": slot,
-        "params": params,
-        "result": result,
-        "gate": gate,
-        "extra": extra,
-        "promotion_executed": False,
-    }
+    summary = {"module": module, "slot": slot, "params": params, "result": result, "gate": gate, "extra": extra, "promotion_executed": False}
     (root / "trial.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return summary
 
