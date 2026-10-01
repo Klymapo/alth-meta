@@ -1,0 +1,94 @@
+{
+  "module": "fingers",
+  "status": "READY",
+  "internet_checked": true,
+  "researched_at": "2026-10-01T07:30:00-06:00",
+  "objective": "Conservar la silueta fuerte de semantic-finish/valley-sculpt, crear dos valles visibles sólo en la mano izquierda y preparar loops de deformación/bridge sin reconstruir la mano completa.",
+  "sources": [
+    {
+      "title": "Blender Manual · Mesh Structure / Edge Loops",
+      "url": "https://docs.blender.org/manual/en/5.2/modeling/meshes/structure.html",
+      "type": "official",
+      "finding": "Los edge loops son fundamentales en modelado orgánico y animación; deben seguir líneas de deformación y concentrar densidad donde hay articulación."
+    },
+    {
+      "title": "Blender Manual · Loop Cut and Slide",
+      "url": "https://docs.blender.org/manual/en/5.2/modeling/meshes/editing/edge/loopcut_slide.html",
+      "type": "official",
+      "finding": "Loop Cut añade loops paralelos y permite desplazarlos localmente para controlar dónde se necesita densidad."
+    },
+    {
+      "title": "Blender Manual · Bridge Edge Loops",
+      "url": "https://docs.blender.org/manual/en/5.2/modeling/meshes/editing/edge/bridge_edge_loops.html",
+      "type": "official",
+      "finding": "Bridge Edge Loops crea caras entre loops y admite cortes intermedios e interpolación, útil para unir dedos/palma cuando existan bordes compatibles."
+    },
+    {
+      "title": "Blender Python API · BMesh",
+      "url": "https://docs.blender.org/api/main/bmesh.html",
+      "type": "official",
+      "finding": "BMesh expone operaciones de conectividad como split/separate/collapse/dissolve y permite automatizar edición topológica."
+    },
+    {
+      "title": "Blender Stack Exchange · What are the options to extrude fingers from a low poly hand?",
+      "url": "https://blender.stackexchange.com/questions/2998/what-are-the-options-to-extrude-fingers-from-a-low-poly-hand",
+      "type": "community_expert",
+      "finding": "Inset + extrusión y transiciones all-quads permiten crear bases de dedos sin propagar loop cuts innecesarios por todo el brazo."
+    },
+    {
+      "title": "Blender Stack Exchange · Weird deformation with subdivision surface",
+      "url": "https://blender.stackexchange.com/questions/161026/weird-deformation-with-subdivision-surface",
+      "type": "community_expert",
+      "finding": "Grandes n-gons cóncavos alrededor de dedos degradan subdivisión; conviene que cada dedo tenga topología separada/legible."
+    }
+  ],
+  "techniques": [
+    {
+      "name": "micro_valley_cuts_on_preserved_hand",
+      "applicable": true,
+      "why": "Ataca exactamente el fallo semántico 0→2 valles sin reemplazar la silueta completa que ya puntúa bien."
+    },
+    {
+      "name": "local_loop_insertion",
+      "applicable": true,
+      "why": "Añade grados de libertad sólo alrededor de valles y nudillos; evita extender densidad hacia antebrazo."
+    },
+    {
+      "name": "bridge_edge_loops_to_palm",
+      "applicable": true,
+      "why": "Es el paso correcto cuando existan loops de borde estables en dedos y palma, sustituyendo proxies desconectados."
+    },
+    {
+      "name": "full_hand_rebuild",
+      "applicable": false,
+      "why": "Los últimos robust extrusion demostraron que reemplazar demasiada mano izquierda pierde silueta y empeora la vista 3/4."
+    }
+  ],
+  "technique_rounds": [
+    {
+      "round": 1,
+      "name": "micro_valley_plus_local_loops",
+      "applicable": true,
+      "goal": "Abrir exactamente dos valles de referencia sobre el mejor Valley Sculpt sin cambiar el contorno exterior."
+    },
+    {
+      "round": 2,
+      "name": "bridge_loops_to_palm",
+      "applicable": true,
+      "goal": "Cerrar/puentear loops resultantes hacia palma con quads y sin proxies desconectados."
+    },
+    {
+      "round": 3,
+      "name": "deformation_loops_and_cleanup",
+      "applicable": true,
+      "goal": "Añadir loops mínimos de nudillo, revisar normales, manifold, UV y preparación para rig."
+    }
+  ],
+  "chosen_direction": "Preservar la mano de Valley Sculpt; crear sólo los dos valles izquierdos derivados de referencia, insertar loops locales y bridgear a palma sólo después de que la silueta pase el gate.",
+  "constraints": [
+    "No inventar cantidad de dedos ni posiciones.",
+    "No expandir la edición hacia antebrazo.",
+    "No promover baseline automáticamente durante esta fase.",
+    "Toda técnica debe volver a pasar evidencia frontal, 3/4, región de manos/dedos y mesh integrity."
+  ]
+}
