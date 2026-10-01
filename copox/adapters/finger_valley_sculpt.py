@@ -79,9 +79,8 @@ def sculpt_valleys(
         mb = np.asarray(morph_box, dtype=float)
         for idx, valley in enumerate(valleys):
             x0, y0, x1, y1 = [float(v) for v in valley["bbox_px"]]
-            nx0, nz_top = _pixel_to_norm(x0, y0, registration, lo, span, scale_mm)
-            nx1, nz_bottom = _pixel_to_norm(x1 + 1.0, y1 + 1.0, registration, lo, span, scale_mm)
-            xa, xb = sorted((nx0, nx1))
+            _, nz_top = _pixel_to_norm(x0, y0, registration, lo, span, scale_mm)
+            _, nz_bottom = _pixel_to_norm(x1 + 1.0, y1 + 1.0, registration, lo, span, scale_mm)
             za, zb = sorted((nz_bottom, nz_top))
             cz = (za + zb) * 0.5
             half_z = max((zb - za) * 0.5 * length_scale, 0.001)
@@ -89,15 +88,19 @@ def sculpt_valleys(
             zb = min(cz + half_z, float(mb[5]))
             if zb <= za:
                 continue
-            # El borde proximal de la muesca sale de la propia extensión horizontal
-            # del valle de referencia. No abrimos un agujero: atraemos la superficie
-            # distal hacia este límite conservando conectividad.
-            proximal = min(max(xb if side == "left" else xa, float(mb[0])), float(mb[3]))
+
+            # _valleys reporta width_px sobre X (penetración horizontal del hueco)
+            # y depth_px sobre Y de imagen (altura vertical). Para tallar la muesca
+            # necesitamos width_px, convertido a distancia normalizada del modelo.
+            gap_px = max(1.0, float(valley.get("width_px", x1 - x0 + 1.0)))
+            gap_mm = gap_px / max(float(registration["scale"]), 1e-9)
+            gap_norm_x = float((gap_mm / scale_mm) / max(float(span[0]), 1e-12))
             targets.append({
                 "id": f"{side}_valley_{idx + 1}",
                 "side": side,
                 "z_range": [float(za), float(zb)],
-                "proximal_x": float(proximal),
+                "gap_width_px": gap_px,
+                "gap_width_normalized_x": gap_norm_x,
                 "morph_box": [float(v) for v in mb],
                 "source": valley,
             })
@@ -116,33 +119,63 @@ def sculpt_valleys(
         side = target["side"]
         za, zb = target["z_range"]
         mb = np.asarray(target["morph_box"], dtype=float)
-        proximal = float(target["proximal_x"])
         cz = (za + zb) * 0.5
         half_z = max((zb - za) * 0.5, 1e-9)
+        gap = float(target["gap_width_normalized_x"]) * float(strength)
 
+        # Tomamos el borde ACTUAL del contorno a esta altura y tallamos hacia la
+        # palma una profundidad derivada del ancho horizontal del valle de referencia.
+        # Así no dependemos de una X absoluta registrada con otra silueta.
         in_yz = (
-            (norm[:, 1] >= mb[1]) & (norm[:, 1] <= mb[4]) &
+            (norm[:, 1] >= mb[1] - 0.01) & (norm[:, 1] <= mb[4] + 0.01) &
             (norm[:, 2] >= za) & (norm[:, 2] <= zb)
         )
+        active = np.where(in_yz)[0]
+        if not len(active):
+            per_target.append({**target, "selected_vertices": 0, "max_shift_mm": 0.0, "reason": "no_vertices_in_yz_band"})
+            continue
+
+        xs = norm[active, 0]
         if side == "left":
-            select = in_yz & (norm[:, 0] >= mb[0]) & (norm[:, 0] < proximal)
-            direction = proximal - norm[:, 0]
+            distal_x = float(xs.min())
+            proximal_x = min(distal_x + gap, float(mb[3]))
+            select = in_yz & (norm[:, 0] <= proximal_x) & (norm[:, 0] >= distal_x - 0.004)
+            direction = proximal_x - norm[:, 0]
         else:
-            select = in_yz & (norm[:, 0] <= mb[3]) & (norm[:, 0] > proximal)
-            direction = proximal - norm[:, 0]
+            distal_x = float(xs.max())
+            proximal_x = max(distal_x - gap, float(mb[0]))
+            select = in_yz & (norm[:, 0] >= proximal_x) & (norm[:, 0] <= distal_x + 0.004)
+            direction = proximal_x - norm[:, 0]
+
         if not np.any(select):
-            per_target.append({**target, "selected_vertices": 0, "max_shift_mm": 0.0})
+            per_target.append({
+                **target,
+                "distal_x_current": distal_x,
+                "proximal_x_target": proximal_x,
+                "selected_vertices": 0,
+                "max_shift_mm": 0.0,
+                "reason": "no_boundary_vertices_selected",
+            })
             continue
 
         zphase = np.clip(np.abs(norm[:, 2] - cz) / half_z, 0.0, 1.0)
+        # Conserva cierre suave arriba/abajo del valle, máxima profundidad al centro.
         zfall = np.cos(zphase * math.pi * 0.5) ** 2
-        delta_norm = direction * float(strength) * zfall * select.astype(float)
+        delta_norm = direction * zfall * select.astype(float)
         delta_world = delta_norm * span[0]
         updated[:, 0] += delta_world
-        moved |= select & (np.abs(delta_world) > 0)
+        changed = select & (np.abs(delta_world) > 1e-12)
+        moved |= changed
         local_max = float(np.max(np.abs(delta_world[select])) * scale_mm)
         max_shift = max(max_shift, local_max)
-        per_target.append({**target, "selected_vertices": int(select.sum()), "max_shift_mm": local_max})
+        per_target.append({
+            **target,
+            "distal_x_current": distal_x,
+            "proximal_x_target": proximal_x,
+            "selected_vertices": int(select.sum()),
+            "moved_vertices": int(changed.sum()),
+            "max_shift_mm": local_max,
+        })
 
     inv_node = np.linalg.inv(node_matrix)
     updated_local = (inv_node @ _to_h(updated).T).T[:, :3]
@@ -165,7 +198,7 @@ def sculpt_valleys(
     )
 
     result = {
-        "mode": "finger_reference_valley_surface_sculpt",
+        "mode": "finger_reference_valley_surface_sculpt_v2_relative_depth",
         "object": node_name,
         "geometry": geom_name,
         "reference_driven": True,
@@ -181,7 +214,7 @@ def sculpt_valleys(
         "topology_counts_preserved": topology_counts_preserved,
         "mesh_integrity": mesh_integrity,
         "promotion_allowed": False,
-        "learning": "Forma muescas moviendo superficie existente hacia el borde proximal del valle; no agrega/elimina caras, no suelda y no ejecuta booleanos.",
+        "learning": "Forma muescas desde el borde actual usando profundidad horizontal derivada de width_px; no agrega/elimina caras, no suelda y no ejecuta booleanos.",
     }
     Path(report_path).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return result
