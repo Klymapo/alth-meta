@@ -106,6 +106,8 @@ jobs:
   t2-t4-crear-publicar:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write   # sólo para la rama evidencia/linea-unica-* (imágenes visibles desde el celular)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -176,6 +178,33 @@ jobs:
         run: |
           alth-python tools/aceptacion.py .linea/crear/manzana --contra assets/manzana --max-minutos 15 \
             | tee .linea/t5_aceptacion.json
+      - name: Evidencia visible (rama evidencia/linea-unica-<rama>, una sola versión, nunca main)
+        if: always() && github.event_name != 'pull_request'
+        env:
+          RAMA: ${{ github.ref_name }}
+        run: |
+          c=.linea/crear/manzana
+          [ -f "$c/resumen.json" ] || { echo "sin corrida que mostrar"; exit 0; }
+          d="$RUNNER_TEMP/evidencia"; mkdir -p "$d"
+          hoja=$(alth-python -c "import json,sys; print((json.load(open(sys.argv[1])).get('final') or {}).get('hoja',''))" "$c/resumen.json")
+          [ -n "$hoja" ] && [ -f "$hoja" ] && cp "$hoja" "$d/hoja_generada.png"
+          cp assets/manzana/final.png "$d/hoja_aprobada.png"
+          [ -f "$c/revision.png" ] && cp "$c/revision.png" "$d/revision.png"
+          [ -f "$c/auditoria/comparacion.png" ] && cp "$c/auditoria/comparacion.png" "$d/comparacion.png"
+          [ -f "$c/auditoria/auditoria.json" ] && cp "$c/auditoria/auditoria.json" "$d/auditoria.json"
+          cp "$c/resumen.json" "$d/"
+          destino="evidencia/linea-unica-${RAMA//\//-}"
+          git config user.name "alth-linea[bot]"
+          git config user.email "alth-linea@users.noreply.github.com"
+          git worktree add -q --detach "$RUNNER_TEMP/wt"
+          cd "$RUNNER_TEMP/wt"
+          git checkout -q --orphan tmp-evidencia
+          git rm -rq --cached . && find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp "$d"/* .
+          printf '# Evidencia de la corrida %s (%s)\n\nhoja_generada.png = lo que hizo la línea · hoja_aprobada.png = asset aprobado · comparacion.png = auditoría (azul sólo ref, naranja sólo modelo)\n' "${{ github.run_id }}" "${{ github.sha }}" > README.md
+          git add -A && git commit -q -m "evidencia de la corrida ${{ github.run_id }}"
+          git push -q -f origin "HEAD:refs/heads/$destino"
+          echo "Evidencia: https://github.com/${{ github.repository }}/tree/$destino" | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
