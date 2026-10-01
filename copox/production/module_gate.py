@@ -47,9 +47,14 @@ def evaluate(policy: dict[str, Any], result: dict[str, Any], *, baseline_model: 
         reasons.append(f"unregistered_module:{module}")
         module_policy = {}
 
-    expected_hash = str(policy.get("baseline_sha256") or "")
+    # En generación 0 se compara contra la semilla artística aprobada de la policy.
+    # Después de una promoción, el adapter coloca baseline_sha256 en el resultado y
+    # el gate verifica contra ESA baseline actual, no contra Alpha inicial para siempre.
+    expected_hash = str(result.get("baseline_sha256") or policy.get("baseline_sha256") or "")
+    actual_hash = None
     if baseline_model is not None and expected_hash:
-        checks["baseline_hash"] = _sha256(baseline_model) == expected_hash
+        actual_hash = _sha256(baseline_model)
+        checks["baseline_hash"] = actual_hash == expected_hash
         if not checks["baseline_hash"]:
             reasons.append("baseline_hash_mismatch")
     else:
@@ -93,6 +98,7 @@ def evaluate(policy: dict[str, Any], result: dict[str, Any], *, baseline_model: 
         "module": module,
         "promotion_allowed": promotion_allowed,
         "checks": checks,
+        "baseline": {"expected_sha256": expected_hash or None, "actual_sha256": actual_hash},
         "thresholds": {
             "min_target_gain_pp": min_target,
             "min_global_gain_pp": min_global,
