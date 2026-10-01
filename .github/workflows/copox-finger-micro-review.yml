@@ -1,0 +1,50 @@
+name: COPOX · Micro valleys evidence review
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  evidence-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - name: Read-only promotion guard and research contract tests
+        run: python3 -m unittest discover -s tests -p test_copox_research_iteration.py -v
+      - name: Download existing audited siblings; no geometry generation
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 36876087961
+          name: copox-finger-micro-valleys-36876087961
+          path: .copox/micro-valleys-source
+      - name: Inspect topology, scope, frozen regions and actual renders
+        run: python3 -m copox.production.finger_micro_valley_review --source .copox/micro-valleys-source
+      - name: Verify Alpha remains protected
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
+          if sha!='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b':
+              raise SystemExit('PROTECTED_BASELINE: Alpha changed')
+          print('COPOX_ALPHA_VERIFIED:'+sha)
+          PY
+      - name: Downloadable visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-micro-valleys-visual-review-${{ github.run_id }}
+          path: .copox/finger-micro-review/
+          retention-days: 1
+          if-no-files-found: error

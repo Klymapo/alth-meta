@@ -10,7 +10,6 @@ import scipy.ndimage as ndi
 from PIL import Image
 
 from copox.adapters.alth_character_audit import (
-    bbox,
     crop_norm,
     load_config,
     load_scene,
@@ -19,6 +18,7 @@ from copox.adapters.alth_character_audit import (
     region_mask,
     registration_from_baseline,
 )
+from copox.adapters.finger_valley_probe import _valleys
 
 
 def _component_count(mask: np.ndarray, min_area: int) -> int:
@@ -40,10 +40,17 @@ def _runs_1d(values: np.ndarray, min_len: int = 2) -> int:
     return int(sum((e - s) >= min_len for s, e in zip(starts, ends)))
 
 
-def _detail(mask: np.ndarray, side: str, distal_fraction: float = 0.58) -> dict[str, Any]:
+def _detail(mask: np.ndarray, roi: np.ndarray, side: str, distal_fraction: float = 0.58) -> dict[str, Any]:
     ys, xs = np.where(mask)
     if not len(xs):
-        return {"components": 0, "max_vertical_runs": 0, "mean_vertical_runs": 0.0, "occupied_pixels": 0}
+        return {
+            "components": 0,
+            "max_vertical_runs": 0,
+            "mean_vertical_runs": 0.0,
+            "occupied_pixels": 0,
+            "valleys": [],
+            "valley_count": 0,
+        }
     x0, x1 = int(xs.min()), int(xs.max())
     width = max(1, x1 - x0 + 1)
     if side == "left":
@@ -60,12 +67,15 @@ def _detail(mask: np.ndarray, side: str, distal_fraction: float = 0.58) -> dict[
     min_area = max(2, int(mask.size * 0.0007))
     components = _component_count(distal, min_area)
     runs = [_runs_1d(distal[:, x]) for x in columns if 0 <= x < distal.shape[1]]
+    valleys = _valleys(mask, roi, side)
     return {
         "components": components,
         "max_vertical_runs": int(max(runs, default=0)),
         "mean_vertical_runs": float(np.mean(runs)) if runs else 0.0,
         "occupied_pixels": int(distal.sum()),
         "distal_fraction": distal_fraction,
+        "valleys": valleys,
+        "valley_count": len(valleys),
     }
 
 
@@ -87,24 +97,27 @@ def probe(model_glb: str, reference_sheet: str, config_path: str, output: str, e
     rows = []
     ev = Path(evidence_dir)
     ev.mkdir(parents=True, exist_ok=True)
-    for i, spec in enumerate(front_specs[:2]):
+    for spec in front_specs[:2]:
         box = [float(v) for v in spec["box"]]
         side = "left" if (box[0] + box[2]) / 2.0 < 0.5 else "right"
         roi = region_mask(ref_mask, box)
         ref = ref_mask & roi
         mod = model_mask & roi
-        ref_detail = _detail(ref, side)
-        model_detail = _detail(mod, side)
+        ref_detail = _detail(ref, roi, side)
+        model_detail = _detail(mod, roi, side)
         component_gap = abs(ref_detail["components"] - model_detail["components"])
         run_gap = abs(ref_detail["max_vertical_runs"] - model_detail["max_vertical_runs"])
+        valley_gap = abs(ref_detail["valley_count"] - model_detail["valley_count"])
         rows.append({
             "side": side,
             "reference": ref_detail,
             "model": model_detail,
             "component_gap": int(component_gap),
             "vertical_run_gap": int(run_gap),
+            "valley_count_gap": int(valley_gap),
+            "valley_count_match": bool(valley_gap == 0),
         })
-        # evidencia binaria ampliada, referencia a la izquierda y modelo a la derecha
+
         ys, xs = np.where(roi)
         if len(xs):
             x0, x1 = max(0, int(xs.min()) - 3), min(front.shape[1], int(xs.max()) + 4)
@@ -117,18 +130,32 @@ def probe(model_glb: str, reference_sheet: str, config_path: str, output: str, e
 
     mean_component_gap = float(np.mean([r["component_gap"] for r in rows]))
     mean_run_gap = float(np.mean([r["vertical_run_gap"] for r in rows]))
+    mean_valley_gap = float(np.mean([r["valley_count_gap"] for r in rows]))
+    reference_valleys = {r["side"]: int(r["reference"]["valley_count"]) for r in rows}
+    model_valleys = {r["side"]: int(r["model"]["valley_count"]) for r in rows}
+
+    # Semántica primaria: valles robustos extraídos de la propia referencia. Los
+    # vertical-runs se conservan como diagnóstico, pero ya no pueden inventar dedos
+    # por ruido de una sola columna. Componentes separados siguen siendo un veto útil.
+    valley_match = all(r["valley_count_match"] for r in rows)
+    definition_match = bool(mean_component_gap == 0.0 and valley_match)
     result = {
-        "mode": "hand_detail_reference_probe",
+        "mode": "hand_detail_reference_probe_v2",
         "hands": rows,
         "summary": {
             "mean_component_gap": mean_component_gap,
             "mean_vertical_run_gap": mean_run_gap,
-            "definition_match": bool(mean_component_gap == 0.0 and mean_run_gap == 0.0),
+            "mean_valley_count_gap": mean_valley_gap,
+            "reference_valleys": reference_valleys,
+            "model_valleys": model_valleys,
+            "valley_definition_match": valley_match,
+            "definition_match": definition_match,
         },
         "interpretation": {
-            "components": "Componentes separados en la franja distal de la mano; ayuda a detectar lectura tipo manopla.",
-            "vertical_runs": "Número máximo de bandas verticales separadas en la franja distal; proxy de separación visible de dedos.",
-            "note": "Es un proxy de silueta, no reemplaza revisión de topología/deformación. El objetivo se deriva de la propia referencia, no de un número inventado."
+            "components": "Componentes separados en la franja distal; detecta fragmentación o separación extrema.",
+            "valleys": "Huecos robustos encerrados verticalmente en la zona distal. Es la señal semántica principal y su cantidad se deriva de la referencia.",
+            "vertical_runs": "Diagnóstico secundario sensible a borde/pixel; ya no decide por sí solo cuántos dedos deben existir.",
+            "note": "El probe no impone anatomía humana genérica. Para esta referencia frontal detecta los valles que realmente son visibles; otras vistas y el gate regional siguen siendo obligatorios."
         },
     }
     out = Path(output)

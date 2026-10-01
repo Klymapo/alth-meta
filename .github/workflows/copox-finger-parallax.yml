@@ -1,0 +1,127 @@
+name: COPOX · Finger parallax probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parallax-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+
+      - name: Probar desplazamiento de profundidad sobre c03
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, shutil, subprocess
+          from pathlib import Path
+
+          from copox.adapters.alth_character import ensure_runtime
+          from copox.adapters.alth_character_audit import audit as audit_full
+          from copox.adapters.hand_detail_probe import probe as hand_probe
+          from copox.adapters.mesh_topology_probe import probe as topology_probe
+          from copox.adapters.regional_reference_audit import audit_regions
+          from copox.production.finger_gap_trial import _read, _sha256
+          from copox.production.finger_robust_scope_trial import run_trial as run_scope
+          from copox.production.module_gate import evaluate
+
+          baseline='assets/joven_rubio/theo_alpha.glb'
+          reference='refs/personajes/joven-rubio-4-vistas.jpg'
+          config='copox/reference_configs/joven_rubio_alpha.json'
+          policy_path='copox/production/theo_m5_policy.json'
+          root=Path('.copox/finger-parallax')
+          shutil.rmtree(root, ignore_errors=True)
+          root.mkdir(parents=True, exist_ok=True)
+
+          base_root=root/'base_scope'
+          base_trial=run_scope(baseline, reference, config, policy_path, 3, str(base_root))
+          source=base_root/'model.glb'
+          repo=Path.cwd().resolve()
+          alth=ensure_runtime(repo)
+
+          shift_script=root/'shift_proxy.py'
+          shift_script.write_text(r'''
+          import argparse, json
+          from pathlib import Path
+          import bpy
+          from mathutils import Vector
+
+          p=argparse.ArgumentParser()
+          p.add_argument('--input',required=True); p.add_argument('--output',required=True)
+          p.add_argument('--report',required=True); p.add_argument('--shift-fraction',type=float,required=True)
+          a=p.parse_args()
+          bpy.ops.wm.read_factory_settings(use_empty=True)
+          bpy.ops.import_scene.gltf(filepath=str(Path(a.input).resolve()))
+          proxies=[o for o in bpy.context.scene.objects if o.type=='MESH' and 'COPOX_ReferenceExtrudedDigits' in (o.name + ' ' + o.data.name)]
+          if not proxies: raise RuntimeError('No se encontró proxy de dedos')
+          zs=[]
+          for o in proxies:
+              zs.extend([(o.matrix_world @ Vector(c)).z for c in o.bound_box])
+          depth=max(zs)-min(zs)
+          delta=float(a.shift_fraction)*depth
+          for o in proxies:
+              mw=o.matrix_world.copy(); mw.translation.z += delta; o.matrix_world=mw
+          out=Path(a.output).resolve(); out.parent.mkdir(parents=True,exist_ok=True)
+          bpy.ops.export_scene.gltf(filepath=str(out),export_format='GLB')
+          report={'mode':'finger_parallax_shift','shift_fraction':a.shift_fraction,'proxy_depth_raw_z':depth,'raw_z_delta':delta,'proxy_count':len(proxies),'promotion_allowed':False}
+          Path(a.report).write_text(json.dumps(report,indent=2)+'\n')
+          print(json.dumps(report))
+          ''')
+
+          cfg=_read(config); policy=_read(policy_path)
+          tol=float((cfg.get('approval') or {}).get('freeze_tolerance_pp',-0.20))
+          shifts=(0.75,1.0,1.5)
+          rows=[]
+          for idx,shift in enumerate(shifts,1):
+              out=root/f'c0{idx}'; out.mkdir(parents=True,exist_ok=True)
+              model=out/'model.glb'; shift_report=out/'shift.json'
+              subprocess.run([alth,str(shift_script.resolve()),'--input',str(source.resolve()),'--output',str(model.resolve()),'--report',str(shift_report.resolve()),'--shift-fraction',str(shift)],cwd=repo,check=True)
+              regional=audit_regions(baseline,str(model),reference,config,str(out/'regional_metrics.json'),str(out/'evidence'))
+              target=regional['regions']['fingers']
+              failures=[]
+              for name,data in regional['regions'].items():
+                  if name in {'fingers','hands'}: continue
+                  delta=float(data.get('delta_pp',0.0))
+                  if delta<tol: failures.append({'region':name,'delta_pp':delta})
+              full=audit_full(baseline,str(model),reference,'hair,profile',config,None,str(out/'full_metrics.json'),str(out/'full_evidence'))
+              detail=hand_probe(str(model),reference,config,str(out/'hand_detail.json'),str(out/'hand_detail_evidence'))
+              topology=topology_probe(str(model),str(out/'topology_report.json'))
+              labels={'learning','finger_detail','topology_report'}
+              for side in ('left','right'):
+                  src=out/'hand_detail_evidence'/f'hand_detail_{side}.png'
+                  if src.exists():
+                      (out/'evidence').mkdir(parents=True,exist_ok=True); shutil.copy2(src,out/'evidence'/f'hand_{side}.png'); labels.add(f'hand_{side}')
+              semantic_ready=bool(detail['summary'].get('definition_match',False))
+              vd=full['visual']['full']['delta_pp']
+              learning={'mode':'threeq_parallax_depth_probe','shift_fraction':shift,'view_deltas':vd,'frozen_region_failures':failures,'promotion_executed':False}
+              (out/'learning.json').write_text(json.dumps(learning,indent=2)+'\n')
+              result={'module':'fingers','baseline_sha256':_sha256(baseline),'mesh_integrity':True,'scope_safe':bool(not failures),'regression_ok':bool(not failures),'evidence_complete':{'hand_left','hand_right','finger_detail','topology_report','learning'}<=labels,'semantic_ready':semantic_ready,'target_gain_pp':float(target.get('delta_pp',0.0)),'global_gain_pp':float(full['visual'].get('weighted_gain_pp',0.0)),'worst_view_delta_pp':float(min(float(vd[v]) for v in ('front','side','back','threeq'))),'evidence':sorted(labels),'flags':sorted(set(['bridge_pending','parallax_probe']+([] if semantic_ready else ['mitten_shape']))),'params':{'technique':'scoped_robust_extrusion_parallax_probe','delete_distal_fraction':0.85,'segments':2,'depth_scale':0.45,'tip_scale':0.88,'length_scale':0.90,'depth_shift_fraction':shift}}
+              (out/'module_result.json').write_text(json.dumps(result,indent=2)+'\n')
+              gate=evaluate(policy,result,baseline_model=baseline); (out/'gate.json').write_text(json.dumps(gate,indent=2)+'\n')
+              trial={'slot':idx,'shift':_read(shift_report),'hand_detail':detail,'topology':topology,'learning':learning,'result':result,'gate':gate,'promotion_executed':False}
+              (out/'trial.json').write_text(json.dumps(trial,indent=2)+'\n')
+              rows.append({'candidate':f'c0{idx}','shift_fraction':shift,'semantic_ready':semantic_ready,'reference_valleys':detail['summary'].get('reference_valleys'),'model_valleys':detail['summary'].get('model_valleys'),'target_gain_pp':result['target_gain_pp'],'global_gain_pp':result['global_gain_pp'],'view_deltas':vd,'worst_view_delta_pp':result['worst_view_delta_pp'],'regression_ok':result['regression_ok'],'reasons':gate['reasons']})
+
+          sha=hashlib.sha256(Path(baseline).read_bytes()).hexdigest()
+          assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b'
+          ranking=sorted(rows,key=lambda x:(x['semantic_ready'],x['regression_ok'],x['worst_view_delta_pp'],x['global_gain_pp'],x['target_gain_pp']),reverse=True)
+          (root/'summary.json').write_text(json.dumps({'baseline_sha256':sha,'promotion_executed':False,'ranking':ranking},indent=2)+'\n')
+          print(json.dumps(ranking,indent=2))
+          PY
+
+      - name: Evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-finger-parallax
+          path: .copox/finger-parallax/
+          retention-days: 1
+          if-no-files-found: ignore

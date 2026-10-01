@@ -1,0 +1,86 @@
+{
+  "research_id": "fingers-pose-preserving-micro-valleys-20261001",
+  "date": "2026-10-01",
+  "source_run": 36886096110,
+  "reviewer": "Codex",
+  "review_scope": [
+    "actual front",
+    "actual side",
+    "actual back",
+    "actual three-quarter",
+    "actual left hand front",
+    "actual left hand three-quarter",
+    "actual right hand",
+    "actual finger region"
+  ],
+  "additional_multiview_review": "Completed on source run36886096110 using contact sheets in readonly review36887264686; all three REJECTED, no new geometry.",
+  "decisions": [
+    {
+      "candidate": "c01",
+      "decision": "REJECTED",
+      "reason": "No abre el segundo valle robusto; muesca superior deja una punta estrecha y reduce la silueta de Valley. Integridad/loops y ventaja Valley fallan.",
+      "evidence": {
+        "model_valleys": {
+          "left": 1,
+          "right": 0
+        },
+        "target_difference_to_valley_pp": -2.334148697206423,
+        "topology": {
+          "boundary_edges": 310,
+          "manifold_edges": 48324,
+          "nonmanifold_edges": 9,
+          "degenerate_faces": 10,
+          "closed_manifold": false
+        }
+      },
+      "next_hypothesis": "Investigar reparación de costuras geométricas y parche mínimo conectado en el segmento distal superior; no aumentar profundidad ni mover toda la mano."
+    },
+    {
+      "candidate": "c02",
+      "decision": "REJECTED",
+      "reason": "No abre el segundo valle robusto; muesca superior deja una punta estrecha y reduce la silueta de Valley. Integridad/loops y ventaja Valley fallan.",
+      "evidence": {
+        "model_valleys": {
+          "left": 1,
+          "right": 0
+        },
+        "target_difference_to_valley_pp": -3.132150757480573,
+        "topology": {
+          "boundary_edges": 310,
+          "manifold_edges": 50706,
+          "nonmanifold_edges": 6,
+          "degenerate_faces": 6,
+          "closed_manifold": false
+        }
+      },
+      "next_hypothesis": "Investigar reparación de costuras geométricas y parche mínimo conectado en el segmento distal superior; no aumentar profundidad ni mover toda la mano."
+    },
+    {
+      "candidate": "c03",
+      "decision": "REJECTED",
+      "reason": "No abre el segundo valle robusto; muesca superior deja una punta estrecha y reduce la silueta de Valley. Integridad/loops y ventaja Valley fallan.",
+      "evidence": {
+        "model_valleys": {
+          "left": 1,
+          "right": 0
+        },
+        "target_difference_to_valley_pp": -3.4772369578299314,
+        "topology": {
+          "boundary_edges": 310,
+          "manifold_edges": 51454,
+          "nonmanifold_edges": 0,
+          "degenerate_faces": 0,
+          "closed_manifold": false
+        }
+      },
+      "next_hypothesis": "Investigar reparación de costuras geométricas y parche mínimo conectado en el segmento distal superior; no aumentar profundidad ni mover toda la mano."
+    }
+  ],
+  "winner": null,
+  "best_metrics_candidate": "c01",
+  "promotion_executed": false,
+  "review_evidence_run": 36887264686,
+  "visual_learning": "La mano derecha coincide visualmente con Valley. Las muescas no recuperan el segundo valle ni el contorno rectangular estilizado. Un mayor IoU como el+19pp de la ronda vertical no implica mejor likeness.",
+  "finger_reframing_verified_run": 36888524658,
+  "review_completed": true
+}

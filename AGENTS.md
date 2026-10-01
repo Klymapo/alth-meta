@@ -55,3 +55,7 @@ También corre en GitHub Actions (`.github/workflows/bucle.yml`). Para nuevos lo
 - OpenCode, Codex, Cline, Roo y Goose leen `AGENTS.md` solos.
 - Aider: `aider --read AGENTS.md --read CLAUDE.md`.
 - Gemini CLI: en `.gemini/settings.json` pon `{"contextFileName": ["AGENTS.md", "CLAUDE.md"]}`.
+
+## Protección vigente de Theo
+
+`assets/joven_rubio/theo_alpha.glb` tiene SHA-256 `ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b`. No se reemplaza al fusionar código, importar documentación ni auditar. La política M5 mantiene promoción automática deshabilitada. Antes de cada técnica geométrica nueva se exige un research brief válido; sin él, `RESEARCH_REQUIRED`. Las campañas de manos generan exactamente tres hermanos por generación y publican también los rechazos con evidencia; el score no sustituye revisión visual. La aprobación final del modelo sigue siendo separada de una fusión de repositorios.

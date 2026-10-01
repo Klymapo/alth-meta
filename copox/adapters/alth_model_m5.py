@@ -261,6 +261,17 @@ def cmd_learn(args: argparse.Namespace) -> int:
 def cmd_promote(args: argparse.Namespace) -> int:
     repo = Path(args.repo_root).resolve()
     candidate = Path(args.candidate_dir).resolve()
+    policy_path = repo / "copox" / "production" / "theo_m5_policy.json"
+    policy = _read(policy_path)
+    if policy.get("automatic_promotion_enabled") is not True:
+        _write(candidate / "promotion.json", {
+            "status": "PROMOTION_DISABLED",
+            "reason": policy.get("promotion_block_reason", "VISUAL_REVIEW_REQUIRED"),
+            "promotion_allowed": False,
+            "promotion_executed": False,
+        })
+        print("PROMOTION_DISABLED: revisión visual requerida; baseline intacta")
+        return 9
     gate = _read(candidate / "gate.json")
     if gate.get("promotion_allowed") is not True:
         raise RuntimeError("Intento de promote sin gate M5 PASS")

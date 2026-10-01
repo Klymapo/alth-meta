@@ -184,6 +184,8 @@ jobs:
       - name: Guardar resultado en una rama
         if: always()
         env:
+          IN_PROVEEDOR: ${{ inputs.proveedor }}
+          IN_MODELO: ${{ inputs.modelo }}
           IN_ASSET: ${{ inputs.asset }}
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -208,7 +210,7 @@ jobs:
           git config user.email "bucle-alth@users.noreply.github.com"
           git checkout -b "$rama"
           git add -A "$d" alth/
-          git commit -m "bucle: $nombre (${{ inputs.proveedor }} ${{ inputs.modelo }}), corrida ${{ github.run_number }}" || exit 0
+          git commit -m "bucle: $nombre ($IN_PROVEEDOR $IN_MODELO), corrida ${{ github.run_number }}" || exit 0
           git -c credential.helper='!gh auth git-credential' push origin "$rama"
           {
             echo "_Partió de: \`${{ steps.rama.outputs.ref }}\`_"

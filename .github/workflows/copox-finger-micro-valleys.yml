@@ -1,0 +1,70 @@
+name: COPOX · Researched micro valleys
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: copox-micro-valleys-${{ github.head_ref || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  micro-valleys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Free open-source analysis tools
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - name: Python syntax
+        run: python3 -m compileall -q copox/production copox/adapters/finger_micro_valley_plan.py copox/adapters/finger_micro_valley_edit.py copox/adapters/finger_micro_valley_render.py
+      - name: Research and immutable sibling contract tests
+        run: python3 -m unittest discover -s tests -p test_copox_research_iteration.py -v
+      - name: Research, diagnose, generate exactly three siblings and audit
+        run: python3 -m copox.production.finger_micro_valley_campaign
+      - name: Summary and protected Alpha
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          alpha=Path('assets/joven_rubio/theo_alpha.glb')
+          sha=hashlib.sha256(alpha.read_bytes()).hexdigest()
+          if sha != 'ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b':
+              raise SystemExit('PROTECTED_BASELINE: Alpha hash mismatch')
+          path=Path('.copox/finger-local-notches/loop.json')
+          if not path.exists():
+              print('PREPARATION_FAILED: inspect summary.json artifact')
+              raise SystemExit(1)
+          loop=json.loads(path.read_text())
+          rows=[r for g in loop['generations'] for r in g['candidate_metrics']]
+          if len(rows)!=3 or len({r['parent_sha'] for r in rows})!=1:
+              raise SystemExit('SIBLING_CONTRACT_FAILED')
+          if loop['promotion_executed'] or loop['promotion_allowed']:
+              raise SystemExit('PROTECTED_BASELINE: promotion forbidden')
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as stream:
+              stream.write('## Researched micro valleys — NO PROMOTION\n\n')
+              stream.write('Alpha SHA: '+sha+'\n\n')
+              stream.write('|Candidate|Target pp|Global pp|Worst view pp|Valleys|Audit|\n|---|---:|---:|---:|---|---|\n')
+              for r in rows:
+                  stream.write(f"|{r['candidate']}|{r['target_gain_pp']}|{r['global_gain_pp']}|{r['worst_view_delta_pp']}|{r.get('model_valleys')}|{r['audit_passed']}|\n")
+              stream.write('\nStop: '+loop['stop_reason']+'\n\nVisual review required; metrics alone do not authorize promotion.\n')
+          print('COPOX_VERIFIED:'+json.dumps({'alpha_sha':sha,'siblings':len(rows),'parent_sha':loop['parent_sha'],'promotion_executed':False}))
+          PY
+      - name: Downloadable GLB, editable topology, metrics and real renders
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-finger-micro-valleys-${{ github.run_id }}
+          path: .copox/finger-local-notches/
+          retention-days: 7
+          if-no-files-found: error

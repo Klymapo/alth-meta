@@ -1,0 +1,170 @@
+{
+  "research_id": "fingers-micro-valleys-20261001",
+  "module": "fingers",
+  "problem": "Valley Sculpt c01 mejora silueta pero deja 0/0 valles; Robust Scope abre 2/0 y pierde estructura. Abrir dos valles izquierdos sin reconstrucción ni alteración derecha.",
+  "date": "2026-10-01",
+  "researched_at": "2026-10-01T14:09:32Z",
+  "status": "READY",
+  "web_research_performed": true,
+  "internet_checked": true,
+  "research_prepared_by": "Codex via connected GitHub; runtime validates stored research and does not claim browsing",
+  "access_limitations": [
+    "Executor cloud falló. Sólo conector GitHub disponible para navegación.",
+    "El sitio docs.blender.org no fue consultado en esta sesión. Manual consultado por espejo identificado.",
+    "No se verificó tutorial chibi específico ni receta de separación de mitten en esta sesión. Adaptación estilizada es hipótesis propia basada en principios genéricos oficiales, no hallazgo de tutorial."
+  ],
+  "sources": [
+    {
+      "title": "Blender Python API — BMesh introduction and CustomData",
+      "url": "https://github.com/blender/blender/blob/main/doc/python_api/rst/include__bmesh.rst",
+      "source_type": "official_docs",
+      "relevance": "Edición independiente de viewport; UV/weights por layers; liberar BMesh; script debe conservar estado válido.",
+      "verified_blob_sha": "93b4cac21cef4a0dae42ae6b35bd9f9fb231450e"
+    },
+    {
+      "title": "Blender Manual — Mesh structure (mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/meshes/structure.rst",
+      "source_type": "technical_article",
+      "relevance": "Mirror del Manual, no sitio oficial; quads para deformación, loops siguiendo contorno y mayor densidad local en articulaciones. Información de UI antigua no se usa como API.",
+      "verified_blob_sha": "bbebd383ad24f06ae40db189723630be7ffff0f6"
+    },
+    {
+      "title": "Blender Manual — Loop Cut and Slide (mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/meshes/editing/edge/loopcut_slide.rst",
+      "source_type": "technical_article",
+      "relevance": "Loops se detienen en tris/n-gons; sin smoothing puntos nuevos quedan sobre aristas existentes; corrección UV.",
+      "verified_blob_sha": "c3845326dd0e1e4370ed949a2daa72dd6cf73501"
+    },
+    {
+      "title": "Blender Manual — Bridge Edge Loops (mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/meshes/editing/edge/bridge_edge_loops.rst",
+      "source_type": "technical_article",
+      "relevance": "Conectar loops con caras, controlar twist, cortes e interpolación; bridge se difiere hasta tener ciclos compatibles verificados.",
+      "verified_blob_sha": "fabeaf8c18ebf15655f5ca805d0b67b2aef8bdfc"
+    },
+    {
+      "title": "Blender Manual — Extrude Faces (mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/meshes/editing/face/extrude_faces.rst",
+      "source_type": "technical_article",
+      "relevance": "Extrusión conectada desde borde de palma, evita dedos flotantes; descartada en esta ronda porque ya existe buena silueta.",
+      "verified_blob_sha": "ece6034fef03a6ed57a30e5855fa56e48a1f49ca"
+    },
+    {
+      "title": "Blender — BMesh operator definitions",
+      "url": "https://github.com/blender/blender/blob/main/source/blender/bmesh/intern/bmesh_opdefines.cc",
+      "source_type": "official_docs",
+      "relevance": "Fuente que genera documentación API: bisect_plane, subdivide_edges, bridge_loops y extrude_face_region.",
+      "verified_blob_sha": "24417aca14c29c8c3c2376c0b22b298d01bdad9d"
+    },
+    {
+      "title": "Blender — BMesh bridge implementation",
+      "url": "https://github.com/blender/blender/blob/main/source/blender/bmesh/operators/bmo_bridge.cc",
+      "source_type": "official_docs",
+      "relevance": "Ciclos cerrados, correspondencia de winding y datos por loop; cardinalidad diferente exige expansión y puede añadir triángulos."
+    },
+    {
+      "title": "Blender — BMesh subdivision implementation",
+      "url": "https://github.com/blender/blender/blob/main/source/blender/bmesh/operators/bmo_subdivide.cc",
+      "source_type": "official_docs",
+      "relevance": "Subdivisión por patrones no equivale a ring de deformación; mantener pocos cortes y demostrar conectividad."
+    }
+  ],
+  "techniques": [
+    {
+      "name": "semantic_finish",
+      "applicable": true,
+      "principle": "Conservar el ajuste de contorno ya medido."
+    },
+    {
+      "name": "valley_surface_sculpt",
+      "applicable": true,
+      "principle": "Preparar una sola vez el working parent c01 (0.55), sin promoción."
+    },
+    {
+      "name": "micro_valley_cut_local_sections",
+      "applicable": true,
+      "principle": "Prismas de corte estrechos por valle, ancho/posición desde referencia, profundidad única variable; secciones BMesh locales y conteo explícito de ciclos."
+    },
+    {
+      "name": "bridge_edge_loops_to_palm",
+      "applicable": false,
+      "principle": "Diferir hasta validar ciclos, winding y silueta; no autorizado por este brief para mutación actual."
+    },
+    {
+      "name": "deformation_cleanup",
+      "applicable": false,
+      "principle": "Future rig necesita quads y prueba de flexión; no se declara rig listo por tener cortes."
+    }
+  ],
+  "techniques_found": [
+    "semantic_finish",
+    "valley_surface_sculpt",
+    "micro_valley_cut_local_sections",
+    "bridge_edge_loops_to_palm",
+    "deformation_cleanup"
+  ],
+  "techniques_rejected": [
+    {
+      "technique": "full_hand_rebuild",
+      "reason": "Evidencia Robust Scope: menor target gain y regresión, dedos proxy/bridge pendientes."
+    },
+    {
+      "technique": "simple_scaling",
+      "reason": "No abre separaciones."
+    },
+    {
+      "technique": "global_subdivision",
+      "reason": "Densidad innecesaria y no garantiza loops."
+    },
+    {
+      "technique": "realistic_hand_anatomy",
+      "reason": "Incompatible con chibi-soft; contar sólo valles visibles."
+    }
+  ],
+  "selected_technique": "micro_valley_cut_local_sections",
+  "chosen_direction": "Valley Sculpt c01 común → dos micro-cortes izquierdos → secciones locales → auditar contra Alpha y c01; nunca promover.",
+  "reason": "Mínima nueva operación topológica para corregir la señal semántica conservando contorno y grosor. La extrusión conectada es técnica conocida pero no se necesita reemplazar mano.",
+  "risks": [
+    "Booleanos sobre GLB con face corners pueden producir n-gons o bordes abiertos.",
+    "UV por loop y normals deben comprobarse; capas presentes no garantizan ausencia de distorsión.",
+    "Referencia frontal no determina toda la anatomía oculta.",
+    "Bisect secciones en triángulos no garantiza rings all-quads ni rig readiness.",
+    "Dos valles detectados no prueban semejanza visual; revisión multivista obligatoria."
+  ],
+  "implementation_notes": [
+    "Reutilizar _valleys, _side_spec, hand_detail_probe.",
+    "Registrar mano real para dimensiones relativas; no posiciones absolutas de dedos.",
+    "Tres hermanos con depth_scale 0.75/1.0/1.25; todo otro parámetro fijo.",
+    "Control de scope mediante fingerprint de caras/UV fuera del límite y mano derecha.",
+    "Verificar ciclos por conectividad y persistir blend editable; GLB triangula para transporte.",
+    "Bridge y rig requieren otro brief específico vigente antes de ejecutarse.",
+    "Registrar promotion_executed=false y promotion_allowed=false siempre."
+  ],
+  "technique_rounds": [
+    {
+      "round": 1,
+      "name": "micro_valley_cut_local_sections",
+      "applicable": true
+    }
+  ],
+  "supplemental_research": {
+    "date": "2026-10-01 14:38:41 UTC",
+    "phase": "After initial implementation, for interpreting first-round audit; not a claim of pre-implementation browsing",
+    "sources": [
+      {
+        "title": "Blender Manual — Boolean Modifier (mirror)",
+        "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/modifiers/generate/booleans.rst",
+        "source_type": "technical_article",
+        "relevance": "Manifold required for guaranteed results; Exact tolerates overlaps; Hole Tolerant costs time and is not enabled without evidence.",
+        "verified_blob_sha": "51337e27f8a591fef1e5ca743f760b2d60063e32"
+      },
+      {
+        "title": "Blender — Boolean modifier implementation",
+        "url": "https://github.com/blender/blender/blob/main/source/blender/modifiers/intern/MOD_boolean.cc",
+        "source_type": "official_docs",
+        "relevance": "Solver and watertight assumptions explain possible failure on existing open mesh.",
+        "verified_blob_sha": "fa2d54852210f84509be59eb412a1d3f9e2e77a5"
+      }
+    ]
+  }
+}

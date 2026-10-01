@@ -1,0 +1,71 @@
+name: COPOX · Pose preserving notches review
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  evidence-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - name: Read-only promotion guard and research contract tests
+        run: python3 -m unittest discover -s tests -p test_copox_research_iteration.py -v
+      - name: Download existing audited siblings; no geometry generation
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 36886096110
+          name: copox-pose-preserving-notches-36886096110
+          path: .copox/micro-valleys-source
+      - name: Reframe only finger evidence from immutable existing GLBs
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          from pathlib import Path
+          from copox.adapters.alth_character import ensure_runtime
+          from copox.production.finger_gap_trial import _sha256
+          python=ensure_runtime(Path.cwd())
+          src=Path('.copox/micro-valleys-source')
+          models=[(Path('assets/joven_rubio/theo_alpha.glb'),src/'alpha_render'),
+                  (src/'working_parent'/'model.glb',src/'working_parent'/'renders')]
+          models += [(src/'g01'/name/'model.glb',src/'g01'/name/'renders') for name in ('c01','c02','c03')]
+          for model,directory in models:
+              before=_sha256(model)
+              subprocess.run([python,str(Path('copox/adapters/finger_micro_valley_render.py').resolve()),
+                 '--input',str(model.resolve()),'--config',str(Path('copox/reference_configs/joven_rubio_alpha.json').resolve()),
+                 '--output-dir',str(directory.resolve()),'--only','finger_region'],check=True,timeout=900)
+              if _sha256(model)!=before:
+                  raise SystemExit('PROTECTED_BASELINE: read-only render changed a GLB')
+          print('COPOX_CAPTURE_VERIFIED:5 existing GLBs, only finger_region reframed, no geometry changes')
+          PY
+      - name: Inspect topology, scope, frozen regions and actual renders
+        run: python3 -m copox.production.finger_micro_valley_review --source .copox/micro-valleys-source --output .copox/finger-local-notch-review --source-run 36886096110 --decisions copox/research/fingers-pose-preserving-micro-valleys-20261001-review.json
+      - name: Verify Alpha remains protected
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
+          if sha!='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b':
+              raise SystemExit('PROTECTED_BASELINE: Alpha changed')
+          print('COPOX_ALPHA_VERIFIED:'+sha)
+          PY
+      - name: Downloadable visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-local-notch-visual-review-${{ github.run_id }}
+          path: .copox/finger-local-notch-review/
+          retention-days: 7
+          if-no-files-found: error

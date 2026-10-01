@@ -1,0 +1,21 @@
+# Normalize EOL for text files
+* text=auto eol=lf
+
+# Binary production files
+*.blend binary
+*.blend1 binary
+*.blend2 binary
+*.glb binary
+*.bin binary
+*.xlsx binary
+
+# Binary media
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.mp4 binary
+*.mov binary
+*.wav binary
+*.mp3 binary

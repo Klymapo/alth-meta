@@ -1,0 +1,35 @@
+{
+  "reviewed_by": "Codex",
+  "reviewed_at": "2026-10-01 14:38:41 UTC",
+  "source_run_id": 36876087961,
+  "source_commit": "084a4e41ce01934e5fa6ac8c8a54700f5a2b8b85",
+  "reference": "refs/personajes/joven-rubio-4-vistas.jpg",
+  "review_basis": "Rendered comparison from actual Actions evidence: front, three-quarter, left hand",
+  "best_diagnostic_candidate": "c03",
+  "accepted_candidate": null,
+  "promotion_executed": false,
+  "decisions": [
+    {
+      "candidate": "c01",
+      "status": "REJECTED",
+      "reason": "Only one robust left valley; left-hand tip remains stepped, scope and local cycles unverified; measured fingers gain below Valley Sculpt c01."
+    },
+    {
+      "candidate": "c02",
+      "status": "REJECTED",
+      "reason": "Visible protruding block at distal upper hand and deformed silhouette. Highest target gain cannot compensate mesh integrity failure, one valley and worse 3/4 regression."
+    },
+    {
+      "candidate": "c03",
+      "status": "REJECTED",
+      "reason": "Two visible valleys and good global retention, but finger target gain falls strongly versus Valley Sculpt c01. Stepped distal hand contour and scope/cycle failures make it unsuitable."
+    }
+  ],
+  "learning": [
+    "Reference valley count alone does not establish likeness.",
+    "A target metric can reward visually broken geometry (c02).",
+    "Local cuts on an open/face-corner GLB do not automatically create clean deformation rings.",
+    "Preserve the Valley Sculpt parent; do not chain from rejected variants."
+  ],
+  "next_hypothesis": "Investigate a minimal connected quad patch around the two valley roots, anchored to measured distal boundary and preserving palm depth; validate ring closure and UV/material correspondence before bridging. Requires a new technique-specific research brief."
+}

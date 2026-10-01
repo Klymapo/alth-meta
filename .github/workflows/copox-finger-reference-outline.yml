@@ -1,0 +1,80 @@
+name: COPOX · Finger reference outline
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reference-outline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar análisis de contorno
+        run: python3 -m pip install -q numpy scipy trimesh Pillow scikit-image
+
+      - name: Ejecutar tres volúmenes trazados desde referencia
+        run: |
+          rm -rf .copox/finger-reference-outline
+          for SLOT in 1 2 3; do
+            python3 -m copox.production.finger_reference_outline_trial \
+              --baseline assets/joven_rubio/theo_alpha.glb \
+              --reference refs/personajes/joven-rubio-4-vistas.jpg \
+              --config copox/reference_configs/joven_rubio_alpha.json \
+              --policy copox/production/theo_m5_policy.json \
+              --slot "$SLOT" \
+              --output-dir ".copox/finger-reference-outline/c0${SLOT}"
+          done
+
+      - name: Resumir prueba outline sin promoción
+        run: |
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path('.copox/finger-reference-outline')
+          rows=[]
+          for p in sorted(root.glob('c*/trial.json')):
+              t=json.loads(p.read_text())
+              assert t['promotion_executed'] is False
+              assert t['plan']['reference_driven'] is True
+              assert t['plan']['invented_finger_count'] is False
+              assert t['build']['closed_patch_volume'] is True
+              assert t['build']['bridge_to_wrist_validated'] is False
+              assert t['gate']['promotion_allowed'] is False
+              l=t['learning']; r=t['result']
+              rows.append({
+                  'candidate':p.parent.name,
+                  'outline_points':l['outline_point_count'],
+                  'depth_scale':r['params']['depth_scale'],
+                  'left_definition_match':l['left_definition_match'],
+                  'left_component_gap':l['left_component_gap'],
+                  'left_valley_gap':l['left_valley_count_gap'],
+                  'reference_left_valleys':l['reference_left_valleys'],
+                  'model_left_valleys':l['model_left_valleys'],
+                  'target_gain_pp':r['target_gain_pp'],
+                  'global_gain_pp':r['global_gain_pp'],
+                  'worst_view_delta_pp':r['worst_view_delta_pp'],
+                  'reasons':t['gate']['reasons'],
+              })
+          assert len(rows)==3, rows
+          sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
+          assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b',sha
+          ranking=sorted(rows,key=lambda x:(x['left_definition_match'],-x['left_valley_gap'],-x['left_component_gap'],x['target_gain_pp'],x['global_gain_pp']),reverse=True)
+          summary={'baseline_sha256':sha,'promotion_executed':False,'research_stage_only':True,'ranking':ranking}
+          (root/'summary.json').write_text(json.dumps(summary,indent=2))
+          print(json.dumps(summary,indent=2))
+          PY
+
+      - name: Evidencia outline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-finger-reference-outline
+          path: .copox/finger-reference-outline/
+          retention-days: 1
+          if-no-files-found: ignore

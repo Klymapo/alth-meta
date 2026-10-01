@@ -1,0 +1,120 @@
+name: COPOX · Theo productive loop
+
+on:
+  pull_request:
+    paths:
+      - "copox/cassettes/examples/theo_model_m5_loop.json"
+      - "copox/cassettes/examples/theo_model_m5_validation.json"
+      - "copox/adapters/alth_model_m5.py"
+      - "copox/adapters/alth_model_m5_cycle.py"
+      - "copox/state_bundle.py"
+      - "copox/engine.py"
+      - "copox/production/**"
+      - ".github/workflows/copox-theo-model-loop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: copox-theo-m5-loop
+  cancel-in-progress: false
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+
+      - name: Elegir modo seguro
+        id: mode
+        run: |
+          echo "mode=shadow" >> "$GITHUB_OUTPUT"
+          echo "cassette=copox/cassettes/examples/theo_model_m5_validation.json" >> "$GITHUB_OUTPUT"
+
+      - name: Ejecutar un loop acotado
+        env:
+          CASSETTE: ${{ steps.mode.outputs.cassette }}
+        run: |
+          rm -rf .copox/theo-loop
+          set +e
+          python3 -m copox.engine "$CASSETTE" --output-root .copox/theo-loop
+          RC=$?
+          set -e
+          if [ "$RC" -ne 0 ] && [ "$RC" -ne 2 ]; then
+            echo "Loop terminó con código inesperado: $RC" >&2
+            exit "$RC"
+          fi
+          echo "$RC" > .copox/theo-loop/exit_code.txt
+
+      - name: Verificar contrato sin promoción
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifests=list(Path('.copox/theo-loop').rglob('manifest.json'))
+          if len(manifests)!=1:
+              raise SystemExit('LOOP_CONTRACT_FAILED: se esperaba un manifest')
+          manifest=json.loads(manifests[0].read_text())
+          if manifest['status'] not in {'PLATEAU','PROMOTED'}:
+              raise SystemExit('LOOP_CONTRACT_FAILED: estado inesperado '+manifest['status'])
+          candidates=manifest['candidates']
+          generations={}
+          for candidate in candidates:
+              generation=candidate['id'].split('-c')[0]
+              generations.setdefault(generation,[]).append(candidate)
+          if not 1<=len(generations)<=3 or any(len(rows)!=3 for rows in generations.values()):
+              raise SystemExit('SIBLING_CONTRACT_FAILED: máximo tres generaciones de tres hermanos')
+          if any(c['status'] not in {'REJECTED','ELIGIBLE','ERROR'} for c in candidates):
+              raise SystemExit('LOOP_CONTRACT_FAILED: candidato inesperado')
+          cassette=json.loads(Path('copox/cassettes/examples/theo_model_m5_validation.json').read_text())
+          if 'promote' in cassette['commands'] or 'state_branch' in cassette.get('variables',{}):
+              raise SystemExit('PROMOTION_DISABLED: cassette shadow no puede promover/persistir')
+          for path in manifests[0].parent.rglob('promotion.json'):
+              if json.loads(path.read_text()).get('promotion_executed'):
+                  raise SystemExit('PROMOTION_DISABLED: promoción detectada')
+          print(json.dumps({'mode':'shadow','status':manifest['status'],'generations':len(generations),
+                            'candidates':len(candidates),'promotion_executed':False},indent=2))
+          PY
+
+      - name: Resumen
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          print('## COPOX · Theo loop')
+          print()
+          print('- Modo: `${{ steps.mode.outputs.mode }}`')
+          manifests=list(Path('.copox/theo-loop').rglob('manifest.json'))
+          if not manifests:
+              print('- No se generó manifest.')
+              raise SystemExit
+          m=json.loads(manifests[0].read_text())
+          print(f"- Estado: **{m.get('status')}**")
+          print(f"- Candidatos: {len(m.get('candidates',[]))}/9 (máximo 3 generaciones)")
+          if m.get('winner'):
+              print(f"- Ganador interno: `{m['winner']}`")
+          rejected=[c for c in m.get('candidates',[]) if c.get('status')=='REJECTED']
+          if rejected:
+              print('- Rechazos: ' + ', '.join(f"{c['id']} ({c.get('reason','')})" for c in rejected))
+          PY
+
+      - name: Evidencia del loop
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-loop-${{ steps.mode.outputs.mode }}
+          path: .copox/theo-loop/
+          retention-days: 3
+          if-no-files-found: ignore

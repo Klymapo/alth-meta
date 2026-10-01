@@ -1,0 +1,177 @@
+{
+  "research_id": "fingers-connected-micro-valleys-20261001",
+  "module": "fingers",
+  "problem": "Corregir evidencia real: booleanos reescriben exteriores, c02 tiene104aristas non-manifold, perfiles escalonados pierden ventaja Valley; posición localbbox no acreditada. Crear muescas conectadas sólo en superficie distal izquierda con registro de referencia y secciones por dedo.",
+  "date": "2026-10-01",
+  "researched_at": "2026-10-01T15:10:59Z",
+  "status": "READY",
+  "web_research_performed": true,
+  "internet_checked": true,
+  "research_prepared_by": "Codex via connected GitHub; runtime validates stored research and does not claim browsing",
+  "access_limitations": [
+    "Executor cloud falló. Sólo conector GitHub disponible para navegación.",
+    "El sitio docs.blender.org no fue consultado en esta sesión. Manual consultado por espejo identificado.",
+    "No se verificó tutorial chibi específico ni receta de separación de mitten en esta sesión. Adaptación estilizada es hipótesis propia basada en principios genéricos oficiales, no hallazgo de tutorial."
+  ],
+  "sources": [
+    {
+      "title": "Blender Python API — BMesh introduction and CustomData",
+      "url": "https://github.com/blender/blender/blob/main/doc/python_api/rst/include__bmesh.rst",
+      "source_type": "official_docs",
+      "relevance": "Edición independiente de viewport; UV/weights por layers; liberar BMesh; script debe conservar estado válido.",
+      "verified_blob_sha": "93b4cac21cef4a0dae42ae6b35bd9f9fb231450e"
+    },
+    {
+      "title": "Blender Manual — Mesh structure (mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/meshes/structure.rst",
+      "source_type": "technical_article",
+      "relevance": "Mirror del Manual, no sitio oficial; quads para deformación, loops siguiendo contorno y mayor densidad local en articulaciones. Información de UI antigua no se usa como API.",
+      "verified_blob_sha": "bbebd383ad24f06ae40db189723630be7ffff0f6"
+    },
+    {
+      "title": "Blender Manual — Loop Cut and Slide (mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/meshes/editing/edge/loopcut_slide.rst",
+      "source_type": "technical_article",
+      "relevance": "Loops se detienen en tris/n-gons; sin smoothing puntos nuevos quedan sobre aristas existentes; corrección UV.",
+      "verified_blob_sha": "c3845326dd0e1e4370ed949a2daa72dd6cf73501"
+    },
+    {
+      "title": "Blender — BMesh operator definitions",
+      "url": "https://github.com/blender/blender/blob/main/source/blender/bmesh/intern/bmesh_opdefines.cc",
+      "source_type": "official_docs",
+      "relevance": "Fuente que genera documentación API: bisect_plane, subdivide_edges, bridge_loops y extrude_face_region.",
+      "verified_blob_sha": "24417aca14c29c8c3c2376c0b22b298d01bdad9d"
+    },
+    {
+      "title": "Blender BMesh — plane bisect implementation",
+      "url": "https://github.com/blender/blender/blob/main/source/blender/bmesh/tools/bmesh_bisect_plane.cc",
+      "source_type": "official_docs",
+      "relevance": "Corta sólo aristas etiquetadas; sus caras radiales también se dividen. Restringir selección a caras totalmente locales y comprobar fingerprint de caras externas; sin clear_inner/outer ni snapping."
+    },
+    {
+      "title": "Blender Manual — Bisect (identified mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/meshes/editing/mesh/bisect.rst",
+      "source_type": "technical_article",
+      "relevance": "Plano numérico y geometría interpolada; no borrar lados ni llenar cavidades. API oficial prevalece sobre instrucciones UI."
+    },
+    {
+      "title": "Blender Manual — Lattice Modifier (identified mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/modifiers/deform/lattice.rst",
+      "source_type": "technical_article",
+      "relevance": "Deformación restringida mediante vertex group, mezcla con forma original y conservación de coordenadas de textura. Se extrae principio de influencia acotada, no se copia ni ejecuta un modifier global."
+    },
+    {
+      "title": "Blender Manual — Mesh Deform (identified mirror)",
+      "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/modifiers/deform/mesh_deform.rst",
+      "source_type": "technical_article",
+      "relevance": "Cage continuo y grupo restringido; bind puede agotar memoria. Descarta cage global/binding, adapta interpolación local simple y explícita."
+    },
+    {
+      "title": "Blender BMesh — join triangles implementation",
+      "url": "https://github.com/blender/blender/blob/main/source/blender/bmesh/operators/bmo_join_triangles.cc",
+      "source_type": "official_docs",
+      "relevance": "Unión local de tris a quads con delimitadores de UV/material/normal; no unir aristas de secciones ni prometer all-quads."
+    }
+  ],
+  "techniques": [
+    {
+      "name": "semantic_finish",
+      "applicable": true,
+      "principle": "Reproducir únicamente el parent ya medido."
+    },
+    {
+      "name": "valley_surface_sculpt",
+      "applicable": true,
+      "principle": "Valley c01 .55 permanece parent común."
+    },
+    {
+      "name": "connected_reference_notch_sections",
+      "applicable": true,
+      "principle": "Planes de refinamiento local en límites/centros reales de valles y deformación monotónica de extremo distal hasta raíz medida; registrar x/z desde cámara baseline, verificar ciclo por banda de dedo."
+    },
+    {
+      "name": "anchored_reference_contour_warp",
+      "applicable": true,
+      "principle": "Fase común sin parámetros variables: envelope frontal medido por columna define ajuste de Z en extremo distal; influencia cero en borde de patch, palma original y mano derecha."
+    }
+  ],
+  "techniques_found": [
+    "semantic_finish",
+    "valley_surface_sculpt",
+    "connected_reference_notch_sections",
+    "anchored_reference_contour_warp"
+  ],
+  "techniques_rejected": [
+    {
+      "technique": "full_hand_rebuild",
+      "reason": "Evidencia Robust Scope: menor target gain y regresión, dedos proxy/bridge pendientes."
+    },
+    {
+      "technique": "simple_scaling",
+      "reason": "No abre separaciones."
+    },
+    {
+      "technique": "global_subdivision",
+      "reason": "Densidad innecesaria y no garantiza loops."
+    },
+    {
+      "technique": "realistic_hand_anatomy",
+      "reason": "Incompatible con chibi-soft; contar sólo valles visibles."
+    },
+    {
+      "technique": "whole_mesh_boolean",
+      "reason": "Evidencia campaña36876087961: scopefalso3/3,104nonmanifoldc02,artefactovisible."
+    },
+    {
+      "technique": "global_three_cycle_requirement",
+      "reason": "Tres ciclos en todas las X ignora raíces y longitudes distintas; no demuestra cada dedo."
+    },
+    {
+      "technique": "unverified_hand_bbox_registration",
+      "reason": "Distorsiona correspondencia respecto cámara de auditoría; diagnóstico previo debe comparar posiciones globales y material local."
+    }
+  ],
+  "selected_technique": "connected_reference_notch_sections",
+  "chosen_direction": "Diagnóstico con artifact ya existente → registro frontal bloqueado → refinamiento BMesh local sin borrado → muescas conectadas → secciones por banda → exactamente tres profundidades hermanas.",
+  "reason": "El cuerpo ya contiene volumen continuo válido. Añadir vertices donde faltan y modificar sólo una muesca mantiene conectividad; evita que un booleano global reescriba piel/UV. Aplicación a Theo es hipótesis propia, no receta publicada.",
+  "risks": [
+    "Una muesca continua puede seguir pareciendo mitten: conteo y visual obligatorios.",
+    "La referencia 2D no determina geometría oculta ni rig.",
+    "Deformación monotónica analítica no prueba que triangulación discreta no se interseque; BVH y topología deben auditarla.",
+    "Bisect puede tocar caras radiales vecinas; restringir edges y verificar exterior exacto.",
+    "Los ciclos transversales no prueban estructura all-quads ni rig readiness.",
+    "Materiales de muchas caras pueden impedir unir triángulos; no alterar paleta para conseguir quads.",
+    "Warp de contorno puede cambiar la silueta en3/4 o activar ROI forearm aunque no mueva geometría de antebrazo; gate estricto y visual deciden."
+  ],
+  "implementation_notes": [
+    "Registro global real reemplaza bbox-to-bbox. Ajuste distal de envelope Z común para los tres; sola variable profundidad de notch .85/1/1.15. Esta combinación es hipótesis propia apoyada por diagnóstico, no tutorial.",
+    "Antes de mutar, imprimir diagnóstico real con bounds y registro global de ambos valles.",
+    "Seleccionar sólo caras completamente dentro de fingers left; vertices que pertenecen a caras externas no se desplazan.",
+    "Bisect en z de cada valle y secciones x, clear_inner=false, clear_outer=false, use_snap_center=false; sin boolean modifier.",
+    "Perfil de raíz redondeada por planos en z; x monótona con derivada positiva y profundidad limitada al material medido.",
+    "UV por loop interpolada, conservar materiales y restablecer normals exteriores por cara.",
+    "Verificar cada sección contra bandas delimitadas por los dos valles; no exigir tres ciclos idénticos en todas las secciones.",
+    "No declarar bridge_ready ni rig_ready; faltan correspondencia de raíz con palma y prueba de deformación.",
+    "Research preparada por Codex; Actions sólo valida brief, no declara navegación.",
+    "Alpha y parent SHA protegidos; promoción siemprefalse."
+  ],
+  "technique_rounds": [
+    {
+      "round": 2,
+      "name": "connected_reference_notch_sections",
+      "applicable": true
+    }
+  ],
+  "diagnostic_evidence": {
+    "run_id": 36881716770,
+    "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+    "registration_scale": 7.355727529436979,
+    "upper_valley_mapped_z": [
+      0.5072168609668675,
+      0.5313700448224326
+    ],
+    "upper_valley_existing_vertices": 0,
+    "lower_valley_existing_vertices": 591,
+    "conclusion": "El valle alto cae fuera del volumen distal. No basta profundizar cortes; corregir envelope distal con anchor proximal antes de las muescas. Nueva evidencia permite ajuste local, no reconstrucción completa."
+  }
+}

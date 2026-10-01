@@ -1,0 +1,42 @@
+name: COPOX · Finger remodel learning
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  learn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - name: Extraer valles reales de referencia
+        run: |
+          mkdir -p .copox/finger-remodel
+          python3 -m copox.adapters.finger_valley_probe \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --output .copox/finger-remodel/reference_valleys.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('.copox/finger-remodel/reference_valleys.json').read_text())
+          assert len(d['hands']) == 2
+          assert d['reference_driven'] is True
+          assert d['invented_finger_count'] is False
+          print(json.dumps(d, indent=2))
+          PY
+      - name: Evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-finger-remodel-learning
+          path: .copox/finger-remodel/
+          retention-days: 1

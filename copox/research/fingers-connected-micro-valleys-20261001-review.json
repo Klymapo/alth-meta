@@ -1,0 +1,183 @@
+{
+  "research_id": "fingers-connected-micro-valleys-20261001",
+  "date": "2026-10-01",
+  "source_run": 36883548374,
+  "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+  "reviewer": "Codex; inspected actual rendered six-column front/threeq/left-hand comparison from Actions log",
+  "decisions": [
+    {
+      "candidate": "c01",
+      "decision": "REJECTED",
+      "reason": "Mano levantada con dedos puntiagudos y pequeñas costuras visibles; forma inferior a reference/Valley aunque IoU target y2/0 mejoren.",
+      "metrics": {
+        "module": "fingers",
+        "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+        "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+        "mesh_integrity": false,
+        "scope_safe": false,
+        "regression_ok": false,
+        "evidence_complete": true,
+        "semantic_ready": true,
+        "target_gain_pp": 19.173163558765836,
+        "global_gain_pp": 0.32199357653761584,
+        "worst_view_delta_pp": -0.18584258956691468,
+        "evidence": [
+          "hand_left",
+          "hand_right",
+          "finger_detail",
+          "topology_report",
+          "learning"
+        ],
+        "flags": [
+          "finger_merge_regression"
+        ],
+        "params": {
+          "depth_scale": 0.85
+        },
+        "reference_valleys": {
+          "left": 2,
+          "right": 0
+        },
+        "model_valleys": {
+          "left": 2,
+          "right": 0
+        },
+        "parent_target_delta_pp": 14.164461161624969,
+        "parent_global_delta_pp": 0.16482900795576905,
+        "alpha_locked_target_difference_to_valley_pp": 13.060266759089485,
+        "alpha_locked_global_difference_to_valley_pp": 0.17009814049421257,
+        "parent_worst_view_delta_pp": -0.10644148068864046,
+        "local_loops_ready": false,
+        "valley_structural_advantage_preserved": false,
+        "candidate": "c01",
+        "audit_passed": false,
+        "reasons": [
+          "mesh_integrity",
+          "scope_safe",
+          "regression_ok",
+          "single_view_regression",
+          "forbidden_flags:finger_merge_regression",
+          "valley_structural_advantage",
+          "local_loops_ready"
+        ]
+      }
+    },
+    {
+      "candidate": "c02",
+      "decision": "REJECTED",
+      "reason": "Mano levantada con dedos puntiagudos y pequeñas costuras visibles; forma inferior a reference/Valley aunque IoU target y2/0 mejoren.",
+      "metrics": {
+        "module": "fingers",
+        "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+        "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+        "mesh_integrity": false,
+        "scope_safe": false,
+        "regression_ok": false,
+        "evidence_complete": true,
+        "semantic_ready": true,
+        "target_gain_pp": 18.450796086713908,
+        "global_gain_pp": 0.32090831551557786,
+        "worst_view_delta_pp": -0.18466478469861825,
+        "evidence": [
+          "hand_left",
+          "hand_right",
+          "finger_detail",
+          "topology_report",
+          "learning"
+        ],
+        "flags": [
+          "finger_merge_regression"
+        ],
+        "params": {
+          "depth_scale": 1
+        },
+        "reference_valleys": {
+          "left": 2,
+          "right": 0
+        },
+        "model_valleys": {
+          "left": 2,
+          "right": 0
+        },
+        "parent_target_delta_pp": 13.978311936769433,
+        "parent_global_delta_pp": 0.16514347335202517,
+        "alpha_locked_target_difference_to_valley_pp": 12.337899287037557,
+        "alpha_locked_global_difference_to_valley_pp": 0.16901287947217458,
+        "parent_worst_view_delta_pp": -0.1054002264767484,
+        "local_loops_ready": false,
+        "valley_structural_advantage_preserved": false,
+        "candidate": "c02",
+        "audit_passed": false,
+        "reasons": [
+          "mesh_integrity",
+          "scope_safe",
+          "regression_ok",
+          "single_view_regression",
+          "forbidden_flags:finger_merge_regression",
+          "valley_structural_advantage",
+          "local_loops_ready"
+        ]
+      }
+    },
+    {
+      "candidate": "c03",
+      "decision": "REJECTED",
+      "reason": "Mano levantada con dedos puntiagudos y pequeñas costuras visibles; forma inferior a reference/Valley aunque IoU target y2/0 mejoren.",
+      "metrics": {
+        "module": "fingers",
+        "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+        "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+        "mesh_integrity": false,
+        "scope_safe": false,
+        "regression_ok": false,
+        "evidence_complete": true,
+        "semantic_ready": true,
+        "target_gain_pp": 17.810675807885712,
+        "global_gain_pp": 0.3198741728780541,
+        "worst_view_delta_pp": -0.18479565475302828,
+        "evidence": [
+          "hand_left",
+          "hand_right",
+          "finger_detail",
+          "topology_report",
+          "learning"
+        ],
+        "flags": [
+          "finger_merge_regression"
+        ],
+        "params": {
+          "depth_scale": 1.15
+        },
+        "reference_valleys": {
+          "left": 2,
+          "right": 0
+        },
+        "model_valleys": {
+          "left": 2,
+          "right": 0
+        },
+        "parent_target_delta_pp": 13.641391120725174,
+        "parent_global_delta_pp": 0.1652280136968165,
+        "alpha_locked_target_difference_to_valley_pp": 11.697779008209361,
+        "alpha_locked_global_difference_to_valley_pp": 0.1679787368346508,
+        "parent_worst_view_delta_pp": -0.1054002264767484,
+        "local_loops_ready": false,
+        "valley_structural_advantage_preserved": false,
+        "candidate": "c03",
+        "audit_passed": false,
+        "reasons": [
+          "mesh_integrity",
+          "scope_safe",
+          "regression_ok",
+          "single_view_regression",
+          "forbidden_flags:finger_merge_regression",
+          "valley_structural_advantage",
+          "local_loops_ready"
+        ]
+      }
+    }
+  ],
+  "winner": null,
+  "promotion_executed": false,
+  "next_hypothesis": "Conservar pose de Valley y bloquear aliases geométricos en frontera antes de notch."
+}

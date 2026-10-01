@@ -1,0 +1,1300 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-01",
+  "source_repository": "Klymapo/ALASTHEO",
+  "source_commit": "de50876221bb547065cea2a234aaeb50b40777f8",
+  "destination_repository": "Klymapo/alth-meta",
+  "destination_parent_commit": "16f38836e8edb38cd445f2e452de60621b182a2d",
+  "source_repository_deleted": false,
+  "history_strategy": "Source Git history retained in its original repository; content imported with per-file blob provenance.",
+  "files": [
+    {
+      "source": ".gitattributes",
+      "source_blob_sha": "bdb89ea4e3d56e5a8a9a160ba8963a1034bc974b",
+      "destination": ".gitattributes",
+      "destination_blob_sha": "bdb89ea4e3d56e5a8a9a160ba8963a1034bc974b",
+      "mode": "identical"
+    },
+    {
+      "source": ".github/pull_request_template.md",
+      "source_blob_sha": "3a33ee217c5f334cb35fe917a8cc31192f26dad0",
+      "destination": ".github/pull_request_template.md",
+      "destination_blob_sha": "3a33ee217c5f334cb35fe917a8cc31192f26dad0",
+      "mode": "identical"
+    },
+    {
+      "source": ".gitignore",
+      "source_blob_sha": "574ae8c5ea508bd0bf2df1bbb7d7d26e61dfe1bc",
+      "destination": ".gitignore",
+      "destination_blob_sha": "9bff3cd3dacb5086d135a270f6eed9146073c1b7",
+      "mode": "adapted"
+    },
+    {
+      "source": "CONTRIBUTING.md",
+      "source_blob_sha": "8b8e44e12ef5a88a41546548f80c6cdb1f7a43b3",
+      "destination": "CONTRIBUTING.md",
+      "destination_blob_sha": "6d9b02b480d98e8e8b7aea9b9f368073ca306e6b",
+      "mode": "adapted"
+    },
+    {
+      "source": "README.md",
+      "source_blob_sha": "7822a623f944cb4ac3444431ce79e5a1b5faa73d",
+      "destination": "docs/ALASTHEO.md",
+      "destination_blob_sha": "ac0349ef0f8a27192573820e950d9ad6fbb10c78",
+      "mode": "adapted"
+    },
+    {
+      "source": "archive/README.md",
+      "source_blob_sha": "ec2f136e5379df199f88fe21553763ba9163567e",
+      "destination": "archive/README.md",
+      "destination_blob_sha": "ec2f136e5379df199f88fe21553763ba9163567e",
+      "mode": "identical"
+    },
+    {
+      "source": "assets/README.md",
+      "source_blob_sha": "bf0fea7325a5a7635e07519e2f1de6557d876cc4",
+      "destination": "assets/README.md",
+      "destination_blob_sha": "3c86f27980bcc2ac1c7c726b823c117d32951060",
+      "mode": "adapted"
+    },
+    {
+      "source": "assets/references/README.md",
+      "source_blob_sha": "6038dddd4b5e9ce52e50f092aa295d0d11e13f3a",
+      "destination": "assets/references/README.md",
+      "destination_blob_sha": "6038dddd4b5e9ce52e50f092aa295d0d11e13f3a",
+      "mode": "identical"
+    },
+    {
+      "source": "assets/references/characters/detective/README.md",
+      "source_blob_sha": "853cfcbc966e95d6f95c9451917c6dc63531d99d",
+      "destination": "assets/references/characters/detective/README.md",
+      "destination_blob_sha": "0ef5e3cca596ddf7c58d7e3c2b5dfc6b2884f724",
+      "mode": "adapted"
+    },
+    {
+      "source": "assets/references/characters/theo/README.md",
+      "source_blob_sha": "78ac0385005b70f89beef4755f05911f0693b252",
+      "destination": "assets/references/characters/theo/README.md",
+      "destination_blob_sha": "2565ac09cd6fe60a462e16a0bd6fb33f13125333",
+      "mode": "adapted"
+    },
+    {
+      "source": "assets/references/sam3d/theo/README.md",
+      "source_blob_sha": "0c4f185150559c6d2a3e3f3f827e1b74152dc95d",
+      "destination": "assets/references/sam3d/theo/README.md",
+      "destination_blob_sha": "0c4f185150559c6d2a3e3f3f827e1b74152dc95d",
+      "mode": "identical"
+    },
+    {
+      "source": "assets/references/scale/README.md",
+      "source_blob_sha": "9a4e2d592b65efb132e09af0d0c4bc7500b29e04",
+      "destination": "assets/references/scale/README.md",
+      "destination_blob_sha": "56960f6cc6af50ebf17a221191ea383c53a1790c",
+      "mode": "adapted"
+    },
+    {
+      "source": "docs/METHODS.md",
+      "source_blob_sha": "aef34fee2b8d90b60f028d94d6ea465ad9376906",
+      "destination": "docs/METHODS.md",
+      "destination_blob_sha": "a85737bcfd089b98b902c6147aa9b3b806dee29d",
+      "mode": "adapted"
+    },
+    {
+      "source": "docs/NAMING.md",
+      "source_blob_sha": "66ef119a3ebb4eb2fc078bbe88af63f8dd642e52",
+      "destination": "docs/NAMING.md",
+      "destination_blob_sha": "66ef119a3ebb4eb2fc078bbe88af63f8dd642e52",
+      "mode": "identical"
+    },
+    {
+      "source": "docs/STRUCTURE.md",
+      "source_blob_sha": "5df0b401277ca62f05e773df8937085f44031219",
+      "destination": "docs/STRUCTURE.md",
+      "destination_blob_sha": "db8a712a217b6c8bbba98da26487859883caf16a",
+      "mode": "adapted"
+    },
+    {
+      "source": "docs/production/AlasTheo - Libro de producción.xlsx",
+      "source_blob_sha": "af1d17052be78f221f85c0fd61a66b367cd91b86",
+      "destination": "docs/production/AlasTheo - Libro de producción.xlsx",
+      "destination_blob_sha": "af1d17052be78f221f85c0fd61a66b367cd91b86",
+      "mode": "identical"
+    },
+    {
+      "source": "models/README.md",
+      "source_blob_sha": "da1cf5a7e0fe84b0b18d1ffc6b28b6d0c933f88e",
+      "destination": "models/README.md",
+      "destination_blob_sha": "da1cf5a7e0fe84b0b18d1ffc6b28b6d0c933f88e",
+      "mode": "identical"
+    },
+    {
+      "source": "scripts/README.md",
+      "source_blob_sha": "1c974c471c7d4c8efe34083992691bd137d515ac",
+      "destination": "scripts/README.md",
+      "destination_blob_sha": "1c974c471c7d4c8efe34083992691bd137d515ac",
+      "mode": "identical"
+    },
+    {
+      "source": "tests/README.md",
+      "source_blob_sha": "7468cd97463bd1780cc244b0a27e48a12c1a1a8e",
+      "destination": "tests/README.md",
+      "destination_blob_sha": "fa7e562f08697217a81f5d7f5413afe4015aa702",
+      "mode": "adapted"
+    }
+  ],
+  "preserved_alth_files": [
+    {
+      "path": ".claude/agents/revisor-visual-alth.md",
+      "sha": "5a0997e2b5ca28462901b156820c90c6bdf94c13"
+    },
+    {
+      "path": ".claude/commands/asset.md",
+      "sha": "9978310d0a716632231405db32881846d76ab9cf"
+    },
+    {
+      "path": ".claude/settings.json",
+      "sha": "3dbbfd760cfdf002b15a19428be62a7431a99cfc"
+    },
+    {
+      "path": ".claude/skills/finalizar-personaje/SKILL.md",
+      "sha": "57a6bcfee9de771bc5bbcb816c460778b531e832"
+    },
+    {
+      "path": ".codex/skills/finalizar-personaje/SKILL.md",
+      "sha": "57a6bcfee9de771bc5bbcb816c460778b531e832"
+    },
+    {
+      "path": ".codex/skills/revisar-alth/SKILL.md",
+      "sha": "e83ff5962aca8e2e67dcd604f7300fa1ca62b69a"
+    },
+    {
+      "path": ".github/workflows/copox-alth-integration.yml",
+      "sha": "f6b95847ca8c4b8baa50644bb708463050e12843"
+    },
+    {
+      "path": ".github/workflows/copox-alth-tournament.yml",
+      "sha": "3ce906e708e258caf6edb5846c20fc4661dd7055"
+    },
+    {
+      "path": ".github/workflows/copox-anatomy-maturity.yml",
+      "sha": "1aa82ed002d7c78bed630184828f3023deb6a078"
+    },
+    {
+      "path": ".github/workflows/copox-ci.yml",
+      "sha": "f7689c3bba51550648a4d64d55661b79367f4661"
+    },
+    {
+      "path": ".github/workflows/copox-facial-maturity.yml",
+      "sha": "095154a0af926ffb4045abb90e212f8450d699e0"
+    },
+    {
+      "path": ".github/workflows/copox-finger-combo.yml",
+      "sha": "32605be3d886e05c45cc93c3c65796213c8cea97"
+    },
+    {
+      "path": ".github/workflows/copox-finger-connected-valleys.yml",
+      "sha": "95735fb50aa62e9e817e397cc6dfbd6a30f6a99d"
+    },
+    {
+      "path": ".github/workflows/copox-finger-fulldepth.yml",
+      "sha": "4e3c98224488fca7990ac0bd285f72f3cd26b4f4"
+    },
+    {
+      "path": ".github/workflows/copox-finger-gap-remodel.yml",
+      "sha": "e85fb7f8bd3a1bde522465b6d6bbad36bb00c51c"
+    },
+    {
+      "path": ".github/workflows/copox-finger-handctx.yml",
+      "sha": "daa45b4403ec1aab7bb281144aac3d800abe8da6"
+    },
+    {
+      "path": ".github/workflows/copox-finger-local-notch-review.yml",
+      "sha": "a62f7fffb09fe30cdc0a6566b071fc0f776b2881"
+    },
+    {
+      "path": ".github/workflows/copox-finger-micro-review.yml",
+      "sha": "a6c901a366dcf017c3257a173b4907d357250f3e"
+    },
+    {
+      "path": ".github/workflows/copox-finger-micro-valleys.yml",
+      "sha": "42188562ed0e42559c899754a60ddae3b062b217"
+    },
+    {
+      "path": ".github/workflows/copox-finger-parallax.yml",
+      "sha": "b51a4c85486c7f2965d17c21c926613739216607"
+    },
+    {
+      "path": ".github/workflows/copox-finger-reference-extrude.yml",
+      "sha": "c946069da5d2c778f5609f9c34a284cb48bee54e"
+    },
+    {
+      "path": ".github/workflows/copox-finger-reference-outline.yml",
+      "sha": "24f0bbfc43817e4b1fd8a5227fd068c5da613de2"
+    },
+    {
+      "path": ".github/workflows/copox-finger-remodel-learning.yml",
+      "sha": "d39e02d1e44313af557ae0bb84f493cb6f563c94"
+    },
+    {
+      "path": ".github/workflows/copox-finger-robust-direct.yml",
+      "sha": "b5f26119bbfe6051732b9841bf158d14bd347609"
+    },
+    {
+      "path": ".github/workflows/copox-finger-robust-extrude.yml",
+      "sha": "c940b9dda5a19080f982fa3f5132bef96ad84daf"
+    },
+    {
+      "path": ".github/workflows/copox-finger-robust-narrow.yml",
+      "sha": "ea22a5ca48a6d9ef38bd85a02352be394e9f020f"
+    },
+    {
+      "path": ".github/workflows/copox-finger-robust-scope.yml",
+      "sha": "11e31c4a663b49267a2df8845336f3ff46f79122"
+    },
+    {
+      "path": ".github/workflows/copox-finger-semantic-finish.yml",
+      "sha": "52930cb63ddd402adb40522926e9eee06ffc98a2"
+    },
+    {
+      "path": ".github/workflows/copox-finger-topology-campaign.yml",
+      "sha": "1dee2b722bb1b7eaec06fa23d8ff9f16f9bb8968"
+    },
+    {
+      "path": ".github/workflows/copox-finger-valley-restore.yml",
+      "sha": "98fd8f0593057eb28ed7abc40014006aa6a70bac"
+    },
+    {
+      "path": ".github/workflows/copox-finger-valley-scope-expand.yml",
+      "sha": "ffec82a10a4c9027fc1a39ff53d59a086f29f80a"
+    },
+    {
+      "path": ".github/workflows/copox-finger-valley-scope-length.yml",
+      "sha": "bb518fab442ff0fb5a85e7d86de07eb6d754f4f0"
+    },
+    {
+      "path": ".github/workflows/copox-finger-valley-sculpt.yml",
+      "sha": "155924905dbfc0ee35494e823c0a4c56770c1095"
+    },
+    {
+      "path": ".github/workflows/copox-finger-valley-topology.yml",
+      "sha": "6a6dfcdce98c2189e35b0a61213e60ac5f302003"
+    },
+    {
+      "path": ".github/workflows/copox-finger-valley-widen.yml",
+      "sha": "b76d467d1d5d0aeb84f5463a49a5b900a0f643f1"
+    },
+    {
+      "path": ".github/workflows/copox-global-maturity.yml",
+      "sha": "e65a92d267ade78ab2f9477bb39c81889659ed11"
+    },
+    {
+      "path": ".github/workflows/copox-hand-rebuild-experiment.yml",
+      "sha": "353b6713b28e17efc11accfa168b3a3077828ba0"
+    },
+    {
+      "path": ".github/workflows/copox-m5-engine-validation.yml",
+      "sha": "276e749eb397d4fde8fb20223f0810a034d2960c"
+    },
+    {
+      "path": ".github/workflows/copox-m5-readiness.yml",
+      "sha": "18bd20a85fa933a173a1cefa32d53cf5f5adc261"
+    },
+    {
+      "path": ".github/workflows/copox-material-maturity.yml",
+      "sha": "527cf7aeff56919d67593a2ffdc0d51bbbbaf7c8"
+    },
+    {
+      "path": ".github/workflows/copox-model-loop-dryrun.yml",
+      "sha": "da6ebd73d7a2267b2545748364e1631a72533f45"
+    },
+    {
+      "path": ".github/workflows/copox-orientation-maturity.yml",
+      "sha": "4063bef14c9c924be0cadfc753c56f7ecf5f518f"
+    },
+    {
+      "path": ".github/workflows/copox-rig-maturity.yml",
+      "sha": "1919d5cd54cb03fea6da86bf1c6216acd799f8c1"
+    },
+    {
+      "path": ".github/workflows/copox-run.yml",
+      "sha": "99270723531ef2bf381c72541917296cb0c07489"
+    },
+    {
+      "path": ".github/workflows/copox-scheduler.yml",
+      "sha": "3f139f0487c7b937d613a6a99924f923f1023e19"
+    },
+    {
+      "path": ".github/workflows/copox-theo-model-loop.yml",
+      "sha": "19b525a60b4df078c06c9f34c7ccc3d897c046c9"
+    },
+    {
+      "path": ".nojekyll",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "alth/__init__.py",
+      "sha": "5a66ea0f8205c4d92c5d305b95e70d01f4c3475c"
+    },
+    {
+      "path": "alth/cuerpo.py",
+      "sha": "7e28b6fc49be0852cce08200c9f6e789400f9761"
+    },
+    {
+      "path": "alth/pelo.py",
+      "sha": "fd80c10b6b09929df862d47c6f6f00e5d90ac840"
+    },
+    {
+      "path": "alth/personaje.py",
+      "sha": "8f2fd41052e9a85e443a782125994b684786efe1"
+    },
+    {
+      "path": "alth/ropa.py",
+      "sha": "137376019c50ec4e0515f34e9f1e398b1a19496c"
+    },
+    {
+      "path": "alth/silueta.py",
+      "sha": "b472db08de729f4cca572e904ee6f163a5385652"
+    },
+    {
+      "path": "alth/verificacion.py",
+      "sha": "d9895c0ad374c1859f7d5677dcc608b7f7cda490"
+    },
+    {
+      "path": "assets/.gitkeep",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "assets/joven_rubio/brief_final.md",
+      "sha": "d45fd434c42b9356f0eed1c27807bb74822d479c"
+    },
+    {
+      "path": "assets/joven_rubio/build.py",
+      "sha": "9ac8ab63e8aa6e78652833328eb9a9842faee53a"
+    },
+    {
+      "path": "assets/joven_rubio/spec.json",
+      "sha": "5c0ba9513fb4bc50c89ef611518828025cdfcb63"
+    },
+    {
+      "path": "assets/joven_rubio/theo_alpha.glb",
+      "sha": "b7a2865f14780abc0bb82542c9aa9143117f8896"
+    },
+    {
+      "path": "assets/lata/build.py",
+      "sha": "f15b1e9404e52a5f849814452555af6feb990c6e"
+    },
+    {
+      "path": "assets/lata/final.png",
+      "sha": "0339239515987babec9b00cc60ee3d8fa9389f2e"
+    },
+    {
+      "path": "assets/lata/lata.blend",
+      "sha": "cb108fe9394bba0aeb741db081c439015fd8d7d5"
+    },
+    {
+      "path": "assets/lata/lata.glb",
+      "sha": "c75c4a68d0bdcdaf0915ab116cde1e063dc4a0b8"
+    },
+    {
+      "path": "assets/lata/spec.json",
+      "sha": "354f8872a04b8120725b1e140620252553ad4737"
+    },
+    {
+      "path": "assets/manzana/build.py",
+      "sha": "707695f4720d3e162e2a4528fe2126b62df9bf1b"
+    },
+    {
+      "path": "assets/manzana/final.png",
+      "sha": "1d3c5a699d5d785b4fbf0650bee2d66e05c07ee2"
+    },
+    {
+      "path": "assets/manzana/manzana.blend",
+      "sha": "20c0695d190cae96e603506577a6f09d08c015b2"
+    },
+    {
+      "path": "assets/manzana/manzana.glb",
+      "sha": "54169934ccdb108575175754a618a2e597a26cf5"
+    },
+    {
+      "path": "assets/manzana/spec.json",
+      "sha": "74e7778202ed7b9199262352a9dd46cff106fb38"
+    },
+    {
+      "path": "assets/pruebas/joven_rubio_v1/build.py",
+      "sha": "c6f2ec537116189aba6e73638414fae3216cebc3"
+    },
+    {
+      "path": "assets/pruebas/joven_rubio_v1/hoja_v1.png",
+      "sha": "30af248707dbbda410072f5879c54628d7a7f7fa"
+    },
+    {
+      "path": "assets/pruebas/joven_rubio_v1/spec.json",
+      "sha": "048fae1c2b8a9bc449a2b48ace09890101bc9431"
+    },
+    {
+      "path": "assets/taza/build.py",
+      "sha": "30531cfc6295db3e4ba73594415c77b89ba94014"
+    },
+    {
+      "path": "assets/taza/final.png",
+      "sha": "4374532cad5797ec21c43230c4ca52488f92f016"
+    },
+    {
+      "path": "assets/taza/spec.json",
+      "sha": "b3977b998c911bf661a245b34810f3735f3790af"
+    },
+    {
+      "path": "assets/taza/taza.blend",
+      "sha": "e1daccd0b87071c6c0cd6f0132d7061fbba77b20"
+    },
+    {
+      "path": "assets/taza/taza.glb",
+      "sha": "87194a22a08f8447cc42a962f3c950f15cf0ebc7"
+    },
+    {
+      "path": "assets/vaso/build.py",
+      "sha": "4d4182a62c780cc40ba9cc5075091ee0496a60e0"
+    },
+    {
+      "path": "assets/vaso/final.png",
+      "sha": "5c488805961640b2ea9086f7be509e0f65aff1c0"
+    },
+    {
+      "path": "assets/vaso/spec.json",
+      "sha": "f2314f1a350f8d4da1958ef6f2d99ebe1cc5a2b0"
+    },
+    {
+      "path": "assets/vaso/vaso.blend",
+      "sha": "532159882d558b2a51175eb57216dd505c5e21a6"
+    },
+    {
+      "path": "assets/vaso/vaso.glb",
+      "sha": "da7b7b66453200c0120647da2b8521b04ba003da"
+    },
+    {
+      "path": "assets/vaso_cafe/build.py",
+      "sha": "6d7b78615075fb338d026cf769e45f3616dd5ffc"
+    },
+    {
+      "path": "assets/vaso_cafe/final.png",
+      "sha": "fc35ae5992f43904ebf15c2f4ee9ec270b68feca"
+    },
+    {
+      "path": "assets/vaso_cafe/spec.json",
+      "sha": "9101419f11c8b91b337857a74ade19d41d8c78ce"
+    },
+    {
+      "path": "assets/vaso_cafe/vaso_cafe.blend",
+      "sha": "9a584df32189d3c384a816f4246db29256394052"
+    },
+    {
+      "path": "assets/vaso_cafe/vaso_cafe.glb",
+      "sha": "b0ca00c94dd65201dd9d88887ea0e7a351f17223"
+    },
+    {
+      "path": "chsp-x/fondo-movil.jpg",
+      "sha": "fdbbd69bd413e238c10e9519e6f775ae2dd159f8"
+    },
+    {
+      "path": "chsp-x/fondo.jpg",
+      "sha": "3ee4d12f595c489cd6d8f7f74d9f737f50c00256"
+    },
+    {
+      "path": "chsp-x/icono-180.png",
+      "sha": "09a4f2e64766b21ebc0f67716348a6a749ea6b8d"
+    },
+    {
+      "path": "chsp-x/icono-32.png",
+      "sha": "230406f1cbfbd401bdd346647170e9241d8555f7"
+    },
+    {
+      "path": "chsp-x/index.html",
+      "sha": "29340c7f8c08291c82e7b4a858d18d5345cbe65a"
+    },
+    {
+      "path": "copox/README.md",
+      "sha": "8a108fb839abae26d49854f212e092a95913c955"
+    },
+    {
+      "path": "copox/__init__.py",
+      "sha": "36a1d3b9270313a1cc75598b2bcaa50525e469f6"
+    },
+    {
+      "path": "copox/adapters/__init__.py",
+      "sha": "c0993ee2827f4b7e950e5d0be335885f3b288150"
+    },
+    {
+      "path": "copox/adapters/alth_character.py",
+      "sha": "478485d6dc13e4c08946bc738370695dbc4595dd"
+    },
+    {
+      "path": "copox/adapters/alth_character_alpha.py",
+      "sha": "0a1ed808056565e4928f04a9dd7bb0019d5572a5"
+    },
+    {
+      "path": "copox/adapters/alth_character_audit.py",
+      "sha": "f486e24c8817afe86225a7a785eedeab1576a761"
+    },
+    {
+      "path": "copox/adapters/alth_glb_character.py",
+      "sha": "9440513299d66f7d574447141e7f5fbc3a9f8133"
+    },
+    {
+      "path": "copox/adapters/alth_glb_render.py",
+      "sha": "81f6b2ad0a6558d8b9e231bab87d3a5f49b9ed40"
+    },
+    {
+      "path": "copox/adapters/alth_model_m5.py",
+      "sha": "eab641eeba36b9031ec4fe709b9f06b87c94b880"
+    },
+    {
+      "path": "copox/adapters/alth_model_m5_cycle.py",
+      "sha": "12b7e8be160e655760c6b09330a76c1d151df3ce"
+    },
+    {
+      "path": "copox/adapters/facial_morph_candidate.py",
+      "sha": "5f93433f0fe910f840dab9047b881dde0644c9fa"
+    },
+    {
+      "path": "copox/adapters/facial_morph_preview.py",
+      "sha": "a61ed4fb789e09911d5ce5b7cb1b7c8fe2431989"
+    },
+    {
+      "path": "copox/adapters/finger_connected_diagnostic.py",
+      "sha": "cd56238cfae72e65565ac193ff00328cf8f0b0e2"
+    },
+    {
+      "path": "copox/adapters/finger_connected_profile.py",
+      "sha": "b4e442358b5fad7eecc86e5fdfccaf1dc8d6aa88"
+    },
+    {
+      "path": "copox/adapters/finger_connected_scope.py",
+      "sha": "1dd8d3aae8b678e996275ed031fd9b31d24d3464"
+    },
+    {
+      "path": "copox/adapters/finger_gap_carve.py",
+      "sha": "06eab614fd908f01523e1b0035ba5c58a456aa09"
+    },
+    {
+      "path": "copox/adapters/finger_gap_full_depth_plan.py",
+      "sha": "a78c3e910bf49a2c8cb7ff26193e65833720cbeb"
+    },
+    {
+      "path": "copox/adapters/finger_gap_hands_plan.py",
+      "sha": "80dfa7e8863a919f353d8bf3b5d4099b5bdefb9e"
+    },
+    {
+      "path": "copox/adapters/finger_gap_plan.py",
+      "sha": "24fd14057c6bf0f806cbe8c92df77f4e5a19cba3"
+    },
+    {
+      "path": "copox/adapters/finger_micro_valley_edit.py",
+      "sha": "3304c1c776af2bd216f52ba521199934ba070e2c"
+    },
+    {
+      "path": "copox/adapters/finger_micro_valley_plan.py",
+      "sha": "c63885a086006bbddccc5ae16fd21b68f8e68938"
+    },
+    {
+      "path": "copox/adapters/finger_micro_valley_render.py",
+      "sha": "41306db6f92790d02950b203d64fba247a63f30c"
+    },
+    {
+      "path": "copox/adapters/finger_reference_extrude_build.py",
+      "sha": "7431ae326bf16f862bacefd6797bb8099f1c6a6f"
+    },
+    {
+      "path": "copox/adapters/finger_reference_extrude_plan.py",
+      "sha": "b30ad992a3f3e3bd40d2c2d19e63df63b8ba6dbd"
+    },
+    {
+      "path": "copox/adapters/finger_reference_fit.py",
+      "sha": "feac5e3167be98dd8bfb1389b395be44aebbe066"
+    },
+    {
+      "path": "copox/adapters/finger_reference_outline_build.py",
+      "sha": "3bdbf97ed70dec6fc353b9cc04c75d1ecf7fb34a"
+    },
+    {
+      "path": "copox/adapters/finger_reference_outline_plan.py",
+      "sha": "f2a29124b9382a55d3115661aef81a6850c09767"
+    },
+    {
+      "path": "copox/adapters/finger_reference_valley_restore.py",
+      "sha": "9ae6e62f21cfc899aa1d34ae23df174943f5a448"
+    },
+    {
+      "path": "copox/adapters/finger_robust_extrude_plan.py",
+      "sha": "af009137951a6faf2c93a88f70894d95bb5e0ace"
+    },
+    {
+      "path": "copox/adapters/finger_valley_probe.py",
+      "sha": "db84005e34cc10393c949f172ec7cfc00e10a420"
+    },
+    {
+      "path": "copox/adapters/finger_valley_sculpt.py",
+      "sha": "0148fec72debf710210c756f96368d1cc0a6d04b"
+    },
+    {
+      "path": "copox/adapters/glb_structure_probe.py",
+      "sha": "8e71c1fff37a6c250acdb286903a1064f6e6580b"
+    },
+    {
+      "path": "copox/adapters/global_axis_morph.py",
+      "sha": "e6e8653cfa702cd0c1b4a4462e82da9a7123e178"
+    },
+    {
+      "path": "copox/adapters/hand_detail_probe.py",
+      "sha": "e653267a0b11ecfde64ede971c9683502e3e0125"
+    },
+    {
+      "path": "copox/adapters/hand_rebuild_experiment.py",
+      "sha": "5b689ea303fb946b4727985d3e12a0c7c2aedd86"
+    },
+    {
+      "path": "copox/adapters/material_region_candidate.py",
+      "sha": "286f92962f7cc0aabce848255e5679498f055872"
+    },
+    {
+      "path": "copox/adapters/mesh_topology_probe.py",
+      "sha": "0f1fc148e2dadf76aeaed19c2052eb812f4656d1"
+    },
+    {
+      "path": "copox/adapters/model_inventory.py",
+      "sha": "07317e7b767f44f934a9aec0b27b6ab815c7daac"
+    },
+    {
+      "path": "copox/adapters/regional_process.py",
+      "sha": "4428559df5ce988426a9b550baece2cffea97d3c"
+    },
+    {
+      "path": "copox/adapters/regional_reference_audit.py",
+      "sha": "4fc6fe82f874bee9da2f52e0e471d70d6aec92a6"
+    },
+    {
+      "path": "copox/adapters/regional_vertex_morph.py",
+      "sha": "d1ac7753a5363dbbb6ed9bceb89b5246c66033b9"
+    },
+    {
+      "path": "copox/adapters/rig_candidate.py",
+      "sha": "146761be63e0c6bd4f413df5455b28146d472b3d"
+    },
+    {
+      "path": "copox/adapters/topology_local_refine.py",
+      "sha": "73dfcb0a18cd14f306f2474b74d5dda76a9f1aa4"
+    },
+    {
+      "path": "copox/adapters/uv_region_probe.py",
+      "sha": "3b1a97e2d86130ee7dfb7bfc114c012a038b1154"
+    },
+    {
+      "path": "copox/approved/theo.json",
+      "sha": "11e853e9a33d0179f4b4ffc1ac3732db969c6bd1"
+    },
+    {
+      "path": "copox/auditors/__init__.py",
+      "sha": "82422eb0e06a66313615d5ba268e23d8900001b0"
+    },
+    {
+      "path": "copox/auditors/metric_gate.py",
+      "sha": "36cc39b9370d3199e0b670d7cfe100fa790d1154"
+    },
+    {
+      "path": "copox/auditors/regional_gate.py",
+      "sha": "ab420667c559317d542f8e70639fb9dac1b52dd0"
+    },
+    {
+      "path": "copox/baselines/joven_rubio.json",
+      "sha": "2fefbeef5d2986f32b68761dbe3d48153d9ea260"
+    },
+    {
+      "path": "copox/baselines/joven_rubio_alpha.json",
+      "sha": "109600c153fc3f0ca0ecfd1ecf4c9dca80df4b8e"
+    },
+    {
+      "path": "copox/cassettes/examples/smoke.json",
+      "sha": "561676ab0662759d86b3256f2de98519511555e8"
+    },
+    {
+      "path": "copox/cassettes/examples/theo.json",
+      "sha": "d312678e6662215a84d7f0e50268d7a227207d57"
+    },
+    {
+      "path": "copox/cassettes/examples/theo_model_m5.json",
+      "sha": "9eca36698f29e899c119450fe88e78a8f6cf68e9"
+    },
+    {
+      "path": "copox/cassettes/examples/theo_model_m5_loop.json",
+      "sha": "3681cac0cb117cc977857ffc9ebcde580914beb7"
+    },
+    {
+      "path": "copox/cassettes/examples/theo_model_m5_validation.json",
+      "sha": "f20d36bc04acfb9e4eac098bfec9d4b19b457659"
+    },
+    {
+      "path": "copox/contracts.py",
+      "sha": "00eba987dfa068b281fbe27ed3b211df0e22ac66"
+    },
+    {
+      "path": "copox/discover.py",
+      "sha": "db3c9d3aeeb34cc1a2499d0c74bda75c8f7bbb6b"
+    },
+    {
+      "path": "copox/engine.py",
+      "sha": "fed99521198e53e53b603689a7ebf4480809c7b7"
+    },
+    {
+      "path": "copox/hypotheses/theo_ears.json",
+      "sha": "c8c33b6a3d658c4dc688bfdbf25a1a1559038288"
+    },
+    {
+      "path": "copox/learning/facial_diagnosis.py",
+      "sha": "ebcd7bacb0e7a9ef31941d4c5f62116ef18cfdbb"
+    },
+    {
+      "path": "copox/learning/global_shape_study.py",
+      "sha": "315e77f4b90d2d50b2a1faf85fd275a315f4cf96"
+    },
+    {
+      "path": "copox/learning/material_diagnosis.py",
+      "sha": "6c160667121a357b3cea4e37560a3d55aa46a1b0"
+    },
+    {
+      "path": "copox/learning/orientation_diagnosis.py",
+      "sha": "3b244d871de867e3ce592fb2ba087a4d90b9afdb"
+    },
+    {
+      "path": "copox/learning/regional_diagnosis.py",
+      "sha": "7f8bd9e8b37e7a4820ddf6675582d144407b64b5"
+    },
+    {
+      "path": "copox/learning/regional_hypothesis_study.py",
+      "sha": "8a7fe23e9d1f43af5fdd3e66f18d02df5ad4ebbe"
+    },
+    {
+      "path": "copox/learning/rig_diagnosis.py",
+      "sha": "65699fee5adbf1c9c47527ab69613e3060c8ce36"
+    },
+    {
+      "path": "copox/learning/topology_diagnosis.py",
+      "sha": "45fc22445503ad76413a492bd08e933aed696f08"
+    },
+    {
+      "path": "copox/maturity.py",
+      "sha": "10f710e018dcc022a696c52e902984b7a3e8209e"
+    },
+    {
+      "path": "copox/maturity/modules.json",
+      "sha": "5ccf317762fcad1e236f0173198fff54a6560779"
+    },
+    {
+      "path": "copox/maturity/theo.json",
+      "sha": "a7b2f6a6562922eb6553369c529f6c4e399b8808"
+    },
+    {
+      "path": "copox/production/__init__.py",
+      "sha": "660d6e9e436b27145a82d68002d0c7e4d30ae155"
+    },
+    {
+      "path": "copox/production/diagnostics.py",
+      "sha": "fcada89ac8577fd16fa62f56d6bae5f4f91db7a1"
+    },
+    {
+      "path": "copox/production/finger_combo_trial.py",
+      "sha": "3ae03f4f8c2db700a10a393ca0f3d34d85eee771"
+    },
+    {
+      "path": "copox/production/finger_fulldepth_trial.py",
+      "sha": "b2708ac770c8b83984b9496d11256b06a603e853"
+    },
+    {
+      "path": "copox/production/finger_gap_trial.py",
+      "sha": "58f1f8e01bf33ac75be114fdb7ce4219377f02b2"
+    },
+    {
+      "path": "copox/production/finger_handctx_trial.py",
+      "sha": "8f0edc76e1035f00d33a05f63b7389720fcf9b32"
+    },
+    {
+      "path": "copox/production/finger_micro_valley_campaign.py",
+      "sha": "1762d18497a16d1d74047b3d2aec8dee22f90364"
+    },
+    {
+      "path": "copox/production/finger_micro_valley_review.py",
+      "sha": "0d903ffa3bbb8edcd738af0543be846b6830da48"
+    },
+    {
+      "path": "copox/production/finger_reference_extrude_trial.py",
+      "sha": "e4161e2b18a21e628e010a48f3fff646f710ff78"
+    },
+    {
+      "path": "copox/production/finger_reference_outline_trial.py",
+      "sha": "4edc2ba69af9c1c5f9896d0324ba830b66e4747e"
+    },
+    {
+      "path": "copox/production/finger_robust_direct_trial.py",
+      "sha": "007a7bf86da3e68a3334b21bae6e0badd3c69911"
+    },
+    {
+      "path": "copox/production/finger_robust_extrude_trial.py",
+      "sha": "e33e6160ca62a8efb0e8db317ae2dff45fd3d5ec"
+    },
+    {
+      "path": "copox/production/finger_robust_narrow_trial.py",
+      "sha": "5250759d1b11c2d39bdf1374a61cd36764070506"
+    },
+    {
+      "path": "copox/production/finger_robust_scope_trial.py",
+      "sha": "bd8d120a31e0bccd99d8e988ed23b6ce2be25245"
+    },
+    {
+      "path": "copox/production/finger_semantic_finish_trial.py",
+      "sha": "9f97a570469f9ad57fc7a606565cff32d5c506a3"
+    },
+    {
+      "path": "copox/production/finger_valley_restore_trial.py",
+      "sha": "0a9f55f76bf61cc67a91f2af401bb8ed3ef7ea32"
+    },
+    {
+      "path": "copox/production/finger_valley_scope_expand_trial.py",
+      "sha": "7b99964497c115cd94f634d00fdc6340ac9f2874"
+    },
+    {
+      "path": "copox/production/finger_valley_scope_length_trial.py",
+      "sha": "b9484b428190916da3f8f3192e5e651b1cc29c78"
+    },
+    {
+      "path": "copox/production/finger_valley_sculpt_trial.py",
+      "sha": "5955817b511d987e445e39069616d1bade392bed"
+    },
+    {
+      "path": "copox/production/finger_valley_topology_trial.py",
+      "sha": "dbc7121ce0f2d8dd24342f9ea4715b9e05f64df3"
+    },
+    {
+      "path": "copox/production/finger_valley_widen_trial.py",
+      "sha": "c5ff85d2c47a82321746a259a5dbe406d7097760"
+    },
+    {
+      "path": "copox/production/module_gate.py",
+      "sha": "0ae3f472d0876e21e480e638f6d1db6271226d56"
+    },
+    {
+      "path": "copox/production/module_router.py",
+      "sha": "446d2469d663b7a1262cf752e7b79e0dd303fc15"
+    },
+    {
+      "path": "copox/production/regional_trial.py",
+      "sha": "76860b3ad9c7ee5252d54706997a1279db675f2b"
+    },
+    {
+      "path": "copox/production/research_gate.py",
+      "sha": "7dfd76a0acb93bda87d122ae12cf91fdcc2b6415"
+    },
+    {
+      "path": "copox/production/research_iteration_loop.py",
+      "sha": "5fe639f2feddd97eb81d55aba7b0880e0303d30c"
+    },
+    {
+      "path": "copox/production/theo_m5_policy.json",
+      "sha": "d05d21a57a28685a8265475c933e0086d15493d9"
+    },
+    {
+      "path": "copox/profiles/alth_asset.json",
+      "sha": "d8a2d723b858702e383cc1643a2b8858000afdfc"
+    },
+    {
+      "path": "copox/profiles/alth_character.json",
+      "sha": "0a4116fb4b03cfc0080fe93526061fa210381a2d"
+    },
+    {
+      "path": "copox/profiles/alth_character_alpha.json",
+      "sha": "ccbd64dffee5257fe62223d2de8016aeda9f5418"
+    },
+    {
+      "path": "copox/profiles/alth_model_m5.json",
+      "sha": "c332ac4dc59ed5afca7b1b178b30a8b2362a6c43"
+    },
+    {
+      "path": "copox/profiles/godot_script.json",
+      "sha": "7ad9ffbdfa491e41ffafe33f8ae7c8e2ee51e9a9"
+    },
+    {
+      "path": "copox/profiles/godot_ui.json",
+      "sha": "23a7eb07b2606d7803c82d14ac54ad7f4c4d46e1"
+    },
+    {
+      "path": "copox/profiles/rig.json",
+      "sha": "e418f608c6fcf01d335c583e2e5ef50e8dbc1a50"
+    },
+    {
+      "path": "copox/profiles/smoke.json",
+      "sha": "b0cc29c6e73e879bfd63d663783c2a41aa072ee4"
+    },
+    {
+      "path": "copox/profiles/texture.json",
+      "sha": "ca462c99ebb135b258b50baf10b8af60fae62da9"
+    },
+    {
+      "path": "copox/reference_configs/joven_rubio.json",
+      "sha": "a5c03c3ebc0e7af37dd8725da973dc0c6a1ee98d"
+    },
+    {
+      "path": "copox/reference_configs/joven_rubio_alpha.json",
+      "sha": "63b76a632cd19ed03774a95b10745e70b6c79a50"
+    },
+    {
+      "path": "copox/report.py",
+      "sha": "9b2f471a283f5e21827029558f182d422194dd6d"
+    },
+    {
+      "path": "copox/research/README.md",
+      "sha": "dcc6e7401a1b8af6be8d1e03979ac6eab0f948f5"
+    },
+    {
+      "path": "copox/research/fingers-connected-micro-valleys-20261001-review.json",
+      "sha": "fc26fb071993e39e65692186ff37f1e0841c1d68"
+    },
+    {
+      "path": "copox/research/fingers-connected-micro-valleys-20261001.json",
+      "sha": "2c29e0e9d52794007f4550865f33b9701dc5713d"
+    },
+    {
+      "path": "copox/research/fingers-micro-valleys-20261001-campaign.json",
+      "sha": "e1e272deb8f5591beaba3987c1685821a706648a"
+    },
+    {
+      "path": "copox/research/fingers-micro-valleys-20261001-review.json",
+      "sha": "a49741d17c8b0e160e8eec4fbcf5222e6701013a"
+    },
+    {
+      "path": "copox/research/fingers-micro-valleys-20261001.json",
+      "sha": "abb4ce5213040f8c20d03360d0645f2d6f805a9e"
+    },
+    {
+      "path": "copox/research/fingers-pose-preserving-micro-valleys-20261001-review.json",
+      "sha": "cfd90fb382116494d7caf686e2a1b7f767355489"
+    },
+    {
+      "path": "copox/research/fingers-pose-preserving-micro-valleys-20261001.json",
+      "sha": "2876dfd934d88879765a5433380ba7feee9201db"
+    },
+    {
+      "path": "copox/research/fingers.json",
+      "sha": "2051e77d6f4007f170f69a253a0327a7efa5dfc9"
+    },
+    {
+      "path": "copox/search_spaces/joven_rubio.json",
+      "sha": "53654a5b17d2e79aed92bddc540812f2b4952687"
+    },
+    {
+      "path": "copox/search_spaces/joven_rubio_alpha_hair.json",
+      "sha": "e46e7be071962774486a621c83a56d496341596e"
+    },
+    {
+      "path": "copox/smoke.py",
+      "sha": "21d0ab196241447ea5811e49780c2a37ccece46b"
+    },
+    {
+      "path": "copox/state.py",
+      "sha": "2bd7566ce770d31a783d84741bf25663b8819753"
+    },
+    {
+      "path": "copox/state_bundle.py",
+      "sha": "764eb379ce94d95afa8fb2305e02a80936fbbaf4"
+    },
+    {
+      "path": "data/medidas.csv",
+      "sha": "d2dbbd747d40241d6001bf43c7d05876e030c67b"
+    },
+    {
+      "path": "docs/ALTH_META_Modelado.pdf",
+      "sha": "636b2637780f9f3a86a9c4b1677661703cc863f8"
+    },
+    {
+      "path": "docs/CHSP-X.md",
+      "sha": "59022c51c409588107dc14ee046c0cade7414981"
+    },
+    {
+      "path": "docs/COPOX_LOOP_ENGINE.md",
+      "sha": "04c65f4f042308f6fbafaf6d66ec97d60467c71b"
+    },
+    {
+      "path": "docs/COPOX_M4_VALIDATION_2026-09-30.md",
+      "sha": "e9193771e5516bca1b5715f4e6068459e63c79ee"
+    },
+    {
+      "path": "docs/COPOX_MATURITY.md",
+      "sha": "d216f2757eb3bf82d97d008e6dda1bf6e1ca37bb"
+    },
+    {
+      "path": "docs/COPOX_MICRO_VALLEYS.md",
+      "sha": "942faf1846482a08d7495bca290d0789842d529e"
+    },
+    {
+      "path": "docs/COPOX_MICRO_VALLEYS_2026-10-01_CORRECTION.md",
+      "sha": "eaeb97d652c8c5bc8b20203558221399eba3e96c"
+    },
+    {
+      "path": "docs/COPOX_MICRO_VALLEYS_2026-10-01_RESULTS.md",
+      "sha": "7b2854832fa49fab83bca21bc323f3e9dee2f6b7"
+    },
+    {
+      "path": "docs/COPOX_PR_STATUS.md",
+      "sha": "0b3b36c40622062d66435328bf0c11f84bc81f08"
+    },
+    {
+      "path": "docs/COPOX_VALIDATION_2026-09-30.md",
+      "sha": "458b9180172deb05e78c6f986894ff2e9b629a53"
+    },
+    {
+      "path": "docs/Investigacion-orquestar-Blender.pdf",
+      "sha": "316140841becfb516a54b94153a084a9783363df"
+    },
+    {
+      "path": "docs/agentes/finalizar_personaje.md",
+      "sha": "c6b5197f3ee7277616da63e18581b5e9c4eb83f5"
+    },
+    {
+      "path": "refs/escenas/detective-oficina-policia.png",
+      "sha": "198f06f6312625273e65d740d18e66a59c14be18"
+    },
+    {
+      "path": "refs/escenas/detective-y-joven-rubio-estudio.png",
+      "sha": "060bb82e4b8753298a3e814b688cfe9cca3a1dad"
+    },
+    {
+      "path": "refs/escenas/hombre-mayor-camioneta.png",
+      "sha": "8596cd5af5eb88f75dfd4d73d84692aa92b1d4aa"
+    },
+    {
+      "path": "refs/escenas/joven-rubio-rascacielos.png",
+      "sha": "21ad126f420e2dec8c47dd5280d03b73a2d12292"
+    },
+    {
+      "path": "refs/escenas/joven-rubio-y-hombre-mayor-biblioteca.png",
+      "sha": "fdbfeeaf8d5561ec050e655a92c3498d62916c00"
+    },
+    {
+      "path": "refs/escenas/mujer-rubia-escenario.png",
+      "sha": "b31899b5b5f2bbe6eb8b5f87bb9932e0e74b32b8"
+    },
+    {
+      "path": "refs/escenas/mujer-sueter-corgi.png",
+      "sha": "75eaf1b5235f31e0ec7c0c3bb710e9eeaa638e36"
+    },
+    {
+      "path": "refs/escenas/punk-pelirroja-bar.png",
+      "sha": "bc7b2ddca2eaa3a8264f53078a75f02207b9fd9e"
+    },
+    {
+      "path": "refs/escenas/rey-detective-mujer-sueter-plaza.png",
+      "sha": "c352b14d1e5baa92f65194472aedc3d1c8b66d69"
+    },
+    {
+      "path": "refs/escenas/rey-joven-rubio-mujer-rubia-salon.png",
+      "sha": "795def548d7eed932c467940871d903821207bbe"
+    },
+    {
+      "path": "refs/escenas/rey-patio-de-armas.png",
+      "sha": "7e6913d1970e9a818934d7b155c1d7eef29ea61c"
+    },
+    {
+      "path": "refs/escenas/trio-callejon-neon.png",
+      "sha": "ed16dfc20544146df7b0e06d12a203cb1eb428c9"
+    },
+    {
+      "path": "refs/escenas/trio-nieve.png",
+      "sha": "fd2de98c2587f6a4d4de2f50844322058de9e90d"
+    },
+    {
+      "path": "refs/infografias/comparativa-de-objetos.png",
+      "sha": "e23dee2c8cf6661a44cb6951a6132a83c110191d"
+    },
+    {
+      "path": "refs/infografias/comparativa-personajes-unidades.png",
+      "sha": "7f770cd6a5a944be7d15346f1190ea274de23a10"
+    },
+    {
+      "path": "refs/infografias/comparativa-visual-de-objetos.png",
+      "sha": "e23dee2c8cf6661a44cb6951a6132a83c110191d"
+    },
+    {
+      "path": "refs/infografias/comparativa-visual-de-personajes.png",
+      "sha": "153484fcac559c18a03518259fdf87209c49f733"
+    },
+    {
+      "path": "refs/infografias/hoja-de-vistas-personaje.png",
+      "sha": "27f9e6694ac051d6fd7f58217cba118b4da458c4"
+    },
+    {
+      "path": "refs/infografias/mano-con-regla-vistas.jpg",
+      "sha": "ddabb81f13bdb2d1c19aa4c4a175a70cf7d1d33c"
+    },
+    {
+      "path": "refs/infografias/mano-con-regla.jpg",
+      "sha": "9330a283ee40d3db2191f44132b558b043ed7fec"
+    },
+    {
+      "path": "refs/infografias/objeto-01-manzana.png",
+      "sha": "dcc5de1e919516e43d04af17f6a4071b8322e4f8"
+    },
+    {
+      "path": "refs/infografias/objeto-02-lata-aceitunas.png",
+      "sha": "56be7332c07be00717189ab10b3ae7e373b0b656"
+    },
+    {
+      "path": "refs/infografias/objeto-03-librero.png",
+      "sha": "b04aa114700241748db41129c6a6a0b0d4cb1f24"
+    },
+    {
+      "path": "refs/infografias/objeto-04-plato.png",
+      "sha": "1b2dd70a86d79faf8a9fa24c97791f5dbb39686f"
+    },
+    {
+      "path": "refs/infografias/paletas-y-objetos.png",
+      "sha": "9ffcdcce87d4218a535b72fb396ff32644d570df"
+    },
+    {
+      "path": "refs/infografias/sistema-de-paletas.png",
+      "sha": "14814ddb32243291cdcc31d898d42393dce3afa1"
+    },
+    {
+      "path": "refs/pendientes/alastor-1790548802009.jpg",
+      "sha": "161938e26947202abb6a092bae08ce8c2236a96d"
+    },
+    {
+      "path": "refs/personajes/detective.jpg",
+      "sha": "b54d8fc8bc2f6888b1f939aa2ce056ee85867e7b"
+    },
+    {
+      "path": "refs/personajes/hombre-mayor.png",
+      "sha": "e0ba846cc76e7ec2b3cacc190da82d66fc8d913c"
+    },
+    {
+      "path": "refs/personajes/joven-rubio-4-vistas.jpg",
+      "sha": "f6aad1a93ee31b414a77ba7d3ab773ec7a40fc04"
+    },
+    {
+      "path": "refs/personajes/joven-rubio-y-hombre-mayor.png",
+      "sha": "e79c637ff06de26d8cf934cab58acb8601b89549"
+    },
+    {
+      "path": "refs/personajes/joven-rubio.jpg",
+      "sha": "714e5ec4a18844182a4a8003466969ae7cec73a2"
+    },
+    {
+      "path": "refs/personajes/mujer-rubia.png",
+      "sha": "78674cedc94a6dc033d87f33a765bec5ec02070f"
+    },
+    {
+      "path": "refs/personajes/mujer-sueter-verde.png",
+      "sha": "2c8df93e3402f31e82accc1b2c8aef5888e52ac0"
+    },
+    {
+      "path": "refs/personajes/punk-pelirroja.png",
+      "sha": "db309e4a787d86461268568fd73d847e2718b234"
+    },
+    {
+      "path": "refs/personajes/rey.png",
+      "sha": "028ff296aff966692aed1527697e119a11ddafc3"
+    },
+    {
+      "path": "spec/alth_spec.json",
+      "sha": "7333be26db3a34673f385897c902dca60cf71f7a"
+    },
+    {
+      "path": "taller/index.html",
+      "sha": "d92a916ad386990c78fe17750fac76f5b5049afd"
+    },
+    {
+      "path": "tests/test_bucle.py",
+      "sha": "01fc8cbad77801436bbde72485cc662dd61bca47"
+    },
+    {
+      "path": "tests/test_copox_alpha.py",
+      "sha": "4f6f933772640765e1cfc28b0b79e31461247e78"
+    },
+    {
+      "path": "tests/test_copox_connected_notch.py",
+      "sha": "acae6dd5940a3e104bd3264f121c83e7bbbd77f9"
+    },
+    {
+      "path": "tests/test_copox_contract.py",
+      "sha": "5dd78e40d7d3f3b4ec04e5ceb7047caf3dea1650"
+    },
+    {
+      "path": "tests/test_copox_learning_guards.py",
+      "sha": "849d04e90556bef5f1543df01e07a960a017a350"
+    },
+    {
+      "path": "tests/test_copox_m5.py",
+      "sha": "0afa87d08ade13bbaecc09857055555fcb4979b5"
+    },
+    {
+      "path": "tests/test_copox_maturity.py",
+      "sha": "287de7a725e487085e0788ae8cc9836a228fa112"
+    },
+    {
+      "path": "tests/test_copox_research_iteration.py",
+      "sha": "2d7a808cbc874ff694619a3ef266645b9c4caf95"
+    },
+    {
+      "path": "tests/test_maniqui.py",
+      "sha": "3e433d74c2b748a084735b5279c878ee8f212811"
+    },
+    {
+      "path": "tests/test_pelo.py",
+      "sha": "6a2668e80aa95fff21eeddc2e99f0cc10c713479"
+    },
+    {
+      "path": "tests/test_personaje.py",
+      "sha": "f6980c0d558ac0f1bb85f5ac8d02e053accf0fa9"
+    },
+    {
+      "path": "tests/test_revision.py",
+      "sha": "75a36752722ebac179ff3b2bc6a64701c7527662"
+    },
+    {
+      "path": "tests/test_verificacion.py",
+      "sha": "62fbb6f261bbc94f329e4f380b54b19b36688e60"
+    },
+    {
+      "path": "tools/bucle_sistema.md",
+      "sha": "f955c9e1afb45f7d8ada914397d2a37fb4c4c3d7"
+    },
+    {
+      "path": "tools/ensure_blender.sh",
+      "sha": "c86bb4979a0a4e85595507fe7063870f83b188d7"
+    },
+    {
+      "path": "tools/escala.py",
+      "sha": "8a7400700312e8531aa319e3ac0984eb63eaec94"
+    },
+    {
+      "path": "tools/fase0_cubo.py",
+      "sha": "4daa154a3aeae731e35727b681fae3a835563a09"
+    },
+    {
+      "path": "tools/prueba_pelo.py",
+      "sha": "73bba5554abdb00a3b0442eaaf6f547ff2c1049b"
+    },
+    {
+      "path": "tools/verificar_revision.py",
+      "sha": "8ea073cf69dc8c5d0dc7020102d3f3b2967c1aaa"
+    }
+  ],
+  "protected_alpha": {
+    "path": "assets/joven_rubio/theo_alpha.glb",
+    "sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+    "blob_sha": "b7a2865f14780abc0bb82542c9aa9143117f8896"
+  },
+  "workbook": "docs/production/AlasTheo - Libro de producción.xlsx",
+  "automatic_model_promotion_allowed": false,
+  "promotion_executed": false,
+  "corrected_existing_files": [
+    ".github/workflows/aprobar.yml",
+    ".github/workflows/bucle.yml",
+    "tools/bucle.py"
+  ]
+}

@@ -1,0 +1,85 @@
+name: COPOX · Pose preserving local notches
+on:
+  workflow_dispatch:
+    inputs:
+      parent_run:
+        description: "Optional audited Valley artifact run; empty reproduces Valley c01 from protected Alpha"
+        required: false
+        default: ""
+        type: string
+      parent_artifact:
+        description: "Artifact name when parent_run is supplied"
+        required: false
+        default: ""
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  connected-valleys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - uses: actions/download-artifact@v4
+        if: ${{ inputs.parent_run != '' }}
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.parent_run }}
+          name: ${{ inputs.parent_artifact }}
+          path: .copox/source
+      - name: Syntax and research, sibling, shape protection contracts
+        run: |
+          python3 -m compileall -q copox
+          python3 -m unittest tests.test_copox_research_iteration tests.test_copox_connected_notch -v
+      - name: Generate and audit exactly three existing-parent siblings
+        env:
+          COPOX_PARENT_RUN: ${{ inputs.parent_run }}
+        run: |
+          python3 - <<'PY'
+          import os,subprocess,sys
+          command=[sys.executable,'-m','copox.production.finger_micro_valley_campaign']
+          if os.environ.get('COPOX_PARENT_RUN'):
+              command += ['--parent-source','.copox/source']
+          subprocess.run(command,check=True)
+          PY
+      - name: Verify sibling contract and protected Alpha
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
+          if sha != 'ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b':
+              raise SystemExit('PROTECTED_BASELINE: Alpha changed')
+          root=Path('.copox/finger-local-notches')
+          loop=json.loads((root/'loop.json').read_text())
+          rows=[r for g in loop['generations'] for r in g['candidate_metrics']]
+          if len(rows)!=3 or len({r['parent_sha'] for r in rows})!=1:
+              raise SystemExit('SIBLING_CONTRACT_FAILED')
+          if loop['promotion_executed'] or loop['promotion_allowed']:
+              raise SystemExit('PROTECTED_BASELINE: forbidden promotion')
+          print('COPOX_VERIFIED:'+json.dumps({'alpha_sha':sha,'siblings':3,'parent_sha':loop['parent_sha'],'promotion_executed':False}))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as stream:
+              stream.write('## Connected local valleys — visual review required\n\n')
+              stream.write('|Candidate|Target pp|Global pp|Worst view pp|Valleys|Scope|Mesh|Audit|\n|---|---:|---:|---:|---|---|---|---|\n')
+              for r in rows:
+                  stream.write(f"|{r['candidate']}|{r['target_gain_pp']}|{r['global_gain_pp']}|{r['worst_view_delta_pp']}|{r.get('model_valleys')}|{r['scope_safe']}|{r['mesh_integrity']}|{r['audit_passed']}|\n")
+              stream.write('\nStop: '+loop['stop_reason']+'\n\nNo promotion. Alpha: '+sha+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: copox-pose-preserving-notches-${{ github.run_id }}
+          path: |
+            .copox/finger-local-notches/
+          retention-days: 7
+          if-no-files-found: error

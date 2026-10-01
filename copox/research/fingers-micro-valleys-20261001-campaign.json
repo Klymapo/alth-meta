@@ -1,0 +1,548 @@
+{
+  "campaign_id": "fingers-micro-valleys-20261001",
+  "module": "fingers",
+  "max_technical_rounds": 3,
+  "alpha_sha": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+  "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+  "generations": [
+    {
+      "generation_id": "g01",
+      "source_run": 36876087961,
+      "research_id": "fingers-micro-valleys-20261001",
+      "technique": "micro_valley_cut_local_sections",
+      "winner": null,
+      "rejected_candidates": [
+        "c01",
+        "c02",
+        "c03"
+      ],
+      "learning": "Boolean global pierde scope; c02artefacto visible, c03sem2/0pierdeventajaValley.",
+      "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+      "module": "fingers",
+      "parameters": [
+        {
+          "depth_scale": 0.75
+        },
+        {
+          "depth_scale": 1
+        },
+        {
+          "depth_scale": 1.25
+        }
+      ],
+      "promotion_executed": false,
+      "candidate_metrics": [
+        {
+          "module": "fingers",
+          "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+          "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+          "mesh_integrity": true,
+          "scope_safe": false,
+          "regression_ok": false,
+          "evidence_complete": true,
+          "semantic_ready": false,
+          "target_gain_pp": 4.078285818980838,
+          "global_gain_pp": 0.15254798762505128,
+          "worst_view_delta_pp": -0.0781628568233328,
+          "evidence": [
+            "hand_left",
+            "hand_right",
+            "finger_detail",
+            "topology_report",
+            "learning"
+          ],
+          "flags": [
+            "mitten_shape"
+          ],
+          "params": {
+            "depth_scale": 0.75
+          },
+          "reference_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "model_valleys": {
+            "left": 1,
+            "right": 0
+          },
+          "parent_target_delta_pp": -1.5699063047490796,
+          "parent_global_delta_pp": 0.0024410691211507185,
+          "parent_worst_view_delta_pp": -0.005457468283065481,
+          "local_loops_ready": false,
+          "valley_structural_advantage_preserved": false,
+          "visual_review": "REJECTED",
+          "audit_passed": false
+        },
+        {
+          "module": "fingers",
+          "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+          "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+          "mesh_integrity": false,
+          "scope_safe": false,
+          "regression_ok": false,
+          "evidence_complete": true,
+          "semantic_ready": false,
+          "target_gain_pp": 9.429519490969227,
+          "global_gain_pp": 0.13166520132856796,
+          "worst_view_delta_pp": -0.1893756583162043,
+          "evidence": [
+            "hand_left",
+            "hand_right",
+            "finger_detail",
+            "topology_report",
+            "learning"
+          ],
+          "flags": [
+            "mitten_shape",
+            "finger_merge_regression"
+          ],
+          "params": {
+            "depth_scale": 1
+          },
+          "reference_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "model_valleys": {
+            "left": 1,
+            "right": 0
+          },
+          "parent_target_delta_pp": 2.185136082434163,
+          "parent_global_delta_pp": -0.025377842940255135,
+          "parent_worst_view_delta_pp": -0.10787313136302878,
+          "local_loops_ready": false,
+          "valley_structural_advantage_preserved": false,
+          "visual_review": "REJECTED",
+          "audit_passed": false
+        },
+        {
+          "module": "fingers",
+          "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+          "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+          "mesh_integrity": true,
+          "scope_safe": false,
+          "regression_ok": false,
+          "evidence_complete": true,
+          "semantic_ready": true,
+          "target_gain_pp": 1.6999986254359962,
+          "global_gain_pp": 0.1507791590590557,
+          "worst_view_delta_pp": -0.07382460842690342,
+          "evidence": [
+            "hand_left",
+            "hand_right",
+            "finger_detail",
+            "topology_report",
+            "learning"
+          ],
+          "flags": [],
+          "params": {
+            "depth_scale": 1.25
+          },
+          "reference_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "model_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "parent_target_delta_pp": -4.14619945898497,
+          "parent_global_delta_pp": 0.00033718388221526396,
+          "parent_worst_view_delta_pp": -0.022036967560823406,
+          "local_loops_ready": false,
+          "valley_structural_advantage_preserved": false,
+          "visual_review": "REJECTED",
+          "audit_passed": false
+        }
+      ],
+      "next_hypothesis": "Investigar edición local conectada con protección exterior."
+    },
+    {
+      "generation_id": "g02",
+      "source_run": 36883548374,
+      "research_id": "fingers-connected-micro-valleys-20261001",
+      "technique": "connected_reference_notch_sections",
+      "winner": null,
+      "rejected_candidates": [
+        "c01",
+        "c02",
+        "c03"
+      ],
+      "candidate_metrics": [
+        {
+          "module": "fingers",
+          "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+          "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+          "mesh_integrity": false,
+          "scope_safe": false,
+          "regression_ok": false,
+          "evidence_complete": true,
+          "semantic_ready": true,
+          "target_gain_pp": 19.173163558765836,
+          "global_gain_pp": 0.32199357653761584,
+          "worst_view_delta_pp": -0.18584258956691468,
+          "evidence": [
+            "hand_left",
+            "hand_right",
+            "finger_detail",
+            "topology_report",
+            "learning"
+          ],
+          "flags": [
+            "finger_merge_regression"
+          ],
+          "params": {
+            "depth_scale": 0.85
+          },
+          "reference_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "model_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "parent_target_delta_pp": 14.164461161624969,
+          "parent_global_delta_pp": 0.16482900795576905,
+          "alpha_locked_target_difference_to_valley_pp": 13.060266759089485,
+          "alpha_locked_global_difference_to_valley_pp": 0.17009814049421257,
+          "parent_worst_view_delta_pp": -0.10644148068864046,
+          "local_loops_ready": false,
+          "valley_structural_advantage_preserved": false,
+          "candidate": "c01",
+          "audit_passed": false,
+          "reasons": [
+            "mesh_integrity",
+            "scope_safe",
+            "regression_ok",
+            "single_view_regression",
+            "forbidden_flags:finger_merge_regression",
+            "valley_structural_advantage",
+            "local_loops_ready"
+          ],
+          "visual_review": "REJECTED"
+        },
+        {
+          "module": "fingers",
+          "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+          "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+          "mesh_integrity": false,
+          "scope_safe": false,
+          "regression_ok": false,
+          "evidence_complete": true,
+          "semantic_ready": true,
+          "target_gain_pp": 18.450796086713908,
+          "global_gain_pp": 0.32090831551557786,
+          "worst_view_delta_pp": -0.18466478469861825,
+          "evidence": [
+            "hand_left",
+            "hand_right",
+            "finger_detail",
+            "topology_report",
+            "learning"
+          ],
+          "flags": [
+            "finger_merge_regression"
+          ],
+          "params": {
+            "depth_scale": 1
+          },
+          "reference_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "model_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "parent_target_delta_pp": 13.978311936769433,
+          "parent_global_delta_pp": 0.16514347335202517,
+          "alpha_locked_target_difference_to_valley_pp": 12.337899287037557,
+          "alpha_locked_global_difference_to_valley_pp": 0.16901287947217458,
+          "parent_worst_view_delta_pp": -0.1054002264767484,
+          "local_loops_ready": false,
+          "valley_structural_advantage_preserved": false,
+          "candidate": "c02",
+          "audit_passed": false,
+          "reasons": [
+            "mesh_integrity",
+            "scope_safe",
+            "regression_ok",
+            "single_view_regression",
+            "forbidden_flags:finger_merge_regression",
+            "valley_structural_advantage",
+            "local_loops_ready"
+          ],
+          "visual_review": "REJECTED"
+        },
+        {
+          "module": "fingers",
+          "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+          "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+          "mesh_integrity": false,
+          "scope_safe": false,
+          "regression_ok": false,
+          "evidence_complete": true,
+          "semantic_ready": true,
+          "target_gain_pp": 17.810675807885712,
+          "global_gain_pp": 0.3198741728780541,
+          "worst_view_delta_pp": -0.18479565475302828,
+          "evidence": [
+            "hand_left",
+            "hand_right",
+            "finger_detail",
+            "topology_report",
+            "learning"
+          ],
+          "flags": [
+            "finger_merge_regression"
+          ],
+          "params": {
+            "depth_scale": 1.15
+          },
+          "reference_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "model_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "parent_target_delta_pp": 13.641391120725174,
+          "parent_global_delta_pp": 0.1652280136968165,
+          "alpha_locked_target_difference_to_valley_pp": 11.697779008209361,
+          "alpha_locked_global_difference_to_valley_pp": 0.1679787368346508,
+          "parent_worst_view_delta_pp": -0.1054002264767484,
+          "local_loops_ready": false,
+          "valley_structural_advantage_preserved": false,
+          "candidate": "c03",
+          "audit_passed": false,
+          "reasons": [
+            "mesh_integrity",
+            "scope_safe",
+            "regression_ok",
+            "single_view_regression",
+            "forbidden_flags:finger_merge_regression",
+            "valley_structural_advantage",
+            "local_loops_ready"
+          ],
+          "visual_review": "REJECTED"
+        }
+      ],
+      "learning": "2/0 en los3 yIoU grande; mano levantada ycosturas rechazan. Exteriortransportado exacto; index-onlyseams falla.",
+      "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+      "module": "fingers",
+      "parameters": [
+        {
+          "depth_scale": 0.85
+        },
+        {
+          "depth_scale": 1
+        },
+        {
+          "depth_scale": 1.15
+        }
+      ],
+      "promotion_executed": false,
+      "next_hypothesis": "Preservar pose y bloquear aliases geométricos; ningún padre rechazado."
+    },
+    {
+      "generation_id": "g03",
+      "source_run": 36886096110,
+      "research_id": "fingers-pose-preserving-micro-valleys-20261001",
+      "technique": "pose_preserving_reference_notch_sections",
+      "winner": null,
+      "best_metrics_candidate": "c01",
+      "rejected_candidates": [
+        "c01",
+        "c02",
+        "c03"
+      ],
+      "candidate_metrics": [
+        {
+          "module": "fingers",
+          "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+          "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+          "mesh_integrity": false,
+          "scope_safe": true,
+          "regression_ok": false,
+          "evidence_complete": true,
+          "semantic_ready": false,
+          "target_gain_pp": 3.778748102469928,
+          "global_gain_pp": 0.1505960097950898,
+          "worst_view_delta_pp": -0.07198390364367424,
+          "evidence": [
+            "hand_left",
+            "hand_right",
+            "finger_detail",
+            "topology_report",
+            "learning"
+          ],
+          "flags": [
+            "mitten_shape",
+            "finger_merge_regression"
+          ],
+          "params": {
+            "depth_scale": 0.75
+          },
+          "visual_review": "REJECTED",
+          "reference_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "model_valleys": {
+            "left": 1,
+            "right": 0
+          },
+          "parent_target_delta_pp": -2.0604283603654143,
+          "parent_global_delta_pp": -0.000037104727945713734,
+          "alpha_locked_target_difference_to_valley_pp": -2.334148697206423,
+          "alpha_locked_global_difference_to_valley_pp": -0.0012994262483134733,
+          "parent_worst_view_delta_pp": -0.013223867668343825,
+          "local_loops_ready": false,
+          "valley_structural_advantage_preserved": false,
+          "candidate": "c01",
+          "audit_passed": false,
+          "reasons": [
+            "mesh_integrity",
+            "regression_ok",
+            "semantic_ready",
+            "forbidden_flags:finger_merge_regression,mitten_shape",
+            "valley_structural_advantage",
+            "local_loops_ready",
+            "exact_valley_counts"
+          ]
+        },
+        {
+          "module": "fingers",
+          "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+          "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+          "mesh_integrity": false,
+          "scope_safe": true,
+          "regression_ok": false,
+          "evidence_complete": true,
+          "semantic_ready": false,
+          "target_gain_pp": 2.980746042195778,
+          "global_gain_pp": 0.15032618792852892,
+          "worst_view_delta_pp": -0.07093200926734378,
+          "evidence": [
+            "hand_left",
+            "hand_right",
+            "finger_detail",
+            "topology_report",
+            "learning"
+          ],
+          "flags": [
+            "mitten_shape",
+            "finger_merge_regression"
+          ],
+          "params": {
+            "depth_scale": 1
+          },
+          "visual_review": "REJECTED",
+          "reference_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "model_valleys": {
+            "left": 1,
+            "right": 0
+          },
+          "parent_target_delta_pp": -2.84525597099742,
+          "parent_global_delta_pp": -0.0012192967726587511,
+          "alpha_locked_target_difference_to_valley_pp": -3.132150757480573,
+          "alpha_locked_global_difference_to_valley_pp": -0.0015692481148743553,
+          "parent_worst_view_delta_pp": -0.019071986353713655,
+          "local_loops_ready": false,
+          "valley_structural_advantage_preserved": false,
+          "candidate": "c02",
+          "audit_passed": false,
+          "reasons": [
+            "mesh_integrity",
+            "regression_ok",
+            "semantic_ready",
+            "forbidden_flags:finger_merge_regression,mitten_shape",
+            "valley_structural_advantage",
+            "local_loops_ready",
+            "exact_valley_counts"
+          ]
+        },
+        {
+          "module": "fingers",
+          "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+          "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+          "mesh_integrity": false,
+          "scope_safe": true,
+          "regression_ok": false,
+          "evidence_complete": true,
+          "semantic_ready": false,
+          "target_gain_pp": 2.6356598418464197,
+          "global_gain_pp": 0.14913401477898436,
+          "worst_view_delta_pp": -0.06895958366450738,
+          "evidence": [
+            "hand_left",
+            "hand_right",
+            "finger_detail",
+            "topology_report",
+            "learning"
+          ],
+          "flags": [
+            "mitten_shape",
+            "finger_merge_regression"
+          ],
+          "params": {
+            "depth_scale": 1.25
+          },
+          "visual_review": "REJECTED",
+          "reference_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "model_valleys": {
+            "left": 1,
+            "right": 0
+          },
+          "parent_target_delta_pp": -3.416506166096531,
+          "parent_global_delta_pp": -0.001677524922205631,
+          "alpha_locked_target_difference_to_valley_pp": -3.4772369578299314,
+          "alpha_locked_global_difference_to_valley_pp": -0.0027614212644189173,
+          "parent_worst_view_delta_pp": -0.023644747546214262,
+          "local_loops_ready": false,
+          "valley_structural_advantage_preserved": false,
+          "candidate": "c03",
+          "audit_passed": false,
+          "reasons": [
+            "mesh_integrity",
+            "regression_ok",
+            "semantic_ready",
+            "forbidden_flags:finger_merge_regression,mitten_shape",
+            "valley_structural_advantage",
+            "local_loops_ready",
+            "exact_valley_counts"
+          ]
+        }
+      ],
+      "learning": "Scope verdadero3/3.Posepreservada; sem1/0,topoloopsfallan; perderventajaValley veto.",
+      "next_hypothesis": "Research mínimo patch conectado del segmento distal superior y reparación de bordes/costuras; no más profundidad.",
+      "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+      "module": "fingers",
+      "parameters": [
+        {
+          "depth_scale": 0.75
+        },
+        {
+          "depth_scale": 1
+        },
+        {
+          "depth_scale": 1.25
+        }
+      ],
+      "promotion_executed": false
+    }
+  ],
+  "stop_reason": "MESH_INTEGRITY_FAILED",
+  "technique_budget_exhausted": true,
+  "accepted_candidate": null,
+  "promotion_executed": false,
+  "promotion_allowed": false
+}

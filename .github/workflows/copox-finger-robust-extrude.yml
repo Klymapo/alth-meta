@@ -1,0 +1,74 @@
+name: COPOX · Finger robust extrusion
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  robust-extrude:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - name: Ejecutar tres variantes de tres bandas robustas
+        run: |
+          rm -rf .copox/finger-robust-extrude
+          for SLOT in 1 2 3; do
+            python3 -m copox.production.finger_robust_extrude_trial \
+              --baseline assets/joven_rubio/theo_alpha.glb \
+              --reference refs/personajes/joven-rubio-4-vistas.jpg \
+              --config copox/reference_configs/joven_rubio_alpha.json \
+              --policy copox/production/theo_m5_policy.json \
+              --slot "$SLOT" \
+              --output-dir ".copox/finger-robust-extrude/c0${SLOT}"
+          done
+      - name: Comparar semántica y silueta
+        run: |
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path('.copox/finger-robust-extrude')
+          rows=[]
+          for p in sorted(root.glob('c*/trial.json')):
+              t=json.loads(p.read_text())
+              assert t['promotion_executed'] is False
+              assert t['plan']['robust_valley_count']==2
+              assert t['plan']['visible_band_count']==3
+              assert t['plan']['invented_finger_count'] is False
+              r=t['result']; d=t['hand_detail']['summary']
+              rows.append({
+                  'candidate':p.parent.name,
+                  'segments':t['params']['segments'],
+                  'reference_valleys':d['reference_valleys'],
+                  'model_valleys':d['model_valleys'],
+                  'semantic_ready':r['semantic_ready'],
+                  'mesh_integrity':r['mesh_integrity'],
+                  'regression_ok':r['regression_ok'],
+                  'target_gain_pp':r['target_gain_pp'],
+                  'global_gain_pp':r['global_gain_pp'],
+                  'worst_view_delta_pp':r['worst_view_delta_pp'],
+                  'reasons':t['gate']['reasons'],
+              })
+          assert len(rows)==3
+          sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
+          assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b'
+          ranking=sorted(rows,key=lambda x:(x['semantic_ready'],x['target_gain_pp'],x['global_gain_pp']),reverse=True)
+          summary={'baseline_sha256':sha,'promotion_executed':False,'ranking':ranking}
+          (root/'summary.json').write_text(json.dumps(summary,indent=2))
+          print(json.dumps(summary,indent=2))
+          PY
+      - name: Evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-finger-robust-extrude
+          path: .copox/finger-robust-extrude/
+          retention-days: 1
+          if-no-files-found: ignore

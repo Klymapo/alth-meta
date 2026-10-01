@@ -1,0 +1,54 @@
+name: COPOX · Finger topology campaign
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  finger-topology:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - name: Ejecutar generaciones 2 y 3 sin promoción
+        run: |
+          rm -rf .copox/finger-topology
+          for GEN in 2 3; do
+            for SLOT in 1 2 3; do
+              python3 -m copox.production.regional_trial \
+                --baseline assets/joven_rubio/theo_alpha.glb \
+                --reference refs/personajes/joven-rubio-4-vistas.jpg \
+                --config copox/reference_configs/joven_rubio_alpha.json \
+                --policy copox/production/theo_m5_policy.json \
+                --module fingers --slot "$SLOT" --tournament "$GEN" \
+                --output-dir ".copox/finger-topology/g${GEN}-c0${SLOT}"
+            done
+          done
+      - name: Resumir definición y gates
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          rows=[]
+          for p in sorted(Path('.copox/finger-topology').glob('g*-c*/trial.json')):
+              t=json.loads(p.read_text())
+              d=t['extra']['hand_detail']['summary']
+              rows.append({'candidate':p.parent.name,'params':t['params'],'target_gain_pp':t['result']['target_gain_pp'],'global_gain_pp':t['result']['global_gain_pp'],'definition_match':d['definition_match'],'component_gap':d['mean_component_gap'],'vertical_run_gap':d['mean_vertical_run_gap'],'flags':t['result']['flags'],'promotion_allowed':t['gate']['promotion_allowed'],'reasons':t['gate']['reasons']})
+              assert t['promotion_executed'] is False
+          best=sorted(rows,key=lambda x:(not x['definition_match'],x['component_gap']+x['vertical_run_gap'],-x['target_gain_pp']))[0]
+          summary={'baseline_preserved':True,'candidates':rows,'best_learning_candidate':best}
+          Path('.copox/finger-topology/summary.json').write_text(json.dumps(summary,indent=2))
+          print(json.dumps(summary,indent=2))
+          PY
+      - name: Guardar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-finger-topology-campaign
+          path: .copox/finger-topology/
+          retention-days: 2
+          if-no-files-found: ignore

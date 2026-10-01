@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 from pathlib import Path
 from typing import Any
 
@@ -20,17 +19,6 @@ from copox.adapters.alth_character_audit import (
     registration_from_baseline,
     region_mask,
 )
-
-
-def _canonical_rotation() -> np.ndarray:
-    a = math.radians(-90.0)
-    c, s = math.cos(a), math.sin(a)
-    return np.array([
-        [1.0, 0.0, 0.0, 0.0],
-        [0.0, c, -s, 0.0],
-        [0.0, s, c, 0.0],
-        [0.0, 0.0, 0.0, 1.0],
-    ], dtype=float)
 
 
 def _to_h(points: np.ndarray) -> np.ndarray:
@@ -77,7 +65,7 @@ def _filled_smoothed_delta(ref_values: np.ndarray, ref_valid: np.ndarray, model_
     raw = ref_values[valid] - model_values[valid]
     interpolated = np.interp(rows, known, raw, left=float(raw[0]), right=float(raw[-1]))
     # La referencia raster puede tener dientes de 1 px; suavizamos apenas la tendencia,
-    # conservando los valles/protrusiones de varios píxeles que forman los dedos.
+    # conservando valles/protrusiones de varios píxeles que forman los dedos.
     smooth = ndi.gaussian_filter1d(interpolated, sigma=1.0, mode="nearest")
     delta[:] = smooth
     return delta, valid
@@ -99,7 +87,6 @@ def fit_fingers(
     if len(specs) < 2 or len(boxes) < 2:
         raise RuntimeError("Fingers requiere dos ROIs frontales y dos cajas anatómicas")
 
-    # Auditoría/proyección usa la escena concatenada ya normalizada por trimesh.
     scale_mm = float(cfg.get("mesh_to_mm", 1000.0))
     _, baseline_mesh = load_scene(baseline, scale_mm)
     sheet = np.array(Image.open(reference_sheet).convert("RGB"))
@@ -108,28 +95,33 @@ def fit_fingers(
     registration = registration_from_baseline(baseline_mesh, "front", ref_mask, cfg)
     model_mask = raster_silhouette(baseline_mesh, "front", front.shape[:2], registration, cfg)
 
-    # Edición usa geometría/nodos crudos; la convertimos al mismo Z-up canónico.
+    # IMPORTANTE: trimesh ya expone la escena de Alpha en coordenadas world Z-up,
+    # las mismas que usa load_scene/auditoría. La corrección -90° X pertenece al
+    # importador de Blender, no a esta ruta trimesh. Aplicarla aquí convertía Z en
+    # profundidad y hacía que el fit aprendiera filas equivocadas de la mano.
     scene = trimesh.load(str(baseline), force="scene")
     node_name, geom_name, node_matrix, geom = _dominant(scene)
     vertices_local = np.asarray(geom.vertices, dtype=float).copy()
-    rotation = _canonical_rotation()
-    inv_rotation = np.linalg.inv(rotation)
     inv_node = np.linalg.inv(node_matrix)
-    raw_world_h = (node_matrix @ _to_h(vertices_local).T).T
-    canonical = (rotation @ raw_world_h.T).T[:, :3]
+    world_h = (node_matrix @ _to_h(vertices_local).T).T
+    canonical = world_h[:, :3].copy()
     lo, hi = canonical.min(axis=0), canonical.max(axis=0)
     span = np.maximum(hi - lo, 1e-12)
     norm = (canonical - lo) / span
 
-    px = registration["pixel_center_x"] + ((canonical[:, 0] * scale_mm) - registration["horizontal_center"]) * registration["scale"]
-    py = registration["pixel_bottom_y"] - ((canonical[:, 2] * scale_mm) - registration["vertical_min"]) * registration["scale"]
+    coord = cfg["coordinates"]
+    h_axis = int(coord["front_horizontal_axis"])
+    v_axis = int(coord["vertical_axis"])
+    h_sign = float(coord.get("front_sign", 1.0))
+    px = registration["pixel_center_x"] + ((canonical[:, h_axis] * scale_mm * h_sign) - registration["horizontal_center"]) * registration["scale"]
+    py = registration["pixel_bottom_y"] - ((canonical[:, v_axis] * scale_mm) - registration["vertical_min"]) * registration["scale"]
 
     updated = canonical.copy()
     selected_total = np.zeros(len(canonical), dtype=bool)
     side_reports: list[dict[str, Any]] = []
     max_shift_model = 0.0
 
-    for idx, (spec, box) in enumerate(zip(specs[:2], boxes[:2])):
+    for spec, box in zip(specs[:2], boxes[:2]):
         side = "left" if (float(spec["box"][0]) + float(spec["box"][2])) / 2.0 < 0.5 else "right"
         roi = region_mask(ref_mask, [float(x) for x in spec["box"]])
         ref_profile, ref_valid = _outer_profile(ref_mask, roi, side)
@@ -155,11 +147,10 @@ def fit_fingers(
         shift_mm = delta_px[rows] / max(float(registration["scale"]), 1e-9)
         shift_model = (shift_mm / scale_mm) * float(strength) * weight
 
-        # No permitimos que una sola hipótesis recorra más de la mitad del ancho
-        # geométrico de la propia caja de dedos. El límite se deriva del modelo.
-        cap_model = float(span[0] * width * 0.50)
+        # El desplazamiento es horizontal en la vista frontal; para Theo es X.
+        cap_model = float(span[h_axis] * width * 0.50)
         shift_model = np.clip(shift_model, -cap_model, cap_model)
-        updated[:, 0] += shift_model
+        updated[:, h_axis] += shift_model * h_sign
         max_shift_model = max(max_shift_model, float(np.max(np.abs(shift_model))))
 
         valid_rows = np.where(profile_valid)[0]
@@ -173,9 +164,9 @@ def fit_fingers(
             "max_applied_shift_mm": float(np.max(np.abs(shift_model[inside])) * scale_mm),
         })
 
-    # Mapear sólo el scope seleccionado; fuera de él se conservan coordenadas exactas.
-    updated_raw_world_h = (inv_rotation @ _to_h(updated).T).T
-    updated_local = (inv_node @ updated_raw_world_h.T).T[:, :3]
+    # El nodo se invierte directamente: no existe una segunda rotación canónica en trimesh.
+    updated_world_h = _to_h(updated)
+    updated_local = (inv_node @ updated_world_h.T).T[:, :3]
     updated_local[~selected_total] = vertices_local[~selected_total]
     untouched_exact = bool(np.array_equal(updated_local[~selected_total], vertices_local[~selected_total]))
     geom.vertices = updated_local
@@ -190,7 +181,8 @@ def fit_fingers(
         "object": node_name,
         "geometry": geom_name,
         "strength": float(strength),
-        "selection_coordinates": "canonical_z_up",
+        "selection_coordinates": "trimesh_world_z_up_no_extra_rotation",
+        "coordinate_axes": {"horizontal": h_axis, "vertical": v_axis},
         "selected_vertices": int(selected_total.sum()),
         "total_vertices": int(len(vertices_local)),
         "outside_scope_exact": untouched_exact,
@@ -200,7 +192,7 @@ def fit_fingers(
         "reference_driven": True,
         "invented_finger_count": False,
         "promotion_allowed": False,
-        "learning": "El perfil distal se deriva de la silueta frontal de referencia. El gate de manos/dedos debe confirmar que aumentan las separaciones visibles sin regresión en otras vistas.",
+        "learning": "El perfil distal se deriva de la silueta frontal de referencia en el mismo Z-up world que usa la auditoría. El gate confirma separaciones visibles y regresiones.",
     }
     Path(report_path).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return result

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from copox.adapters import alth_model_m5 as base
+from copox.production.research_gate import require_research
 from copox.state_bundle import save_bundle
 
 
@@ -46,6 +47,18 @@ def cmd_mutate(args: argparse.Namespace) -> int:
     technique_round = int(attempts.get(module, 0)) + 1
     budget = _technique_budget(_policy(run_dir), module)
     technique_round = min(technique_round, budget)
+
+    # Research preflight obligatorio. El loop no puede ni siquiera preparar una
+    # mutación si la técnica de esta ronda no fue investigada previamente.
+    repo = Path.cwd().resolve()
+    brief = repo / "copox" / "research" / f"{module}.json"
+    research = require_research(
+        brief,
+        module,
+        technique_round=technique_round,
+        output=candidate / "research_gate.json",
+    )
+
     spec = {
         "module": module,
         "candidate_id": args.candidate_id,
@@ -54,6 +67,9 @@ def cmd_mutate(args: argparse.Namespace) -> int:
         "engine_tournament": base._tournament(args.candidate_id),
         "technique_round": technique_round,
         "technique_budget": budget,
+        "research_ready": True,
+        "research_brief": str(brief.relative_to(repo)),
+        "research_direction": research.get("chosen_direction"),
     }
     base._write(candidate / "module_spec.json", spec)
     return 0
