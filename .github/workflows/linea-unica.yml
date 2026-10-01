@@ -99,7 +99,7 @@ jobs:
           retention-days: 7
           include-hidden-files: true
 
-  t2-crear:
+  t2-t4-crear-publicar:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -128,6 +128,17 @@ jobs:
           set -e
           test -f .linea/crear/manzana/resumen.json
           alth-python tools/resumen_linea.py .linea/crear/manzana/resumen.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: T4 · Hoja de revisión y publicación simulada (en el runner; no se sube nada)
+        run: |
+          alth-python tools/hoja_revision.py .linea/crear/manzana --salida .linea/crear/manzana/revision.png
+          /usr/bin/time -f "publicar %e s" alth-python tools/publicar.py .linea/crear/manzana --issue 0 2>&1 \
+            | grep -v -E "INFO|CUEW|^Fra|Saved|Draco|MeshOpt" | tee .linea/t4_publicar.txt
+          git status --short | tee .linea/t4_cambios.txt
+          for f in assets/manzana/manzana.glb assets/manzana/final.png assets/manzana/spec.json data/medidas.csv kb/capacidades.json kb/huellas.json; do
+            grep -q "$f" .linea/t4_cambios.txt || { echo "::error::publicar no tocó $f"; exit 1; }
+          done
+          cp -r assets/manzana .linea/t4_asset_publicado
+          git checkout -- assets data kb
       - uses: actions/upload-artifact@v4
         if: always()
         with:

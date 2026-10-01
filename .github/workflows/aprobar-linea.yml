@@ -1,0 +1,71 @@
+name: Aprobar asset (línea única)
+run-name: "Aprobar · issue #${{ github.event.issue.number }} · ${{ github.event.label.name }}"
+
+# El usuario aprueba o rechaza con una ETIQUETA en el issue de "Crear asset":
+#   aprobado  → reconstruye en modo final desde la receta revisada (rama linea/revision-issue-N),
+#               publica en main assets/<nombre>/ (GLB raíz ×0.01, .blend, final.png, spec.json),
+#               fila en data/medidas.csv, capacidades aprendidas y huella memorizada; cierra el issue.
+#   rechazado → no publica nada; lo deja anotado en el issue.
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: publicar-main
+  cancel-in-progress: false
+
+jobs:
+  aprobar:
+    if: contains(github.event.issue.labels.*.name, 'crear-asset') && (github.event.label.name == 'aprobado' || github.event.label.name == 'rechazado')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+      N: ${{ github.event.issue.number }}
+    steps:
+      - name: Rechazado
+        if: github.event.label.name == 'rechazado'
+        run: |
+          gh issue comment "$N" -R "${{ github.repository }}" --body "Rechazado: no se publica nada. La revisión queda en la rama linea/revision-issue-$N como historial."
+      - uses: actions/checkout@v4
+        if: github.event.label.name == 'aprobado'
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        if: github.event.label.name == 'aprobado'
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+        if: github.event.label.name == 'aprobado'
+      - name: Blender headless
+        if: github.event.label.name == 'aprobado'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          bash tools/ensure_blender.sh --strict
+          uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" numpy scipy Pillow
+      - name: Publicar lo revisado
+        if: github.event.label.name == 'aprobado'
+        run: |
+          rama="linea/revision-issue-$N"
+          git fetch -q origin "$rama" || { gh issue comment "$N" --body "No encontré la rama \`$rama\`: no hay revisión que aprobar."; exit 1; }
+          git checkout "origin/$rama" -- revision kb/investigacion.json kb/investigacion 2>/dev/null || git checkout "origin/$rama" -- revision
+          carpeta=$(ls -d revision/*/ | head -1)
+          img=$(alth-python -c "import json; print(json.load(open('${carpeta}entrada.json'))['imagen'])")
+          git checkout "origin/$rama" -- "$img" || true
+          alth-python tools/publicar.py "$carpeta" --issue "$N" 2>&1 | grep -v -E "INFO|CUEW|^Fra|Saved|Draco|MeshOpt" | tee publicar.txt
+          nom=$(basename "$carpeta")
+          git rm -r -q --cached revision && rm -rf revision
+          git config user.name "alth-linea[bot]"
+          git config user.email "alth-linea@users.noreply.github.com"
+          git add "assets/$nom" data/medidas.csv kb "$img"
+          git commit -q -m "publica $nom (aprobado por el usuario en #$N)"
+          git push -q origin HEAD:${{ github.event.repository.default_branch }}
+          gh issue comment "$N" --body "Publicado en \`${{ github.event.repository.default_branch }}\`: \`assets/$nom/\` (GLB, .blend, final.png, spec.json), fila en \`data/medidas.csv\`, capacidades aprendidas y huella memorizada. Commit $(git rev-parse --short HEAD)."
+          gh issue close "$N"

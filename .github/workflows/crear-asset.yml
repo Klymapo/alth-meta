@@ -25,16 +25,20 @@ on:
     types: [opened, labeled]
 
 permissions:
-  contents: read
+  contents: write     # solo para la rama de revisión linea/revision-issue-N (nunca main)
   issues: write
 
-concurrency:
+concurrency:   # abrir con la plantilla dispara "opened" y "labeled": solo sigue la última
   group: crear-asset-${{ github.event.issue.number || inputs.nombre }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   crear:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.issue.labels.*.name, 'crear-asset')
+    # no reacciona a las etiquetas aprobado/rechazado (esas son de aprobar-linea.yml)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'crear-asset')) ||
+      (github.event.action == 'labeled' && github.event.label.name == 'crear-asset')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -84,6 +88,38 @@ jobs:
         run: |
           r="${{ steps.linea.outputs.carpeta }}/resumen.json"
           [ -f "$r" ] && alth-python tools/resumen_linea.py "$r" >> "$GITHUB_STEP_SUMMARY" || echo "sin resumen" >> "$GITHUB_STEP_SUMMARY"
+      - name: Hoja de revisión en el issue (rama linea/revision-issue-N, no main)
+        if: github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.event.issue.number }}
+          CARPETA: ${{ steps.linea.outputs.carpeta }}
+        run: |
+          rama="linea/revision-issue-$N"
+          if [ ! -f "$CARPETA/receta.json" ] || [ ! -f "$CARPETA/resumen.json" ]; then
+            { echo "No se pudo armar el asset. Faltantes:"; echo; alth-python tools/resumen_linea.py "$CARPETA/resumen.json" 2>/dev/null || cat .linea/crear_salida.txt | tail -20; } > comentario.md
+            gh issue comment "$N" --body-file comentario.md
+            exit 0
+          fi
+          nom=$(basename "$CARPETA")
+          alth-python tools/hoja_revision.py "$CARPETA" --salida "$CARPETA/revision.png"
+          hoja=$(alth-python -c "import json; print(json.load(open('$CARPETA/resumen.json'))['final']['hoja'])")
+          dest="revision/$nom"
+          mkdir -p "$dest"
+          cp "$CARPETA"/{receta.json,resumen.json,ficha.json,capacidades.json,investigacion.json,revision.png} "$dest"/
+          cp "$hoja" "$dest/hoja.png"
+          [ -f entrada.json ] && cp entrada.json "$dest/"
+          img=$(alth-python -c "import json; print(json.load(open('entrada.json'))['imagen'])")
+          git config user.name "alth-linea[bot]"
+          git config user.email "alth-linea@users.noreply.github.com"
+          git checkout -B "$rama"
+          git add -f "$dest" "$img" kb/investigacion.json kb/investigacion 2>/dev/null || git add -f "$dest" "$img"
+          git commit -q -m "revisión: $nom (issue #$N, sin publicar)"
+          git push -q -f origin "$rama"
+          url="https://github.com/${{ github.repository }}/blob/$rama/$dest/revision.png?raw=true"
+          corrida="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          alth-python tools/resumen_linea.py "$CARPETA/resumen.json" --comentario --imagen "$url" --rama "$rama" --corrida "$corrida" > comentario.md
+          gh issue comment "$N" --body-file comentario.md
       - uses: actions/upload-artifact@v4
         if: always()
         with:
