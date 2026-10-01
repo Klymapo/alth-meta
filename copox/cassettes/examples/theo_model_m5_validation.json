@@ -20,10 +20,10 @@
   },
   "strategy": {"tournament_size": 3, "max_candidates": 6},
   "commands": {
-    "prepare": ["python3", "-m", "copox.adapters.alth_model_m5", "prepare", "--repo-root", "{repo_root}", "--baseline-params", "{baseline_params}", "--baseline-model", "{baseline_model}", "--reference", "{reference}", "--config", "{audit_config}", "--policy", "{production_policy}", "--run-dir", "{run_dir}"],
-    "mutate": ["python3", "-m", "copox.adapters.alth_model_m5", "mutate", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--candidate-id", "{candidate_id}"],
-    "capture": ["python3", "-m", "copox.adapters.alth_model_m5", "capture", "--repo-root", "{repo_root}", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--evidence-dir", "{evidence_dir}", "--reference", "{reference}", "--config", "{audit_config}", "--policy", "{production_policy}"],
-    "learn": ["python3", "-m", "copox.adapters.alth_model_m5", "learn", "--repo-root", "{repo_root}", "--run-dir", "{run_dir}", "--tournament", "{tournament}", "--cassette-id", "{cassette_id}", "--target", "{target}", "--config", "{audit_config}", "--policy", "{production_policy}"]
+    "prepare": ["python3", "-m", "copox.adapters.alth_model_m5_cycle", "prepare", "--repo-root", "{repo_root}", "--baseline-params", "{baseline_params}", "--baseline-model", "{baseline_model}", "--reference", "{reference}", "--config", "{audit_config}", "--policy", "{production_policy}", "--run-dir", "{run_dir}"],
+    "mutate": ["python3", "-m", "copox.adapters.alth_model_m5_cycle", "mutate", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--candidate-id", "{candidate_id}"],
+    "capture": ["python3", "-m", "copox.adapters.alth_model_m5_cycle", "capture", "--repo-root", "{repo_root}", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--evidence-dir", "{evidence_dir}", "--reference", "{reference}", "--config", "{audit_config}", "--policy", "{production_policy}"],
+    "learn": ["python3", "-m", "copox.adapters.alth_model_m5_cycle", "learn", "--repo-root", "{repo_root}", "--run-dir", "{run_dir}", "--tournament", "{tournament}", "--cassette-id", "{cassette_id}", "--target", "{target}", "--config", "{audit_config}", "--policy", "{production_policy}"]
   },
   "promotion": {"unanimous": true},
   "reporting": {
