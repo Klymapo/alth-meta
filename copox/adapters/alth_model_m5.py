@@ -50,6 +50,25 @@ def _route_supported(diagnostics: dict[str, Any], config: dict[str, Any], cooldo
     return diagnostics
 
 
+def _candidate_state(baseline_state: dict[str, Any], result: dict[str, Any], candidate_id: str) -> dict[str, Any]:
+    state = json.loads(json.dumps(baseline_state))
+    m5 = dict(state.get("_m5") or {})
+    history = list(m5.get("module_history") or [])
+    history.append({
+        "candidate": candidate_id,
+        "module": result["module"],
+        "params": result.get("params") or {},
+        "baseline_sha256": result.get("baseline_sha256"),
+    })
+    # Mantener el JSON acotado; la historia completa vive también en commits de state branch.
+    m5["module_history"] = history[-50:]
+    m5["last_module"] = result["module"]
+    m5.setdefault("module_params", {})[result["module"]] = result.get("params") or {}
+    m5["format"] = "model-state-v1"
+    state["_m5"] = m5
+    return state
+
+
 def cmd_prepare(args: argparse.Namespace) -> int:
     repo = Path(args.repo_root).resolve()
     run_dir = Path(args.run_dir).resolve()
@@ -127,6 +146,12 @@ def cmd_capture(args: argparse.Namespace) -> int:
     )
     result = trial["result"]
     gate = trial["gate"]
+
+    # El trial puede escribir params operativos locales. Los convertimos a estado acumulativo
+    # antes de cualquier posible promoción para no borrar hair/u otros módulos históricos.
+    baseline_state = _read(run_dir / "baseline" / "params.json")
+    _write(candidate / "params.json", _candidate_state(baseline_state, result, str(spec["candidate_id"])))
+
     metrics = {
         "production": {
             "module": result["module"],
@@ -147,7 +172,7 @@ def cmd_capture(args: argparse.Namespace) -> int:
     _write(candidate / "metrics.json", metrics)
     evidence = Path(args.evidence_dir).resolve()
     evidence.mkdir(parents=True, exist_ok=True)
-    for name in ("gate.json", "module_result.json", "trial.json", "metrics.json"):
+    for name in ("gate.json", "module_result.json", "trial.json", "metrics.json", "params.json"):
         src = candidate / name
         if src.exists():
             shutil.copy2(src, evidence / name)
