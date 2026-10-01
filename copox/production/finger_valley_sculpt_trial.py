@@ -19,6 +19,13 @@ SCULPT_STRENGTHS = (0.55, 0.75, 0.95)
 CONTOUR_STRENGTH = 1.20
 
 
+def _dominant_topology(report: dict) -> dict:
+    rows = list(report.get("geometries") or [])
+    if not rows:
+        return {}
+    return max(rows, key=lambda r: int(r.get("vertices", 0)))
+
+
 def run_trial(baseline: str, reference: str, config: str, policy_path: str, slot: int, output_dir: str):
     if slot not in (1, 2, 3):
         raise ValueError("slot debe ser 1..3")
@@ -28,14 +35,14 @@ def run_trial(baseline: str, reference: str, config: str, policy_path: str, slot
 
     refined_input, refine = _refine_finger_topology(baseline, config, root, 1)
 
-    # Primero ajustamos la silueta exterior con el mejor rango ya validado.
+    # Conservamos la silueta exterior del semantic-finish c02.
     contoured = root / "contoured.glb"
     contour = fit_fingers(
         refined_input, reference, config, str(contoured), str(root / "contour_report.json"),
         strength=CONTOUR_STRENGTH,
     )
 
-    # Después abrimos sólo los valles robustos que ve el mismo probe semántico.
+    # Después abrimos sólo los valles robustos, sin booleans ni cambios de conectividad.
     model = root / "model.glb"
     sculpt = sculpt_valleys(
         baseline, str(contoured), reference, config, str(model), str(root / "sculpt_report.json"),
@@ -58,17 +65,28 @@ def run_trial(baseline: str, reference: str, config: str, policy_path: str, slot
             failures.append({"region": name, "delta_pp": delta})
 
     full = audit_full(
-        baseline, str(model), reference, "hair,profile", config,
+        baseline, str(model), reference, "hands,fingers", config,
         None, str(root / "full_metrics.json"), str(root / "full_evidence"),
     )
     detail = hand_probe(str(model), reference, config, str(root / "hand_detail.json"), str(root / "hand_detail_evidence"))
     topology = topology_probe(str(model), str(root / "topology_report.json"))
+    dominant = _dominant_topology(topology)
+    welded = dominant.get("welded_topology") or {}
 
     labels = {"learning", "finger_detail", "topology_report"}
     _copy_hand_evidence(root, labels)
     semantic_ready = bool(detail.get("summary", {}).get("definition_match", False))
-    topology_ok = bool(topology.get("summary", {}).get("dominant_welds_to_closed_manifold", False))
-    uv_ok = bool(topology.get("summary", {}).get("dominant_has_uv_seams", False))
+
+    # Alpha/contour ya puede contener boundary edges por su representación GLB.
+    # Sculpt no cambia conectividad: exigimos cuentas preservadas, UV presentes y
+    # ninguna cara degenerada/non-manifold nueva en la dominante, no closed-manifold absoluto.
+    topology_ok = bool(
+        dominant.get("valid", False)
+        and int(welded.get("nonmanifold_edges", 0)) == 0
+        and int(welded.get("degenerate_faces", 0)) == 0
+        and sculpt.get("topology_counts_preserved", False)
+    )
+    uv_ok = bool((dominant.get("uv") or {}).get("available", False))
     scope_ok = bool(
         refine.get("safe_geometry_regression", False)
         and contour.get("outside_scope_exact", False)
@@ -81,10 +99,10 @@ def run_trial(baseline: str, reference: str, config: str, policy_path: str, slot
     if not semantic_ready:
         flags.append("mitten_shape")
     if not topology_ok or not uv_ok or not sculpt.get("topology_counts_preserved", False):
-        flags.append("finger_merge_regression")
+        flags.append("finger_topology_regression")
 
     learning = {
-        "mode": "topology_contour_valley_surface_sculpt",
+        "mode": "topology_contour_valley_surface_sculpt_v2",
         "topology_cuts": 1,
         "contour_strength": CONTOUR_STRENGTH,
         "sculpt_strength": sculpt_strength,
@@ -92,7 +110,13 @@ def run_trial(baseline: str, reference: str, config: str, policy_path: str, slot
         "definition_match": semantic_ready,
         "target_delta_pp": float(target.get("delta_pp", 0.0)),
         "frozen_region_failures": failures,
-        "note": "No usa booleanos. Mantiene conectividad y esculpe sólo los valles robustos usados por el probe semántico.",
+        "dominant_topology": {
+            "boundary_edges": int(welded.get("boundary_edges", 0)),
+            "nonmanifold_edges": int(welded.get("nonmanifold_edges", 0)),
+            "degenerate_faces": int(welded.get("degenerate_faces", 0)),
+            "uv_available": uv_ok,
+        },
+        "note": "No usa booleanos ni soldadura. Closed-manifold absoluto no se exige porque Alpha ya conserva bordes abiertos; se veta cualquier nonmanifold/degenerado y cualquier cambio de conteo topológico.",
     }
     (root / "learning.json").write_text(json.dumps(learning, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -111,7 +135,7 @@ def run_trial(baseline: str, reference: str, config: str, policy_path: str, slot
         "evidence": sorted(labels),
         "flags": sorted(set(flags)),
         "params": {
-            "technique": "topology_1cut_contour_then_valley_surface_sculpt",
+            "technique": "topology_1cut_contour_then_relative_valley_surface_sculpt",
             "topology_cuts": 1,
             "contour_strength": CONTOUR_STRENGTH,
             "sculpt_strength": sculpt_strength,
