@@ -1,0 +1,113 @@
+name: COPOX · Model loop dry-run
+
+on:
+  pull_request:
+    paths:
+      - "copox/production/**"
+      - "copox/adapters/regional_*.py"
+      - "copox/adapters/hand_detail_probe.py"
+      - "copox/adapters/mesh_topology_probe.py"
+      - "copox/adapters/uv_region_probe.py"
+      - "copox/reference_configs/joven_rubio_alpha.json"
+      - "assets/joven_rubio/theo_alpha.glb"
+      - ".github/workflows/copox-model-loop-dryrun.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+
+      - name: Diagnosticar baseline y enrutar módulo
+        run: |
+          rm -rf .copox/model-loop
+          mkdir -p .copox/model-loop/baseline
+          python3 -m copox.adapters.regional_reference_audit \
+            --prev assets/joven_rubio/theo_alpha.glb \
+            --curr assets/joven_rubio/theo_alpha.glb \
+            --reference refs/personajes/joven-rubio-4-vistas.jpg \
+            --config copox/reference_configs/joven_rubio_alpha.json \
+            --output .copox/model-loop/baseline/regional_metrics.json \
+            --evidence-dir .copox/model-loop/baseline/evidence
+          python3 -m copox.production.diagnostics \
+            --regional-metrics .copox/model-loop/baseline/regional_metrics.json \
+            --output .copox/model-loop/diagnostics.json
+          python3 -m copox.production.module_router \
+            --policy copox/production/theo_m5_policy.json \
+            --diagnostics .copox/model-loop/diagnostics.json \
+            --output .copox/model-loop/route.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          route=json.loads(Path('.copox/model-loop/route.json').read_text())
+          cfg=json.loads(Path('copox/reference_configs/joven_rubio_alpha.json').read_text())
+          selected=route['selected']
+          assert selected in (cfg.get('morph_regions') or {}), (selected, route)
+          assert selected in {'ears','hands','fingers'}, f'La prioridad real cambió; revisar antes de loop: {selected}'
+          print('SELECTED_MODULE='+selected)
+          Path('.copox/model-loop/selected.txt').write_text(selected+'\n')
+          PY
+
+      - name: Torneo de tres hermanos sin promoción
+        run: |
+          MODULE="$(cat .copox/model-loop/selected.txt)"
+          for SLOT in 1 2 3; do
+            python3 -m copox.production.regional_trial \
+              --baseline assets/joven_rubio/theo_alpha.glb \
+              --reference refs/personajes/joven-rubio-4-vistas.jpg \
+              --config copox/reference_configs/joven_rubio_alpha.json \
+              --policy copox/production/theo_m5_policy.json \
+              --module "$MODULE" \
+              --slot "$SLOT" \
+              --output-dir ".copox/model-loop/candidates/c0${SLOT}"
+          done
+
+      - name: Resumir aprendizaje sin tocar baseline
+        run: |
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root=Path('.copox/model-loop')
+          module=root.joinpath('selected.txt').read_text().strip()
+          rows=[]
+          for p in sorted((root/'candidates').glob('c*/trial.json')):
+              t=json.loads(p.read_text())
+              rows.append({
+                  'candidate':p.parent.name,
+                  'module':module,
+                  'target_gain_pp':t['result']['target_gain_pp'],
+                  'global_gain_pp':t['result']['global_gain_pp'],
+                  'worst_view_delta_pp':t['result']['worst_view_delta_pp'],
+                  'semantic_ready':t['result']['semantic_ready'],
+                  'promotion_allowed':t['gate']['promotion_allowed'],
+                  'reasons':t['gate']['reasons'],
+              })
+              assert t['promotion_executed'] is False
+          raw=Path('assets/joven_rubio/theo_alpha.glb').read_bytes()
+          sha=hashlib.sha256(raw).hexdigest()
+          assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b', sha
+          summary={'module':module,'baseline_sha256':sha,'promotion_executed':False,'candidates':rows}
+          (root/'summary.json').write_text(json.dumps(summary,indent=2))
+          print(json.dumps(summary,indent=2))
+          PY
+
+      - name: Evidencia dry-run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-model-loop-dryrun
+          path: .copox/model-loop/
+          retention-days: 1
+          if-no-files-found: ignore
