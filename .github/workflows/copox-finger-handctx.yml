@@ -1,0 +1,88 @@
+name: COPOX · Finger hand-context
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/finger_gap_hands_plan.py"
+      - "copox/production/finger_handctx_trial.py"
+      - "copox/adapters/finger_gap_plan.py"
+      - "copox/adapters/finger_gap_carve.py"
+      - "copox/production/finger_gap_trial.py"
+      - "copox/reference_configs/joven_rubio_alpha.json"
+      - "copox/production/theo_m5_policy.json"
+      - "assets/joven_rubio/theo_alpha.glb"
+      - ".github/workflows/copox-finger-handctx.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hand-context:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+
+      - name: Ejecutar tres candidatos con contexto de mano
+        run: |
+          rm -rf .copox/finger-handctx
+          for SLOT in 1 2 3; do
+            python3 -m copox.production.finger_handctx_trial \
+              --baseline assets/joven_rubio/theo_alpha.glb \
+              --reference refs/personajes/joven-rubio-4-vistas.jpg \
+              --config copox/reference_configs/joven_rubio_alpha.json \
+              --policy copox/production/theo_m5_policy.json \
+              --slot "$SLOT" \
+              --output-dir ".copox/finger-handctx/c0${SLOT}"
+          done
+
+      - name: Comparar bilateralidad y ranking
+        run: |
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path('.copox/finger-handctx')
+          rows=[]
+          for p in sorted(root.glob('c*/trial.json')):
+              t=json.loads(p.read_text())
+              assert t['promotion_executed'] is False
+              hands=t['plan']['hands']
+              sides={h['side']:len(h['cutters']) for h in hands}
+              assert sides.get('left',0)>0, sides
+              # No obligamos artificialmente a la derecha; lo registramos para saber
+              # si el ROI ampliado resuelve la discrepancia observada.
+              r=t['result']
+              rows.append({
+                  'candidate':p.parent.name,
+                  'cutters_by_side':sides,
+                  'definition_match':r['semantic_ready'],
+                  'target_gain_pp':r['target_gain_pp'],
+                  'global_gain_pp':r['global_gain_pp'],
+                  'worst_view_delta_pp':r['worst_view_delta_pp'],
+                  'flags':r['flags'],
+                  'promotion_allowed':t['gate']['promotion_allowed'],
+                  'reasons':t['gate']['reasons'],
+              })
+          assert len(rows)==3
+          sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
+          assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b'
+          ranking=sorted(rows,key=lambda x:(x['definition_match'],x['target_gain_pp'],x['global_gain_pp']),reverse=True)
+          summary={'baseline_sha256':sha,'promotion_executed':False,'ranking':ranking}
+          (root/'summary.json').write_text(json.dumps(summary,indent=2))
+          print(json.dumps(summary,indent=2))
+          PY
+
+      - name: Evidencia hand-context
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-finger-handctx
+          path: .copox/finger-handctx/
+          retention-days: 1
+          if-no-files-found: ignore
