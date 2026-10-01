@@ -156,8 +156,8 @@ def api_alth(modulos: list[Path]) -> str:
 
 
 def seccion_md(texto: str, titulo: str) -> str:
-    """Una sección `## titulo` de un markdown, hasta la siguiente `## `."""
-    m = re.search(rf"^## {re.escape(titulo)}\s*\n(.*?)(?=^## |\Z)", texto, re.M | re.S)
+    """Una sección `## titulo` con sufijo opcional, hasta la siguiente `## `."""
+    m = re.search(rf"^## {re.escape(titulo)}(?:[ \t]+[^\n]*)?[ \t]*\n(.*?)(?=^## |\Z)", texto, re.M | re.S)
     return m.group(1).strip() if m else ""
 
 

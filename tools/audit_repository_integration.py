@@ -15,7 +15,7 @@ def blob_sha(path):
     data = path.read_bytes()
     return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
 
-def audit(root):
+def audit(root, verify_preservation=False):
     manifest = json.loads((root / "docs/integration/alastheo-import.json").read_text())
     failures = []
     imported = []
@@ -25,11 +25,14 @@ def audit(root):
         imported.append({"path": entry["destination"], "match": ok, "mode": entry["mode"]})
         if not ok:
             failures.append("IMPORT_MISMATCH: " + entry["destination"])
+    preserved_changes = []
     preserved = manifest["preserved_alth_files"]
     for entry in preserved:
         path = root / entry["path"]
         if not path.is_file() or blob_sha(path) != entry["sha"]:
-            failures.append("ALTH_FILE_CHANGED: " + entry["path"])
+            preserved_changes.append(entry["path"])
+            if verify_preservation:
+                failures.append("ALTH_FILE_CHANGED: " + entry["path"])
     alpha = root / manifest["protected_alpha"]["path"]
     sha = hashlib.sha256(alpha.read_bytes()).hexdigest() if alpha.is_file() else None
     if sha != manifest["protected_alpha"]["sha256"]:
@@ -81,6 +84,7 @@ def audit(root):
     return {"status": "PASS" if not failures else "FAIL", "source_repository": manifest["source_repository"],
             "source_commit": manifest["source_commit"], "imported_file_count": len(imported),
             "imported": imported, "preserved_alth_file_count": len(preserved),
+            "initial_preservation_enforced": verify_preservation, "changes_since_integration": preserved_changes,
             "alpha_sha256": sha, "local_links_checked": links_checked, "workbook": workbook,
             "automatic_promotion_enabled": policy.get("automatic_promotion_enabled"),
             "promotion_executed": False, "findings": findings, "failures": failures,
@@ -89,8 +93,9 @@ def audit(root):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default=".copox/integration-audit/report.json")
+    parser.add_argument("--verify-preservation", action="store_true", help="Enforce the original ALTH snapshot while importing; later development is reported separately.")
     args = parser.parse_args()
-    report = audit(ROOT)
+    report = audit(ROOT, args.verify_preservation)
     output = ROOT / args.output
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")

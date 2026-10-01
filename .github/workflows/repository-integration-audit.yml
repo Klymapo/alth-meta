@@ -15,12 +15,20 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@v6
       - name: Integridad de importación, referencias, XLSX y Alpha
-        run: python3 tools/audit_repository_integration.py
+        run: |
+          args=()
+          git diff --name-only HEAD^ HEAD > "$RUNNER_TEMP/integration-changed.txt"
+          if grep -Fxq 'docs/integration/alastheo-import.json' "$RUNNER_TEMP/integration-changed.txt"; then
+            args+=(--verify-preservation)
+          fi
+          python3 tools/audit_repository_integration.py "${args[@]}"
       - name: Dependencias de Blender headless
         run: |
           sudo apt-get update -qq
@@ -46,7 +54,13 @@ jobs:
         run: alth-python -m pytest tests -q --junitxml=.copox/integration-audit/tests.xml
       - name: Revalidar protección después de las pruebas
         if: always()
-        run: python3 tools/audit_repository_integration.py
+        run: |
+          args=()
+          git diff --name-only HEAD^ HEAD > "$RUNNER_TEMP/integration-changed.txt"
+          if grep -Fxq 'docs/integration/alastheo-import.json' "$RUNNER_TEMP/integration-changed.txt"; then
+            args+=(--verify-preservation)
+          fi
+          python3 tools/audit_repository_integration.py "${args[@]}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -5,7 +5,7 @@ Las pruebas reproducibles existentes son `test_*.py`. La auditoría de integraci
 Comando en el runner con sus dependencias instaladas:
 
 ```bash
-alth-python -m unittest discover -s tests -p 'test_*.py' -v
+alth-python -m pytest tests -q
 python3 tools/audit_repository_integration.py
 ```
 

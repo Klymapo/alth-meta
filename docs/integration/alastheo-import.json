@@ -138,7 +138,7 @@
       "source": "tests/README.md",
       "source_blob_sha": "7468cd97463bd1780cc244b0a27e48a12c1a1a8e",
       "destination": "tests/README.md",
-      "destination_blob_sha": "98a511e02887ce48c4fd0c69d321bdeaaffe7e1a",
+      "destination_blob_sha": "fa7e562f08697217a81f5d7f5413afe4015aa702",
       "mode": "adapted"
     }
   ],
@@ -1260,10 +1260,6 @@
       "sha": "62fbb6f261bbc94f329e4f380b54b19b36688e60"
     },
     {
-      "path": "tools/bucle.py",
-      "sha": "bd45f242bd20cd8764e23cedf3ce5a09d8a47636"
-    },
-    {
       "path": "tools/bucle_sistema.md",
       "sha": "f955c9e1afb45f7d8ada914397d2a37fb4c4c3d7"
     },
@@ -1295,5 +1291,10 @@
   },
   "workbook": "docs/production/AlasTheo - Libro de producción.xlsx",
   "automatic_model_promotion_allowed": false,
-  "promotion_executed": false
+  "promotion_executed": false,
+  "corrected_existing_files": [
+    ".github/workflows/aprobar.yml",
+    ".github/workflows/bucle.yml",
+    "tools/bucle.py"
+  ]
 }

@@ -9,3 +9,5 @@ La auditoría valida identidad de archivos importados, preservación del resto d
 Se corrigieron interpolaciones directas de inputs en el shell de los workflows manuales históricos `bucle.yml` y `aprobar.yml`, usando variables de entorno. Los proveedores externos documentados y los secrets de automatizaciones históricas no se utilizan en esta auditoría. No se considera revalidado el contenido de todas las conversaciones, notebooks históricos ni las cifras comerciales del libro.
 
 Esta fusión de código/documentación no aprueba Theo ni promociona candidatos. La última campaña de dedos continúa rechazada; la siguiente mutación requiere investigación nueva y revisión visual.
+
+La primera auditoría detectó un fallo previo: el bucle histórico extraía `Convenciones` pero el encabezado vigente es `Convenciones ALTH`. Se corrigió la extracción con sufijo opcional sin eliminar el test. La verificación de preservación del snapshot se exige durante el commit de importación; cambios legítimos posteriores se registran por separado para permitir continuar el desarrollo. Alpha permanece protegido en cada ejecución.
