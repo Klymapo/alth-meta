@@ -1,5 +1,42 @@
-# Renders de iteración: se regeneran, no se versionan
-renders/
-exports/
+# Godot 4+
+.godot/
+/android/
+
+# Python
 __pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Blender backups / temporary files
 *.blend1
+*.blend2
+*.blend3
+*.blend@
+*.blend~
+
+# Local pipeline output / caches
+.cache/
+cache/
+tmp/
+temp/
+
+# Editors / IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# ALTH / COPOX generated evidence
+renders/
+.copox/
+exports/

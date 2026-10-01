@@ -1,0 +1,56 @@
+name: Auditoría · integración ALTH / AlasTheo
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+      - name: Integridad de importación, referencias, XLSX y Alpha
+        run: python3 tools/audit_repository_integration.py
+      - name: Dependencias de Blender headless
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          bash tools/ensure_blender.sh --strict
+          uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" pytest numpy scipy trimesh Pillow pyyaml
+      - name: Sintaxis Python, JSON y workflows
+        run: |
+          alth-python -m compileall -q alth copox tools tests
+          alth-python - <<'PY'
+          import json
+          from pathlib import Path
+          import yaml
+          for folder in ("copox", "spec", "assets", "docs/integration"):
+              for path in Path(folder).rglob("*.json"):
+                  json.loads(path.read_text())
+          for path in Path(".github/workflows").glob("*.yml"):
+              yaml.safe_load(path.read_text())
+          print("PASS: Python, JSON y YAML")
+          PY
+      - name: Suite completa ALTH, bucle histórico y COPOX
+        run: alth-python -m pytest tests -q --junitxml=.copox/integration-audit/tests.xml
+      - name: Revalidar protección después de las pruebas
+        if: always()
+        run: python3 tools/audit_repository_integration.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: alth-alastheo-audit-${{ github.run_id }}
+          path: .copox/integration-audit/
+          if-no-files-found: error
+          retention-days: 7

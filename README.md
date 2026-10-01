@@ -1,4 +1,4 @@
-# alth-meta
+# ALTH-META / AlasTheo
 
 Assets 3D en estilo **ALTH-META** (chibi-soft low-poly) para un videojuego en Godot.
 Se modelan con scripts de Blender que corren sin interfaz en sesiones de Claude Code o GitHub Actions.
@@ -13,6 +13,12 @@ Se modelan con scripts de Blender que corren sin interfaz en sesiones de Claude 
 | `assets/<nombre>/` | Especificación, script, .blend, GLB y render final de cada asset aprobado |
 | `refs/` | Referencias visuales: personajes, escenas e infografías |
 | `data/medidas.csv` | Registro que recalibra los factores de conversión |
+
+## Producción unificada de AlasTheo
+
+Se incorporó el contenido de [Klymapo/ALASTHEO](https://github.com/Klymapo/ALASTHEO) en su commit `de50876221bb547065cea2a234aaeb50b40777f8`: [referencias](assets/references/README.md), [memoria técnica](docs/METHODS.md), [estructura vigente](docs/STRUCTURE.md), [nombres](docs/NAMING.md) y [libro de producción](<docs/production/AlasTheo - Libro de producción.xlsx>). La procedencia de cada archivo está en [el manifiesto](docs/integration/alastheo-import.json).
+
+Theo Alpha permanece protegido; fusionar el código no aprueba los candidatos rechazados. [Última ronda y problemas pendientes](docs/COPOX_MICRO_VALLEYS_2026-10-01_CORRECTION.md). El workflow **Auditoría · integración ALTH / AlasTheo** verifica el contenido importado, referencias, suite completa y SHA de Alpha con herramientas gratuitas.
 
 ## Prueba rápida ALTH
 

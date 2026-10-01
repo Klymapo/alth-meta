@@ -79,3 +79,7 @@ Para el bucle histórico siguen vigentes los topes por tipo (3/4/5/8). Para COPO
 - `refs/escenas/`: escala relativa/contexto.
 - `refs/infografias/`: comparativas antiguas; no usar medidas antiguas si la spec las reemplaza.
 - `docs/ALTH_META_Modelado.pdf`: cotas originales del cuerpo base cuando aplique.
+
+## Protección vigente de Theo
+
+`assets/joven_rubio/theo_alpha.glb` tiene SHA-256 `ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b`. No se reemplaza al fusionar código, importar documentación ni auditar. La política M5 mantiene promoción automática deshabilitada. Antes de cada técnica geométrica nueva se exige un research brief válido; sin él, `RESEARCH_REQUIRED`. Las campañas de manos generan exactamente tres hermanos por generación y publican también los rechazos con evidencia; el score no sustituye revisión visual. La aprobación final del modelo sigue siendo separada de una fusión de repositorios.
