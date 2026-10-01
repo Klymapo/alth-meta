@@ -1,33 +1,379 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "fecha": "2026-10-01",
-  "nota": "Vocabulario controlado de capacidades técnicas. tools/reconocer.py obliga al modelo de visión a elegir de aquí; lo que no esté se registra como capacidad nueva (a investigar), nunca se acepta sin más. Estado (dominada/parcial/fallida/desconocida) NO vive aquí: vive en kb/capacidades.json con evidencia.",
-  "tipos": ["objeto", "personaje", "mueble", "animal", "vehiculo", "arquitectura", "escena"],
+  "nota": "Vocabulario controlado de capacidades técnicas. tools/reconocer.py (solo código, sin IA) las deduce midiendo la imagen ('medible': true) o por palabras del nombre que da el usuario ('palabras'). Lo que no se mide ni aparece en el nombre sale como 'no_medible' en la ficha. El estado (dominada/parcial/fallida/desconocida) NO vive aquí: vive en kb/capacidades.json con evidencia.",
+  "tipos": [
+    "objeto",
+    "personaje",
+    "mueble",
+    "animal",
+    "vehiculo",
+    "arquitectura",
+    "escena"
+  ],
   "capacidades": {
-    "torno":            {"descripcion": "Objetos de revolución: frutas, latas, tazas, vasos, botellas.", "modulo_alth": "alth.torno"},
-    "prisma":           {"descripcion": "Cuerpos alargados de pocas caras: tallos, palos, columnas, picos.", "modulo_alth": "alth.prisma"},
-    "hoja":             {"descripcion": "Formas laminares delgadas: hojas, pétalos, alas, tela plana.", "modulo_alth": "alth.hoja"},
-    "anillo":           {"descripcion": "Aros y asas: asas de taza, argollas, lengüetas, rosquillas.", "modulo_alth": "alth.anillo"},
-    "caja":             {"descripcion": "Volúmenes rectangulares con bisel: cajas, muebles simples, libros.", "modulo_alth": "alth.caja"},
-    "calcomania":       {"descripcion": "Dibujo, etiqueta o motivo aplicado sobre una superficie curva o plana.", "modulo_alth": "alth.calcomania"},
-    "contorno_libre":   {"descripcion": "Silueta irregular extruida o aplicada: óvalos, gotas, tiras, formas orgánicas planas.", "modulo_alth": "alth.contorno_ovalo/contorno_gota/contorno_tira"},
-    "texto_legible":    {"descripcion": "Texto que debe poder leerse en el modelo (letreros, etiquetas con palabras).", "modulo_alth": null},
-    "simetria_bilateral": {"descripcion": "El objeto o personaje es simétrico izquierda/derecha y puede modelarse en espejo.", "modulo_alth": null},
-    "material_metal":   {"descripcion": "Superficie metálica o brillante (usa material metal_suave de la paleta).", "modulo_alth": "alth.anillo(metal=True)"},
-    "transparencia_vidrio": {"descripcion": "Vidrio, plástico transparente, cristal.", "modulo_alth": null},
-    "liquido":          {"descripcion": "Líquido visible dentro de un recipiente o derramado.", "modulo_alth": null},
-    "cuerpo_humanoide": {"descripcion": "Cuerpo humano completo en proporción chibi-soft (cabeza, torso, brazos, piernas).", "modulo_alth": "alth.personaje"},
-    "cabeza_cara":      {"descripcion": "Cara con ojos, cejas, nariz y boca legibles y compatibles con animación.", "modulo_alth": "alth.personaje"},
-    "dedos":            {"descripcion": "Manos con dedos individuales visibles y modelables.", "modulo_alth": null},
-    "pelo_corto":       {"descripcion": "Cabello corto o peinado compacto.", "modulo_alth": "alth.pelo"},
-    "pelo_largo":       {"descripcion": "Cabello largo, mechones, trenzas o flequillo extenso.", "modulo_alth": "alth.pelo"},
-    "ropa_ajustada":    {"descripcion": "Ropa pegada al cuerpo: playera, pantalón, chaleco.", "modulo_alth": "alth.ropa"},
-    "ropa_holgada_tela": {"descripcion": "Tela suelta o con caída: abrigo largo, capa, falda, bufanda.", "modulo_alth": null},
-    "calzado":          {"descripcion": "Zapatos, botas, tenis.", "modulo_alth": "alth.personaje"},
-    "accesorio_rigido": {"descripcion": "Objeto rígido pegado al cuerpo: lentes, sombrero, reloj, mochila, arma de mano.", "modulo_alth": null},
-    "animal_cuadrupedo": {"descripcion": "Animal de cuatro patas.", "modulo_alth": null},
-    "vehiculo":         {"descripcion": "Coche, bicicleta, barco u otro vehículo.", "modulo_alth": null},
-    "arquitectura":     {"descripcion": "Edificio, puerta, ventana, estructura a escala de personaje.", "modulo_alth": null},
-    "rig_esqueleto":    {"descripcion": "Debe poder animarse con esqueleto (huesos, pesos, poses).", "modulo_alth": null}
+    "torno": {
+      "descripcion": "Objetos de revolución: frutas, latas, tazas, vasos, botellas.",
+      "modulo_alth": "alth.torno",
+      "medible": true,
+      "palabras": [
+        "manzana",
+        "naranja",
+        "pera",
+        "tomate",
+        "lata",
+        "taza",
+        "vaso",
+        "botella",
+        "jarron",
+        "florero",
+        "plato",
+        "tazon",
+        "cuenco",
+        "frasco",
+        "pelota",
+        "vela"
+      ]
+    },
+    "prisma": {
+      "descripcion": "Cuerpos alargados de pocas caras: tallos, palos, columnas, picos.",
+      "modulo_alth": "alth.prisma",
+      "medible": true,
+      "palabras": [
+        "lapiz",
+        "palo",
+        "baston",
+        "tallo",
+        "columna",
+        "tubo"
+      ]
+    },
+    "hoja": {
+      "descripcion": "Formas laminares delgadas: hojas, pétalos, alas, tela plana.",
+      "modulo_alth": "alth.hoja",
+      "medible": true,
+      "palabras": [
+        "hoja",
+        "petalo",
+        "pluma",
+        "ala"
+      ]
+    },
+    "anillo": {
+      "descripcion": "Aros y asas: asas de taza, argollas, lengüetas, rosquillas.",
+      "modulo_alth": "alth.anillo",
+      "medible": true,
+      "palabras": [
+        "taza",
+        "asa",
+        "anillo",
+        "argolla",
+        "llavero",
+        "dona",
+        "aro"
+      ]
+    },
+    "caja": {
+      "descripcion": "Volúmenes rectangulares con bisel: cajas, muebles simples, libros.",
+      "modulo_alth": "alth.caja",
+      "medible": false,
+      "palabras": [
+        "caja",
+        "libro",
+        "librero",
+        "cajon",
+        "mesa",
+        "escritorio",
+        "cama",
+        "silla",
+        "gabinete",
+        "refrigerador",
+        "maleta"
+      ]
+    },
+    "calcomania": {
+      "descripcion": "Dibujo, etiqueta o motivo aplicado sobre una superficie curva o plana.",
+      "modulo_alth": "alth.calcomania",
+      "medible": false,
+      "palabras": [
+        "etiqueta",
+        "estampado",
+        "logo",
+        "dibujo"
+      ]
+    },
+    "contorno_libre": {
+      "descripcion": "Silueta irregular extruida o aplicada: óvalos, gotas, tiras, formas orgánicas planas.",
+      "modulo_alth": "alth.contorno_ovalo/contorno_gota/contorno_tira",
+      "medible": false,
+      "palabras": []
+    },
+    "texto_legible": {
+      "descripcion": "Texto que debe poder leerse en el modelo (letreros, etiquetas con palabras).",
+      "modulo_alth": null,
+      "medible": false,
+      "palabras": [
+        "letrero",
+        "cartel",
+        "anuncio",
+        "placa",
+        "senal"
+      ]
+    },
+    "simetria_bilateral": {
+      "descripcion": "El objeto o personaje es simétrico izquierda/derecha y puede modelarse en espejo.",
+      "modulo_alth": null,
+      "medible": true,
+      "palabras": []
+    },
+    "material_metal": {
+      "descripcion": "Superficie metálica o brillante (usa material metal_suave de la paleta). No se deduce del color (gris y metal se ven igual): solo por nombre.",
+      "modulo_alth": "alth.anillo(metal=True)",
+      "medible": false,
+      "palabras": [
+        "metal",
+        "metalico",
+        "lata",
+        "acero",
+        "fierro",
+        "cuchillo",
+        "llave",
+        "espada",
+        "moneda",
+        "olla"
+      ]
+    },
+    "transparencia_vidrio": {
+      "descripcion": "Vidrio, plástico transparente, cristal.",
+      "modulo_alth": null,
+      "medible": false,
+      "palabras": [
+        "vidrio",
+        "cristal",
+        "transparente",
+        "copa",
+        "ventana",
+        "foco",
+        "lupa"
+      ]
+    },
+    "liquido": {
+      "descripcion": "Líquido visible dentro de un recipiente o derramado.",
+      "modulo_alth": null,
+      "medible": false,
+      "palabras": [
+        "agua",
+        "jugo",
+        "refresco",
+        "sopa",
+        "liquido",
+        "leche",
+        "vino",
+        "lleno",
+        "llena"
+      ]
+    },
+    "cuerpo_humanoide": {
+      "descripcion": "Cuerpo humano completo en proporción chibi-soft (cabeza, torso, brazos, piernas).",
+      "modulo_alth": "alth.personaje",
+      "medible": true,
+      "palabras": []
+    },
+    "cabeza_cara": {
+      "descripcion": "Cara con ojos, cejas, nariz y boca legibles y compatibles con animación.",
+      "modulo_alth": "alth.personaje",
+      "medible": true,
+      "palabras": []
+    },
+    "dedos": {
+      "descripcion": "Manos con dedos individuales visibles y modelables.",
+      "modulo_alth": null,
+      "medible": true,
+      "palabras": [
+        "mano",
+        "manos",
+        "guante",
+        "dedos"
+      ]
+    },
+    "pelo_corto": {
+      "descripcion": "Cabello corto o peinado compacto.",
+      "modulo_alth": "alth.pelo",
+      "medible": true,
+      "palabras": []
+    },
+    "pelo_largo": {
+      "descripcion": "Cabello largo, mechones, trenzas o flequillo extenso.",
+      "modulo_alth": "alth.pelo",
+      "medible": true,
+      "palabras": [
+        "trenza",
+        "melena",
+        "coleta"
+      ]
+    },
+    "ropa_ajustada": {
+      "descripcion": "Ropa pegada al cuerpo: playera, pantalón, chaleco.",
+      "modulo_alth": "alth.ropa",
+      "medible": true,
+      "palabras": []
+    },
+    "ropa_holgada_tela": {
+      "descripcion": "Tela suelta o con caída: abrigo largo, capa, falda, bufanda.",
+      "modulo_alth": null,
+      "medible": true,
+      "palabras": [
+        "abrigo",
+        "gabardina",
+        "capa",
+        "falda",
+        "vestido",
+        "bufanda",
+        "cortina",
+        "manta",
+        "tunica"
+      ]
+    },
+    "calzado": {
+      "descripcion": "Zapatos, botas, tenis.",
+      "modulo_alth": "alth.personaje",
+      "medible": true,
+      "palabras": [
+        "zapato",
+        "zapatos",
+        "bota",
+        "botas",
+        "tenis"
+      ]
+    },
+    "accesorio_rigido": {
+      "descripcion": "Objeto rígido pegado al cuerpo: lentes, sombrero, reloj, mochila, arma de mano.",
+      "modulo_alth": null,
+      "medible": true,
+      "palabras": [
+        "lentes",
+        "gafas",
+        "sombrero",
+        "reloj",
+        "mochila",
+        "casco",
+        "corona"
+      ]
+    },
+    "animal_cuadrupedo": {
+      "descripcion": "Animal de cuatro patas.",
+      "modulo_alth": null,
+      "medible": false,
+      "palabras": [
+        "perro",
+        "gato",
+        "corgi",
+        "caballo",
+        "vaca",
+        "zorro",
+        "conejo",
+        "oso"
+      ]
+    },
+    "vehiculo": {
+      "descripcion": "Coche, bicicleta, barco u otro vehículo.",
+      "modulo_alth": null,
+      "medible": false,
+      "palabras": [
+        "coche",
+        "carro",
+        "auto",
+        "camioneta",
+        "bicicleta",
+        "moto",
+        "barco",
+        "camion",
+        "autobus",
+        "tren"
+      ]
+    },
+    "arquitectura": {
+      "descripcion": "Edificio, puerta, ventana, estructura a escala de personaje.",
+      "modulo_alth": null,
+      "medible": false,
+      "palabras": [
+        "casa",
+        "edificio",
+        "puerta",
+        "pared",
+        "torre",
+        "puente",
+        "muro",
+        "rascacielos",
+        "tienda"
+      ]
+    },
+    "rig_esqueleto": {
+      "descripcion": "Debe poder animarse con esqueleto (huesos, pesos, poses).",
+      "modulo_alth": null,
+      "medible": true,
+      "palabras": []
+    }
+  },
+  "tipos_palabras": {
+    "personaje": [
+      "theo",
+      "rubio",
+      "joven rubio",
+      "alastor",
+      "detective",
+      "policia",
+      "rey",
+      "mujer",
+      "hombre",
+      "nino",
+      "nina",
+      "persona",
+      "punk"
+    ],
+    "mueble": [
+      "mesa",
+      "silla",
+      "librero",
+      "cama",
+      "sofa",
+      "escritorio",
+      "estante",
+      "gabinete",
+      "banco"
+    ],
+    "animal": [
+      "perro",
+      "gato",
+      "corgi",
+      "caballo",
+      "vaca",
+      "zorro",
+      "conejo",
+      "oso",
+      "pajaro"
+    ],
+    "vehiculo": [
+      "coche",
+      "carro",
+      "auto",
+      "camioneta",
+      "bicicleta",
+      "moto",
+      "barco",
+      "camion",
+      "autobus",
+      "tren"
+    ],
+    "arquitectura": [
+      "casa",
+      "edificio",
+      "puerta",
+      "pared",
+      "torre",
+      "puente",
+      "muro",
+      "rascacielos"
+    ]
   }
 }
