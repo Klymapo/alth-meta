@@ -14,6 +14,7 @@ Cómo compara (diseño de docs/AUDITORIA_VISUAL.md):
        inercia  primer momento de Hu (compacidad), estable en figuras casi simétricas
        bandas   ancho por franja de altura, diferencia media ¿la proporción cambia a lo alto?
        aspecto  ancho/alto de la caja (|ln| del cociente)
+       redondez cuánto llena el cuerpo su caja y sus 4 esquinas (redondo vs. caja de lados rectos)
        color    ΔE por celda de una rejilla 4×3 + colores dominantes, en Lab con L* a la mitad
      Informativas (no vetan): Dice, Hu completos (log, inestables en siluetas casi simétricas),
      banda máxima, SSIM de luminancia.
@@ -55,9 +56,11 @@ N_BANDAS = 10
 REGIONES = (4, 3)   # rejilla de color: filas × columnas sobre la intersección
 K_DOMINANTES = 6
 PESO_L = 0.5
+CUERPO_DESDE = 0.22   # la redondez se mide sin el 22 % superior de la figura (tallo, hoja)
+ESQUINA = 0.20        # lado de cada esquina, en fracción del lado menor de la caja del cuerpo
 # Medidas que vetan (un FAIL basta). Las demás del reporte son informativas.
 VETO = ("silueta_iou", "contorno_p95", "contorno_chamfer", "compacidad", "bandas_media", "aspecto",
-        "color_regiones", "color_dominante")
+        "redondez_llenado", "redondez_esquinas", "color_regiones", "color_dominante")
 
 
 # ================================================================ encuadre
@@ -165,6 +168,29 @@ def aspecto(m: np.ndarray) -> float:
     return (cols[-1] - cols[0] + 1) / (filas[-1] - filas[0] + 1)
 
 
+def _cuerpo(m: np.ndarray, desde: float = CUERPO_DESDE) -> np.ndarray:
+    """La figura sin su parte alta (tallo, hoja, asa superior): ahí se mide la redondez del cuerpo."""
+    filas = np.where(m.any(1))[0]
+    c = m.copy()
+    c[:int(filas[0] + desde * (filas[-1] - filas[0]))] = False
+    return c
+
+
+def redondez(m: np.ndarray) -> dict:
+    """Qué tan 'caja' es el cuerpo: fracción llena de su caja (elipse ≈ 0.785, caja = 1) y ocupación de
+    las 4 esquinas de esa caja (lado = ESQUINA del lado menor). Una manzana redonda deja las esquinas
+    vacías; una de lados rectos y hombros planos las llena (caso rechazado por el dueño el 1 oct 2026)."""
+    c = _cuerpo(m)
+    ys, xs = np.nonzero(c)
+    if len(ys) < 50:
+        return {"llenado": None, "esquinas": None}
+    y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+    lado = max(1, int(ESQUINA * min(y1 - y0, x1 - x0)))
+    esq = [c[y0:y0 + lado, x0:x0 + lado], c[y0:y0 + lado, x1 - lado:x1],
+           c[y1 - lado:y1, x0:x0 + lado], c[y1 - lado:y1, x1 - lado:x1]]
+    return {"llenado": float(c.sum() / ((y1 - y0) * (x1 - x0))), "esquinas": [float(e.mean()) for e in esq]}
+
+
 def _lab_ponderado(rgb: np.ndarray) -> np.ndarray:
     """Lab con L* a la mitad: el tono (a*b*) manda; la luz del render nunca es la de la referencia,
     pero sin nada de L* un crema y un gris oscuro serían el mismo color."""
@@ -237,6 +263,12 @@ def medir(ref: tuple, cand: tuple) -> dict:
     alto = ALTO_FIG * ma.shape[0]
     cont = contorno(ma, mb, alto)
     reg = color_regiones(ca, ma, cb, mb)
+    ra, rb = redondez(ma), redondez(mb)
+    if ra["llenado"] is None or rb["llenado"] is None:
+        llenado = esquinas = None
+    else:
+        llenado = abs(ra["llenado"] - rb["llenado"])
+        esquinas = float(np.mean(np.abs(np.array(ra["esquinas"]) - np.array(rb["esquinas"]))))
     dom = color_dominante(ca, ma, cb, mb)
     return {
         "silueta_iou": round(float(inter / max(union, 1)), 4),
@@ -248,6 +280,8 @@ def medir(ref: tuple, cand: tuple) -> dict:
         "bandas_media": round(float(np.mean(np.abs(anchos_por_banda(ma) - anchos_por_banda(mb)))), 4),
         "compacidad": round(compacidad(ma, mb), 4),
         "aspecto": round(abs(np.log(aspecto(mb) / aspecto(ma))), 4),
+        "redondez_llenado": None if llenado is None else round(llenado, 4),
+        "redondez_esquinas": None if esquinas is None else round(esquinas, 4),
         "color_regiones": None if reg["media"] is None else round(reg["media"], 2),
         "color_regiones_celdas": reg["celdas"],
         "color_dominante": None if dom is None else round(dom, 2),

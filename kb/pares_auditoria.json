@@ -1,5 +1,5 @@
 {
-  "nota": "Pares etiquetados para calibrar la auditoría visual (tools/calibrar_auditoria.py). Los 10 iniciales salen de los assets aprobados: cada uno contra su referencia es 'aprobado' y contra la referencia de otro objeto es 'rechazado'. Hacen falta pares DIFÍCILES etiquetados por el dueño (mismo objeto, versión buena y mala; p. ej. la manzana rechazada del 1 oct) para que la calibración valga.",
+  "nota": "Pares etiquetados para calibrar la auditoría visual (tools/calibrar_auditoria.py). Los 10 iniciales salen de los assets aprobados: cada uno contra su referencia es 'aprobado' y contra la referencia de otro objeto es 'rechazado'. Hacen falta pares DIFÍCILES etiquetados por el dueño (mismo objeto, versión buena y mala; la manzana rechazada del 1 oct ya está) para que la calibración valga.",
   "pares": [
     {
       "id": "manzana-ref__manzana-hoja",
@@ -130,6 +130,19 @@
       "hoja": "assets/vaso_cafe/final.png",
       "veredicto": "rechazado",
       "fuente": "objeto distinto al de la referencia (cruce)"
+    },
+    {
+      "id": "manzana-ref__manzana-generada-rechazada",
+      "ref": "refs/infografias/objeto-01-manzana.png",
+      "recorte": [
+        0.52,
+        0.1,
+        1,
+        1
+      ],
+      "hoja": "kb/pares/manzana_rechazada_2026-10-01.png",
+      "veredicto": "rechazado",
+      "fuente": "dueño, 1 oct 2026: parece una caja (hombros planos, lados rectos, pico arriba, muesca a la derecha); hoja de la línea única, run 36933414047"
     }
   ]
 }

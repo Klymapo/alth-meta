@@ -277,3 +277,19 @@ def test_publicar_rechaza_rutas_dentro_de_theo_o_vacias():
                 assert "protegido" in str(e), (nombre, e)
             else:
                 raise AssertionError(f"publicó en {nombre!r}")
+
+
+def test_manzana_rechazada_por_el_dueno_falla_por_redondez():
+    """La manzana de la línea que el dueño rechazó (1 oct 2026: parece caja) supera a la aprobada en silueta,
+    contorno y color; la redondez del cuerpo es lo que la separa."""
+    rgb, m, _ = M.cargar_con_mascara(RAIZ / MANZANA[0], MANZANA[1])
+    r = A.auditar(rgb, m, A.vistas_de_hoja(RAIZ / "kb" / "pares" / "manzana_rechazada_2026-10-01.png"), U)
+    assert r["decision"] == "FAIL"
+    assert {"redondez_llenado", "redondez_esquinas"} <= set(r["fallas"]), r["fallas"]
+    assert r["por_medida"]["silueta_iou"] == "PASS"            # la silueta sola la habría aprobado
+
+
+def test_redondez_distingue_elipse_de_caja():
+    ref = figura("elipse")
+    r = auditar(ref, figura("rect", caja=(80, 60, 220, 250)))
+    assert "redondez_esquinas" in r["fallas"] and "redondez_llenado" in r["fallas"], r["fallas"]

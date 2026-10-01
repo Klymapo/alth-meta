@@ -34,6 +34,7 @@ crear_asset.py → hoja final (4 vistas) → auditoria_visual.py ─┬─ PASS 
    | `compacidad` | inercia global (primer momento de Hu) |
    | `bandas_media` | proporción a lo alto (ancho por franja) |
    | `aspecto` | ancho/alto de la caja |
+   | `redondez_llenado`, `redondez_esquinas` | si el cuerpo (sin tallo ni hoja) es redondo o una caja de lados rectos: cuánto llena su caja y sus 4 esquinas |
    | `color_regiones` | color por celda de una rejilla 4×3 (Lab con L* a la mitad: la luz del render no es la de la ref) |
    | `color_dominante` | los 6 colores dominantes emparejados |
    | `supera_aprobado` | si ya hay un asset aprobado, reemplazarlo exige superarlo: más IoU y menos contorno p95 que él (`no_peor_que_aprobado` queda como dato) |
@@ -42,10 +43,18 @@ crear_asset.py → hoja final (4 vistas) → auditoria_visual.py ─┬─ PASS 
 3. **Vista**: se audita cada vista del render y se usa la más parecida; con `--vista` se fuerza una y se
    avisa si otra se parece más.
 
+## Primer veredicto del dueño (1 oct 2026)
+
+La manzana que genera la línea **superaba a la aprobada** en silueta (IoU 0.861 vs 0.837), contorno
+(p95 0.079 vs 0.140) y color, y la auditoría la dejaba pasar. El dueño la rechazó: **parece una caja**
+(hombros planos, lados rectos, pico arriba, muesca a la derecha). Silueta y color no miden eso; por eso
+se añadieron las dos medidas de redondez y la manzana quedó en `kb/pares/` como primer par rechazado
+(`test_manzana_rechazada_por_el_dueno_falla_por_redondez`).
+
 ## Estado de los umbrales (1 oct 2026): provisionales
 
 Puestos con los 5 assets aprobados del repo: manzana y lata contra sus infografías (2 positivos) y cada
-referencia contra los otros objetos (8 negativos). Clasifican bien los 10 pares (prueba
+referencia contra los otros objetos, más la manzana rechazada (9 negativos). Clasifican bien los 11 pares (prueba
 `test_matriz_real_aprobados_pasan_y_cruces_fallan`), pero el margen es corto:
 
 - color entre cilindros: lata contra taza da 11.1 en `color_dominante` (umbral 10.5);

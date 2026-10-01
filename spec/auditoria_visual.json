@@ -1,7 +1,7 @@
 {
   "version": 1,
   "calibrado": false,
-  "nota": "Umbrales PROVISIONALES del 1 oct 2026. Puestos con 2 positivos (manzana y lata aprobadas contra sus infografías) y 8 negativos (cada referencia contra los otros 4 assets aprobados del repo). Separan los 10 pares, pero con poco margen: en color entre cilindros (lata vs taza/vaso de café) y en contorno_p95 de la manzana. Se reemplazan con tools/calibrar_auditoria.py cuando haya veredictos del dueño (aprobado/rechazado) sobre pares reales.",
+  "nota": "Umbrales PROVISIONALES del 1 oct 2026. Puestos con 2 positivos (manzana y lata aprobadas contra sus infografías) y 9 negativos (cada referencia contra los otros 4 assets aprobados del repo, más la manzana generada que el dueño rechazó el 1 oct 2026 por parecer caja: hombros planos, lados rectos, muesca). Separan los 11 pares, pero con poco margen: en color entre cilindros (lata vs taza/vaso de café) y en contorno_p95 de la manzana. Se reemplazan con tools/calibrar_auditoria.py cuando haya veredictos del dueño (aprobado/rechazado) sobre pares reales.",
   "umbrales": {
     "silueta_iou": {
       "min": 0.8,
@@ -26,6 +26,14 @@
     "aspecto": {
       "max": 0.15,
       "por_que": "|ln| del cociente ancho/alto; positivos <= 0.122"
+    },
+    "redondez_llenado": {
+      "max": 0.06,
+      "por_que": "diferencia en cuánto llena el cuerpo (sin el 22 % superior) su caja; manzana aprobada 0.011, lata 0.051, manzana RECHAZADA por el dueño (caja de lados rectos) 0.071"
+    },
+    "redondez_esquinas": {
+      "max": 0.22,
+      "por_que": "diferencia media de ocupación de las 4 esquinas del cuerpo; manzana aprobada 0.13, lata 0.18, manzana RECHAZADA 0.30"
     },
     "color_regiones": {
       "max": 15.0,
