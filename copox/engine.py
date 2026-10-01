@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from copox.contracts import Cassette, ContractError, load_cassette
+from copox.contracts import Cassette, ContractError, load_cassette\nfrom copox.production import load_policy, module_gate
 
 
 def _expand(value: str, ctx: dict[str, str]) -> str:
@@ -175,8 +175,28 @@ def run_campaign(cassette_path: str, output_root: str = ".copox/evidence") -> in
                     unanimous, score, audit_results = _audit_candidate(cassette, ctx, env)
                     record.update({"audit": audit_results, "score": score})
                     if unanimous:
-                        record["status"] = "ELIGIBLE"
-                        passing.append(record)
+                        production = cassette.data.get("production") or {}
+                        if production:
+                            policy_path = Path(str(production["policy"]))
+                            if not policy_path.is_absolute():
+                                policy_path = Path.cwd() / policy_path
+                            gate = module_gate(
+                                policy=load_policy(policy_path),
+                                module_id=str(production["primary_module"]),
+                                candidate_dir=candidate_dir,
+                                audit_results=audit_results,
+                                score=score,
+                            )
+                            record["production_gate"] = gate
+                            _write_json(candidate_dir / "production_gate.json", gate)
+                            if gate["status"] != "PASS":
+                                record.update({"status": "REJECTED", "reason": "production_gate_veto"})
+                            else:
+                                record["status"] = "ELIGIBLE"
+                                passing.append(record)
+                        else:
+                            record["status"] = "ELIGIBLE"
+                            passing.append(record)
                     else:
                         record.update({"status": "REJECTED", "reason": "auditor_veto"})
             except Exception as exc:
