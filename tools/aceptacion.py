@@ -25,14 +25,15 @@ CUADRANTES = {"frente": (0.0, 0.03, 0.5, 0.5), "tres_cuartos": (0.5, 0.53, 1.0, 
 
 def iou_de_hoja(hoja: Path, ref) -> dict:
     """IoU de las vistas de una hoja 2x2 (final.png) contra la máscara de referencia."""
+    import tempfile
     from alth import silueta
     out = {}
+    tmpdir = Path(tempfile.mkdtemp(prefix="alth_aceptacion_"))
     im = Image.open(hoja).convert("RGB")
     w, h = im.size
     for vista, (x0, y0, x1, y1) in CUADRANTES.items():
         q = im.crop((int(x0 * w), int(y0 * h), int(x1 * w), int(y1 * h)))
-        tmp = RAIZ / ".linea" / f"_cuadrante_{vista}.png"
-        tmp.parent.mkdir(parents=True, exist_ok=True)
+        tmp = tmpdir / f"cuadrante_{vista}.png"
         q.save(tmp)
         m = silueta.mayor_mancha(silueta.mascara(silueta.cargar(tmp)))
         out[vista] = round(float(silueta.comparar(m, ref)["iou"]), 4)
