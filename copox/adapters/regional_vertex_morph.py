@@ -15,7 +15,6 @@ def _read_json(path: str | Path) -> dict[str, Any]:
 
 
 def _canonical_rotation() -> np.ndarray:
-    # Mismo -90° X usado por renderer/topology: raw GLB -> COPOX Z-up.
     a = math.radians(-90.0)
     c, s = math.cos(a), math.sin(a)
     return np.array([
@@ -133,11 +132,13 @@ def _vertex_region_morph(scene: trimesh.Scene, boxes: list[list[float]], scale: 
     target_canonical = center + (canonical - center) * scale_vec + shift_vec
     updated_canonical = canonical + weights[:, None] * (target_canonical - canonical)
 
-    updated_canonical_h = _to_h(updated_canonical)
-    updated_world_raw_h = (inv_rotation @ updated_canonical_h.T).T
+    updated_world_raw_h = (inv_rotation @ _to_h(updated_canonical).T).T
     updated_local_h = (inv_node @ updated_world_raw_h.T).T
     updated_local = updated_local_h[:, :3]
 
+    # El viaje de coordenadas canónico→raw introduce ruido flotante minúsculo incluso
+    # cuando weight==0. Fuera del scope, preservamos los bytes numéricos originales.
+    updated_local[~selected] = vertices_local[~selected]
     untouched_ok = bool(np.array_equal(updated_local[~selected], vertices_local[~selected]))
     geom.vertices = updated_local
     return {
