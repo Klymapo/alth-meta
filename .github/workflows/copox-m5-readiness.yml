@@ -1,0 +1,120 @@
+name: COPOX · M5 readiness
+
+on:
+  pull_request:
+    paths:
+      - "copox/production/**"
+      - "copox/maturity.py"
+      - "copox/maturity/**"
+      - "copox/cassettes/**"
+      - "tests/test_copox_m5.py"
+      - ".github/workflows/copox-m5-readiness.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  m5-readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Verificar cobertura M5 con policy
+        run: |
+          python3 -m copox.maturity copox/maturity/theo.json \
+            --min-level M5 \
+            --production-policy copox/production/theo_m5_policy.json \
+            --output .copox/m5/maturity.md \
+            --check > .copox/m5/maturity.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('.copox/m5/maturity.json').read_text())
+          assert data['ready'] is True, data['blockers']
+          assert data['summary']['M5'] == 23, data['summary']
+          assert not data['learning_backlog'], data['learning_backlog']
+          print('PASS: 23/23 módulos de Theo tienen capacidad M5')
+          PY
+
+      - name: Verificar gate positivo contra baseline exacta
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          policy=json.loads(Path('copox/production/theo_m5_policy.json').read_text())
+          module='fingers'
+          result={
+            'module':module,'mesh_integrity':True,'scope_safe':True,'regression_ok':True,
+            'evidence_complete':True,'semantic_ready':True,'target_gain_pp':0.25,
+            'global_gain_pp':0.05,'worst_view_delta_pp':-0.02,
+            'evidence':policy['modules'][module]['required_evidence'],'flags':[]
+          }
+          Path('.copox/m5').mkdir(parents=True,exist_ok=True)
+          Path('.copox/m5/good.json').write_text(json.dumps(result))
+          PY
+          python3 -m copox.production.module_gate \
+            --policy copox/production/theo_m5_policy.json \
+            --result .copox/m5/good.json \
+            --baseline-model assets/joven_rubio/theo_alpha.glb \
+            --output .copox/m5/good_gate.json --check
+
+      - name: Verificar vetos duros
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          policy=json.loads(Path('copox/production/theo_m5_policy.json').read_text())
+          module='hands'
+          result={
+            'module':module,'mesh_integrity':True,'scope_safe':True,'regression_ok':True,
+            'evidence_complete':True,'semantic_ready':True,'target_gain_pp':20.0,
+            'global_gain_pp':1.0,'worst_view_delta_pp':-0.50,
+            'evidence':policy['modules'][module]['required_evidence'],'flags':[]
+          }
+          Path('.copox/m5/bad.json').write_text(json.dumps(result))
+          PY
+          if python3 -m copox.production.module_gate \
+            --policy copox/production/theo_m5_policy.json \
+            --result .copox/m5/bad.json \
+            --baseline-model assets/joven_rubio/theo_alpha.glb \
+            --output .copox/m5/bad_gate.json --check; then
+            echo 'ERROR: una regresión global no debe promocionarse' >&2
+            exit 1
+          fi
+
+      - name: Verificar router learning-first
+        run: |
+          cat > .copox/m5/diagnostics.json <<'JSON'
+          {"modules":{"global_proportions":{"error":1.0,"confidence":1.0,"actionable":true},"ears":{"error":0.8,"confidence":0.95,"learning_need":1.0,"actionable":true},"hands":{"error":0.75,"confidence":0.95,"actionable":true}}}
+          JSON
+          python3 -m copox.production.module_router \
+            --policy copox/production/theo_m5_policy.json \
+            --diagnostics .copox/m5/diagnostics.json \
+            --output .copox/m5/route.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          route=json.loads(Path('.copox/m5/route.json').read_text())
+          assert route['selected'] in {'ears','hands'}, route
+          assert route['global_suppressed'] is True, route
+          print('PASS:', route['selected'])
+          PY
+
+      - name: Confirmar scheduler productivo apagado
+        run: |
+          test -z "$(find copox/cassettes/enabled -maxdepth 1 -name '*.json' -print -quit 2>/dev/null)"
+
+      - name: Guardar reporte M5
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-m5-readiness
+          path: .copox/m5/
+          retention-days: 1
+          if-no-files-found: ignore
