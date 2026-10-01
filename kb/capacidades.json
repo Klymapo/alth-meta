@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "actualizado": "2026-10-01",
+  "nota": "Registro de capacidades del proceso. 'dominada' SOLO con evidencia: rutas a archivos que existan en el repo (assets aprobados, pruebas auditadas). tools/capacidades.py degrada a 'parcial' cualquier 'dominada' sin evidencia verificable. Lo que no aparece aquí es 'desconocida'. Memoria, no instrucciones: no contiene técnicas nuevas.",
+  "capacidades": {
+    "torno": {"estado": "dominada", "evidencia": ["assets/manzana/final.png", "assets/lata/final.png", "assets/taza/final.png", "assets/vaso/final.png", "assets/vaso_cafe/final.png"], "motivo": "Usada en los 5 assets aprobados.", "actualizado": "2026-10-01"},
+    "prisma": {"estado": "dominada", "evidencia": ["assets/manzana/final.png"], "motivo": "Tallo de la manzana aprobada (alth.prisma).", "actualizado": "2026-10-01"},
+    "hoja": {"estado": "dominada", "evidencia": ["assets/manzana/final.png"], "motivo": "Hoja de la manzana aprobada (alth.hoja).", "actualizado": "2026-10-01"},
+    "anillo": {"estado": "dominada", "evidencia": ["assets/lata/final.png", "assets/taza/final.png"], "motivo": "Lengüeta y remaches de la lata, asa de la taza.", "actualizado": "2026-10-01"},
+    "calcomania": {"estado": "dominada", "evidencia": ["assets/lata/final.png"], "motivo": "Aceitunas, rama y hoja de la lata aprobada.", "actualizado": "2026-10-01"},
+    "contorno_libre": {"estado": "dominada", "evidencia": ["assets/lata/final.png"], "motivo": "contorno_ovalo/gota/tira en la lata aprobada.", "actualizado": "2026-10-01"},
+    "material_metal": {"estado": "dominada", "evidencia": ["assets/lata/final.png"], "motivo": "Lengüeta metálica de la lata aprobada.", "actualizado": "2026-10-01"},
+    "caja": {"estado": "parcial", "evidencia": ["alth/__init__.py"], "motivo": "Existe alth.caja en la librería, pero ningún asset aprobado la usa todavía.", "actualizado": "2026-10-01"},
+    "cuerpo_humanoide": {"estado": "parcial", "evidencia": ["assets/joven_rubio/theo_alpha.glb"], "motivo": "Theo Alpha existe y es la base de medidas, pero no está aprobado como personaje final.", "actualizado": "2026-10-01"},
+    "cabeza_cara": {"estado": "parcial", "evidencia": ["assets/joven_rubio/theo_alpha.glb"], "motivo": "Presente en Theo Alpha; sin aprobación final.", "actualizado": "2026-10-01"},
+    "pelo_corto": {"estado": "parcial", "evidencia": ["alth/pelo.py"], "motivo": "Módulo alth/pelo.py usado en joven_rubio, sin personaje aprobado.", "actualizado": "2026-10-01"},
+    "pelo_largo": {"estado": "parcial", "evidencia": ["alth/pelo.py"], "motivo": "Módulo alth/pelo.py usado en joven_rubio, sin personaje aprobado.", "actualizado": "2026-10-01"},
+    "ropa_ajustada": {"estado": "parcial", "evidencia": ["alth/ropa.py"], "motivo": "Módulo alth/ropa.py usado en joven_rubio, sin personaje aprobado.", "actualizado": "2026-10-01"},
+    "dedos": {
+      "estado": "fallida",
+      "evidencia": ["docs/COPOX_MICRO_VALLEYS_2026-10-01_CORRECTION.md", "copox/research/fingers-micro-valleys-20261001-campaign.json"],
+      "motivo": "Tres rondas de micro-valles sobre la malla de mano de Theo Alpha (1 oct 2026) terminaron sin candidato aceptado: MESH_INTEGRITY_FAILED, rechazo visual de los tres.",
+      "intentos_fallidos": [
+        {"tecnica": "booleano global sobre la mano", "motivo": "Descartado en la ronda de corrección; se reemplazó por edición local con BMesh.", "evidencia": ["docs/COPOX_MICRO_VALLEYS_2026-10-01_CORRECTION.md"]},
+        {"tecnica": "contorno conectado de micro-valles", "motivo": "Rechazado en la campaña de micro-valles.", "evidencia": ["copox/research/fingers-micro-valleys-20261001-campaign.json"]},
+        {"tecnica": "micro-valles con pose preservada", "motivo": "310 boundary edges vs 228 del parent y caras degeneradas; rechazo visual.", "evidencia": ["docs/COPOX_MICRO_VALLEYS_2026-10-01_CORRECTION.md"]}
+      ],
+      "actualizado": "2026-10-01"
+    }
+  }
+}
