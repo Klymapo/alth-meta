@@ -53,11 +53,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 TRIPOSG_REPO = "https://github.com/VAST-AI-Research/TripoSG.git"
 TRIPOSG_COMMIT = "fc5c40990181e2a756c4e0b1c2f4d6b5202faf8c"
 TRIPOSG_PESOS = "VAST-AI/TripoSG"          # Hugging Face, licencia MIT
-ACELERADOR = "NvidiaTeslaT4"                # TripoSG pide >= 8 GB de VRAM; una T4 tiene 16 GB
+ACELERADOR = "NvidiaTeslaT4"                # T4 ×2 (16 GB cada una); TripoSG pide >= 8 GB y usa una
 LADO_ENTRADA = 1024                          # lado mayor de la imagen que se manda
 SLUG_DEFECTO = "alth-meta-propuesta"
 SOMBRA_DESDE = 0.40      # la sombra del piso sólo se busca en el 60 % inferior de la figura
 BORDE_SOMBRA_DE = 11.0   # contraste de borde (ΔE) bajo el cual una mancha gris es sombra, no pieza
+MAX_FALLOS_STATUS = 5    # `kaggle kernels status` fallando seguido (401/404…) → abortar, no esperar 90 min
+SONDEOS_SIN_VER_CORRER = 4  # estado final sin haber visto QUEUED/RUNNING: puede ser de la versión anterior
 
 EXIT_OK, EXIT_ENTRADA, EXIT_FALLO, EXIT_TIEMPO, EXIT_CREDENCIALES, EXIT_SIN_SALIDA = 0, 2, 5, 6, 7, 8
 
@@ -163,16 +165,19 @@ def script_kernel(imagen_b64: str, parametros: dict) -> str:
     """Código que corre dentro de Kaggle. Sin RMBG: usa el alfa que ya trae la imagen."""
     params = json.dumps(parametros, ensure_ascii=False, sort_keys=True)
     return f'''# Generado por tools/kaggle_proveedor.py (ALTH-META). No editar a mano.
-# TripoSG (MIT) en commit fijo; la imagen ya trae el fondo quitado en el canal alfa, así que
-# NO se descarga ni se usa briaai/RMBG-1.4 (uso comercial con licencia de pago).
-import base64, json, os, subprocess, sys, time, traceback
+# TripoSG (MIT) en commit fijo. Dos exclusiones por licencia:
+#  - briaai/RMBG-1.4 (uso comercial con licencia de pago): la imagen ya trae el fondo quitado en el
+#    canal alfa, así que prepare_image no la llama y aquí no se descarga.
+#  - diso (CC BY-NC 4.0, no comercial): solo lo usa el "flash decoder"; se reemplaza por un módulo vacío
+#    y se genera con use_flash_decoder=False (extracción jerárquica con skimage.marching_cubes).
+import base64, json, os, subprocess, sys, time, traceback, types
 from pathlib import Path
 
 T0 = time.time()
 SALIDA = Path("/kaggle/working")
 PARAMS = json.loads({params!r})
 IMAGEN_B64 = {imagen_b64!r}
-META = {{"estado": "ERROR", "parametros": PARAMS, "pasos": {{}}}}
+META = {{"estado": "ERROR", "pedido_id": PARAMS["pedido_id"], "parametros": PARAMS, "pasos": {{}}}}
 
 
 def paso(nombre, t):
@@ -191,10 +196,25 @@ try:
     sh(f"git -C /kaggle/tmp/TripoSG checkout -q {{PARAMS['commit']}}")
     # numpy==1.22.3 del requirements no instala en el Python de Kaggle: se respeta el numpy del entorno.
     req = Path("/kaggle/tmp/TripoSG/requirements.txt").read_text().splitlines()
-    req = [r for r in req if r.strip() and not r.strip().startswith("numpy")]
+    req = [r for r in req if r.strip() and not r.strip().startswith(("numpy", "diso"))]
     Path("/kaggle/tmp/req.txt").write_text("\\n".join(req) + "\\n")
-    sh("pip install -q -r /kaggle/tmp/req.txt")
+    # Restringe a lo que ya trae la imagen de Kaggle para no arrastrar actualizaciones de torch/numpy.
+    sh("pip freeze | grep -v ' @ ' > /kaggle/tmp/base.txt || true")
+    try:
+        sh("pip install -q -r /kaggle/tmp/req.txt -c /kaggle/tmp/base.txt")
+        META["instalacion"] = "restringida a la imagen de Kaggle"
+    except subprocess.CalledProcessError:
+        # alguna dependencia pide una versión distinta a la que trae Kaggle: se instala sin restricción
+        sh("pip install -q -r /kaggle/tmp/req.txt")
+        META["instalacion"] = "sin restricción (la restringida falló)"
+    sh("pip freeze > /kaggle/working/pip_freeze.txt")
     paso("instalar", t)
+
+    # Sustituto vacío de diso (no comercial): si algo intentara usarlo, falla con un mensaje claro.
+    class _SinDiso:
+        def __init__(self, *a, **k):
+            raise RuntimeError("diso (CC BY-NC) está excluido; usa use_flash_decoder=False")
+    sys.modules["diso"] = types.SimpleNamespace(DiffDMC=_SinDiso)
 
     sys.path.insert(0, "/kaggle/tmp/TripoSG")
     sys.path.insert(0, "/kaggle/tmp/TripoSG/scripts")
@@ -213,11 +233,10 @@ try:
     t = time.time()
     pipe = TripoSGPipeline.from_pretrained(pesos).to("cuda", torch.float16)
     img = prepare_image(str(entrada), bg_color=np.array([1.0, 1.0, 1.0]), rmbg_net=None)
-    if isinstance(img, str) or img is None:
-        raise RuntimeError(f"prepare_image rechazó la entrada: {{img}}")
     with torch.no_grad():
         out = pipe(image=img, generator=torch.Generator(device=pipe.device).manual_seed(PARAMS["semilla"]),
-                   num_inference_steps=PARAMS["pasos"], guidance_scale=PARAMS["guia"]).samples[0]
+                   num_inference_steps=PARAMS["pasos"], guidance_scale=PARAMS["guia"],
+                   use_flash_decoder=False).samples[0]
     malla = trimesh.Trimesh(out[0].astype(np.float32), np.ascontiguousarray(out[1]))
     META["caras_crudas"] = int(malla.faces.shape[0])
     paso("generar", t)
@@ -261,47 +280,91 @@ def armar(imagen, nombre: str, carpeta, usuario: str, slug: str = SLUG_DEFECTO, 
     carpeta = Path(carpeta)
     carpeta.mkdir(parents=True, exist_ok=True)
     meta = metadata_kernel(usuario, slug)
+    sha = hashlib.sha256(Path(imagen).read_bytes()).hexdigest()
+    fecha = datetime.now(timezone.utc).isoformat(timespec="seconds")
     params = {"nombre": nombre, "caras": int(caras), "semilla": int(semilla), "pasos": int(pasos),
               "guia": float(guia), "repo": TRIPOSG_REPO, "commit": TRIPOSG_COMMIT, "pesos": TRIPOSG_PESOS}
+    # Identificador único de ESTE pedido: el kernel lo copia a meta.json y lanzar() lo exige al bajar,
+    # para no confundir nunca la salida de una corrida anterior con la nueva.
+    params["pedido_id"] = hashlib.sha256(
+        (sha + json.dumps(params, sort_keys=True) + fecha + os.urandom(8).hex()).encode()).hexdigest()[:16]
     (carpeta / "kernel-metadata.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n")
     (carpeta / "propuesta.py").write_text(script_kernel(b64, params), encoding="utf-8")
     im.save(carpeta / "entrada.png")
-    sha = hashlib.sha256(Path(imagen).read_bytes()).hexdigest()
     pedido = {"kernel": meta["id"], "nombre": nombre, "imagen": str(imagen), "imagen_sha256": sha,
-              "recorte": recorte, "entrada": info, "parametros": params, "acelerador": ACELERADOR,
-              "fecha": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+              "recorte": recorte, "entrada": info, "parametros": params, "pedido_id": params["pedido_id"],
+              "acelerador": ACELERADOR, "fecha": fecha}
     (carpeta / "pedido.json").write_text(json.dumps(pedido, ensure_ascii=False, indent=2) + "\n")
     return pedido
 
 
 # ================================================================ 3. lanzar y vigilar
 def credenciales() -> str | None:
-    """Usuario de Kaggle si hay credenciales (variables de entorno o ~/.kaggle/kaggle.json)."""
-    if os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_KEY"):
-        return os.environ["KAGGLE_USERNAME"]
-    archivo = Path(os.environ.get("KAGGLE_CONFIG_DIR", Path.home() / ".kaggle")) / "kaggle.json"
+    """Usuario de Kaggle si hay alguna credencial válida para la CLI. Acepta las dos formas vigentes:
+
+    - token nuevo ("Generate New Token" en Kaggle): KAGGLE_API_TOKEN o ~/.kaggle/access_token. El token no
+      trae el usuario, así que hace falta KAGGLE_USERNAME (o --usuario) para armar el id del kernel;
+    - llave legacy ("Create Legacy API Key"): KAGGLE_USERNAME + KAGGLE_KEY o ~/.kaggle/kaggle.json.
+    """
+    dir_conf = Path(os.environ.get("KAGGLE_CONFIG_DIR", Path.home() / ".kaggle"))
+    usuario = os.environ.get("KAGGLE_USERNAME") or None
+    if os.environ.get("KAGGLE_API_TOKEN") or (Path.home() / ".kaggle" / "access_token").exists():
+        return usuario
+    if usuario and os.environ.get("KAGGLE_KEY"):
+        return usuario
+    archivo = dir_conf / "kaggle.json"
     if archivo.exists():
         try:
-            return json.loads(archivo.read_text()).get("username")
+            return json.loads(archivo.read_text()).get("username") or usuario
         except (json.JSONDecodeError, OSError):
             return None
     return None
 
 
+def hay_credencial() -> bool:
+    """¿La CLI de Kaggle tiene con qué autenticarse? (token nuevo, llave legacy o kaggle.json)."""
+    dir_conf = Path(os.environ.get("KAGGLE_CONFIG_DIR", Path.home() / ".kaggle"))
+    return bool(os.environ.get("KAGGLE_API_TOKEN") or (Path.home() / ".kaggle" / "access_token").exists()
+                or (os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_KEY"))
+                or (dir_conf / "kaggle.json").exists())
+
+
 def estado_de(texto: str) -> str:
-    """Normaliza la salida de `kaggle kernels status` a: corriendo | completo | fallido | desconocido."""
-    t = texto.lower()
-    if "complete" in t:
+    """Normaliza la salida de `kaggle kernels status` a: corriendo | completo | fallido | desconocido.
+
+    La CLI imprime `owner/slug has status "KernelWorkerStatus.COMPLETE"` y, si falló, una línea
+    `Failure message: "..."`. Sólo se mira el estado entrecomillado, nunca el id ni el mensaje.
+    Estados de la CLI: QUEUED, RUNNING, COMPLETE, ERROR, CANCEL_REQUESTED, CANCEL_ACKNOWLEDGED, NEW_SCRIPT.
+    """
+    m = re.search(r'has status "([^"]+)"', texto)
+    if not m:
+        return "desconocido"
+    t = m.group(1).lower().rsplit(".", 1)[-1]
+    if t == "complete":
         return "completo"
-    if "error" in t or "fail" in t or "cancel" in t:
+    if t in ("error", "cancel_requested", "cancel_acknowledged") or "cancel" in t:
         return "fallido"
-    if "running" in t or "queued" in t or "pending" in t:
+    if t in ("queued", "running", "new_script"):
         return "corriendo"
     return "desconocido"
 
 
-def _kaggle(args: list[str], ejecutar=subprocess.run) -> subprocess.CompletedProcess:
-    return ejecutar(["kaggle", *args], capture_output=True, text=True, timeout=600)
+def version_empujada(texto: str) -> int | None:
+    """Número de versión si el push se aceptó (0 si la CLI no lo dio), None si se rechazó.
+    Ojo: un push rechazado imprime `Kernel push error: ...` y la CLI sale con código 0 igual."""
+    if "push error" in texto.lower():
+        return None
+    m = re.search(r"Kernel version (\d+) successfully pushed", texto)
+    if m:
+        return int(m.group(1))
+    return 0 if "successfully pushed" in texto.lower() else None
+
+
+def _kaggle(args: list[str], ejecutar=subprocess.run, timeout: int = 600) -> subprocess.CompletedProcess:
+    try:
+        return ejecutar(["kaggle", *args], capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(["kaggle", *args], 124, "", f"la CLI no respondió en {timeout} s")
 
 
 def lanzar(carpeta, salida, minutos: int = 90, cada: int = 30, ejecutar=subprocess.run,
@@ -311,38 +374,67 @@ def lanzar(carpeta, salida, minutos: int = 90, cada: int = 30, ejecutar=subproce
     if shutil.which("kaggle") is None and ejecutar is subprocess.run:
         return EXIT_CREDENCIALES, {"estado": "SIN_CLI", "detalle": "instala la CLI: pip install kaggle"}
     kid = json.loads((carpeta / "kernel-metadata.json").read_text())["id"]
-    resumen: dict = {"kernel": kid, "intentos_status": 0}
-    r = _kaggle(["kernels", "push", "-p", str(carpeta), "--accelerator", ACELERADOR], ejecutar)
-    resumen["push"] = (r.stdout + r.stderr).strip()[-1000:]
-    if r.returncode != 0:
+    pedido_id = json.loads((carpeta / "pedido.json").read_text()).get("pedido_id") \
+        if (carpeta / "pedido.json").exists() else None
+    resumen: dict = {"kernel": kid, "pedido_id": pedido_id, "intentos_status": 0}
+    # -t: tope de la sesión EN Kaggle (la CLI no tiene comando para cancelar; sin esto, si aquí se agota
+    # el tiempo, la GPU seguiría corriendo y gastando cuota).
+    r = _kaggle(["kernels", "push", "-p", str(carpeta), "--accelerator", ACELERADOR,
+                 "-t", str(int(minutos * 60))], ejecutar)
+    texto_push = (r.stdout + r.stderr).strip()
+    resumen["push"] = texto_push[-1000:]
+    version = version_empujada(texto_push) if r.returncode == 0 else None
+    if version is None:
         resumen["estado"] = "PUSH_FALLIDO"
         return EXIT_FALLO, resumen
+    # La CLI 2.2.x acepta owner/slug/N pero consulta la ÚLTIMA versión igual; la protección real contra
+    # tomar una salida vieja es el pedido_id (abajo) y no aceptar un estado final sin haber visto correr.
+    kid_v = f"{kid}/{version}" if version else kid
+    resumen["version"] = version or None
     inicio = reloj()
-    estado = "corriendo"
-    while estado in ("corriendo", "desconocido"):
+    estado, fallos_seguidos, visto_correr = "corriendo", 0, False
+    while estado in ("corriendo", "desconocido") or (
+            not visto_correr and resumen["intentos_status"] < SONDEOS_SIN_VER_CORRER):
         if reloj() - inicio > minutos * 60:
             resumen["estado"] = "TIEMPO_AGOTADO"
             return EXIT_TIEMPO, resumen
         dormir(cada)
-        s = _kaggle(["kernels", "status", kid], ejecutar)
+        s = _kaggle(["kernels", "status", kid_v], ejecutar)
         resumen["intentos_status"] += 1
         resumen["ultimo_status"] = (s.stdout + s.stderr).strip()[-300:]
-        estado = estado_de(resumen["ultimo_status"]) if s.returncode == 0 else "desconocido"
+        if s.returncode != 0:
+            fallos_seguidos += 1
+            if fallos_seguidos >= MAX_FALLOS_STATUS:
+                resumen["estado"] = "STATUS_FALLIDO"
+                return EXIT_FALLO, resumen
+            estado = "desconocido"
+            continue
+        fallos_seguidos = 0
+        estado = estado_de(resumen["ultimo_status"])
+        visto_correr = visto_correr or estado == "corriendo"
+    if salida.exists():                 # nunca mezclar con la salida de una corrida anterior
+        for viejo in ("propuesta.glb", "meta.json", "pip_freeze.txt"):
+            (salida / viejo).unlink(missing_ok=True)
     salida.mkdir(parents=True, exist_ok=True)
-    o = _kaggle(["kernels", "output", kid, "-p", str(salida)], ejecutar)
+    o = _kaggle(["kernels", "output", kid_v, "-p", str(salida), "-o"], ejecutar)
     resumen["output"] = (o.stdout + o.stderr).strip()[-500:]
     meta_ruta = salida / "meta.json"
+    meta = None
     if meta_ruta.exists():
         try:
-            resumen["meta"] = {k: v for k, v in json.loads(meta_ruta.read_text()).items() if k != "traza"}
+            meta = json.loads(meta_ruta.read_text())
+            resumen["meta"] = {k: v for k, v in meta.items() if k != "traza"}
         except json.JSONDecodeError:
             resumen["meta"] = {"estado": "META_ILEGIBLE"}
     resumen["minutos"] = round((reloj() - inicio) / 60, 1)
     if estado == "fallido":
         resumen["estado"] = "KERNEL_FALLIDO"
         return EXIT_FALLO, resumen
-    if not (salida / "propuesta.glb").exists():
+    if not (salida / "propuesta.glb").exists() or not meta:
         resumen["estado"] = "SIN_PROPUESTA"
+        return EXIT_SIN_SALIDA, resumen
+    if pedido_id and meta.get("pedido_id") != pedido_id:
+        resumen["estado"] = "SALIDA_DE_OTRO_PEDIDO"
         return EXIT_SIN_SALIDA, resumen
     resumen["estado"] = "OK"
     return EXIT_OK, resumen
@@ -371,18 +463,18 @@ def main(argv=None) -> int:
         s.add_argument("--recorte", default=None)
         s.add_argument("--slug", default=SLUG_DEFECTO)
         s.add_argument("--carpeta", default=None, help="carpeta del kernel (por defecto .kaggle/<nombre>/kernel)")
+        s.add_argument("--usuario", default=None, help="usuario de Kaggle (si no, KAGGLE_USERNAME o kaggle.json)")
         if nombre == "lanzar":
             s.add_argument("--salida", default=None, help="por defecto propuestas/<nombre>")
             s.add_argument("--minutos", type=int, default=90)
-        else:
-            s.add_argument("--usuario", default=None, help="usuario de Kaggle (si no, el de las credenciales)")
     a = p.parse_args(argv)
     nid = re.sub(r"[^a-z0-9_]+", "_", a.nombre.lower()).strip("_") or "propuesta"
     carpeta = Path(a.carpeta or f".kaggle/{nid}/kernel")
-    usuario = getattr(a, "usuario", None) or credenciales()
-    if a.cmd == "lanzar" and not usuario:
-        print("[kaggle] faltan credenciales: define KAGGLE_USERNAME y KAGGLE_KEY "
-              "(Settings → Secrets → Actions) o ~/.kaggle/kaggle.json", file=sys.stderr)
+    usuario = a.usuario or credenciales()
+    if a.cmd == "lanzar" and not (usuario and hay_credencial()):
+        print("[kaggle] faltan credenciales: KAGGLE_USERNAME + KAGGLE_API_TOKEN (token nuevo) o "
+              "KAGGLE_USERNAME + KAGGLE_KEY (llave legacy), o ~/.kaggle/kaggle.json. Ver docs/KAGGLE.md",
+              file=sys.stderr)
         return EXIT_CREDENCIALES
     try:
         pedido = armar(a.imagen, a.nombre, carpeta, usuario or "usuario-sin-definir", a.slug, a.caras,
