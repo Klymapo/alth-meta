@@ -12,20 +12,9 @@ on:
       - "copox/production/**"
       - ".github/workflows/copox-theo-model-loop.yml"
   workflow_dispatch:
-    inputs:
-      mode:
-        description: "shadow = valida sin persistir | persistent = continúa el estado productivo"
-        required: true
-        default: "shadow"
-        type: choice
-        options:
-          - shadow
-          - persistent
-  schedule:
-    - cron: "17 0,6,12,18 * * *"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: copox-theo-m5-loop
@@ -33,7 +22,6 @@ concurrency:
 
 jobs:
   loop:
-    if: github.event_name != 'schedule' || vars.COPOX_LOOPS_PAUSED != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -50,20 +38,9 @@ jobs:
 
       - name: Elegir modo seguro
         id: mode
-        env:
-          EVENT: ${{ github.event_name }}
-          INPUT_MODE: ${{ inputs.mode }}
         run: |
-          if [ "$EVENT" = "schedule" ]; then
-            echo "mode=persistent" >> "$GITHUB_OUTPUT"
-            echo "cassette=copox/cassettes/examples/theo_model_m5_loop.json" >> "$GITHUB_OUTPUT"
-          elif [ "$EVENT" = "workflow_dispatch" ] && [ "$INPUT_MODE" = "persistent" ]; then
-            echo "mode=persistent" >> "$GITHUB_OUTPUT"
-            echo "cassette=copox/cassettes/examples/theo_model_m5_loop.json" >> "$GITHUB_OUTPUT"
-          else
-            echo "mode=shadow" >> "$GITHUB_OUTPUT"
-            echo "cassette=copox/cassettes/examples/theo_model_m5_validation.json" >> "$GITHUB_OUTPUT"
-          fi
+          echo "mode=shadow" >> "$GITHUB_OUTPUT"
+          echo "cassette=copox/cassettes/examples/theo_model_m5_validation.json" >> "$GITHUB_OUTPUT"
 
       - name: Ejecutar un loop acotado
         env:
@@ -80,44 +57,34 @@ jobs:
           fi
           echo "$RC" > .copox/theo-loop/exit_code.txt
 
-      - name: Verificar contrato y estado
-        env:
-          LOOP_MODE: ${{ steps.mode.outputs.mode }}
+      - name: Verificar contrato sin promoción
         run: |
           python3 - <<'PY'
-          import json, subprocess
+          import json
           from pathlib import Path
-
-          root=Path('.copox/theo-loop')
-          manifests=list(root.rglob('manifest.json'))
-          assert len(manifests)==1, manifests
+          manifests=list(Path('.copox/theo-loop').rglob('manifest.json'))
+          if len(manifests)!=1:
+              raise SystemExit('LOOP_CONTRACT_FAILED: se esperaba un manifest')
           manifest=json.loads(manifests[0].read_text())
-          assert manifest['status'] in {'PLATEAU','PROMOTED'}, manifest['status']
-          assert 1 <= len(manifest['candidates']) <= 3, len(manifest['candidates'])
-          assert all(c['status'] in {'REJECTED','ELIGIBLE','ERROR'} for c in manifest['candidates'])
-
-          mode='${{ steps.mode.outputs.mode }}'
-          run_dir=manifests[0].parent
-          if mode == 'shadow':
-              cassette=json.loads(Path('copox/cassettes/examples/theo_model_m5_validation.json').read_text())
-              assert 'promote' not in cassette['commands']
-              assert 'state_branch' not in cassette.get('variables',{})
-          else:
-              cassette=json.loads(Path('copox/cassettes/examples/theo_model_m5_loop.json').read_text())
-              branch=cassette['variables']['state_branch']
-              probe=subprocess.run(['git','ls-remote','--exit-code','origin',f'refs/heads/{branch}'],capture_output=True,text=True)
-              assert probe.returncode == 0, f'No se persistió state branch {branch}: {probe.stderr}'
-              if manifest['status'] == 'PROMOTED':
-                  winner=manifest['winner']
-                  promotion=run_dir/'candidates'/winner/'promotion.json'
-                  assert promotion.exists(), promotion
-                  pdata=json.loads(promotion.read_text())
-                  assert pdata['promotion_allowed'] is True
-                  assert pdata['state_branch'] == branch
-              else:
-                  learns=sorted(run_dir.glob('learning_t*.json'))
-                  assert learns, 'PLATEAU persistente sin aprendizaje'
-          print(json.dumps({'mode':mode,'status':manifest['status'],'candidates':len(manifest['candidates']),'winner':manifest.get('winner')},indent=2))
+          if manifest['status'] not in {'PLATEAU','PROMOTED'}:
+              raise SystemExit('LOOP_CONTRACT_FAILED: estado inesperado '+manifest['status'])
+          candidates=manifest['candidates']
+          generations={}
+          for candidate in candidates:
+              generation=candidate['id'].split('-c')[0]
+              generations.setdefault(generation,[]).append(candidate)
+          if not 1<=len(generations)<=3 or any(len(rows)!=3 for rows in generations.values()):
+              raise SystemExit('SIBLING_CONTRACT_FAILED: máximo tres generaciones de tres hermanos')
+          if any(c['status'] not in {'REJECTED','ELIGIBLE','ERROR'} for c in candidates):
+              raise SystemExit('LOOP_CONTRACT_FAILED: candidato inesperado')
+          cassette=json.loads(Path('copox/cassettes/examples/theo_model_m5_validation.json').read_text())
+          if 'promote' in cassette['commands'] or 'state_branch' in cassette.get('variables',{}):
+              raise SystemExit('PROMOTION_DISABLED: cassette shadow no puede promover/persistir')
+          for path in manifests[0].parent.rglob('promotion.json'):
+              if json.loads(path.read_text()).get('promotion_executed'):
+                  raise SystemExit('PROMOTION_DISABLED: promoción detectada')
+          print(json.dumps({'mode':'shadow','status':manifest['status'],'generations':len(generations),
+                            'candidates':len(candidates),'promotion_executed':False},indent=2))
           PY
 
       - name: Resumen
@@ -135,7 +102,7 @@ jobs:
               raise SystemExit
           m=json.loads(manifests[0].read_text())
           print(f"- Estado: **{m.get('status')}**")
-          print(f"- Candidatos: {len(m.get('candidates',[]))}/3")
+          print(f"- Candidatos: {len(m.get('candidates',[]))}/9 (máximo 3 generaciones)")
           if m.get('winner'):
               print(f"- Ganador interno: `{m['winner']}`")
           rejected=[c for c in m.get('candidates',[]) if c.get('status')=='REJECTED']

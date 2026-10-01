@@ -1,6 +1,8 @@
 import json
 import tempfile
 import unittest
+from argparse import Namespace
+from unittest.mock import patch
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -14,6 +16,24 @@ class ResearchIterationTests(unittest.TestCase):
     def setUp(self):
         self.brief = json.loads(BRIEF.read_text())
         self.brief["researched_at"] = datetime.now(timezone.utc).isoformat()
+
+    def test_theo_promotion_is_blocked_even_with_pass_gate(self):
+        from copox.adapters.alth_model_m5 import cmd_promote
+        with tempfile.TemporaryDirectory() as td:
+            repo = Path(td)
+            policy = repo / "copox" / "production" / "theo_m5_policy.json"
+            policy.parent.mkdir(parents=True)
+            policy.write_text(json.dumps({"automatic_promotion_enabled": False}))
+            candidate = repo / "candidate"
+            candidate.mkdir()
+            (candidate / "gate.json").write_text(json.dumps({"promotion_allowed": True}))
+            with patch("copox.adapters.alth_model_m5.save_bundle") as save:
+                code = cmd_promote(Namespace(repo_root=str(repo), candidate_dir=str(candidate)))
+                save.assert_not_called()
+            self.assertEqual(code, 9)
+            report = json.loads((candidate / "promotion.json").read_text())
+            self.assertFalse(report["promotion_executed"])
+            self.assertEqual(report["status"], "PROMOTION_DISABLED")
 
     def test_unresearched_technique_cannot_mutate(self):
         result = validate_research(self.brief, "fingers", technique="invented_technique")

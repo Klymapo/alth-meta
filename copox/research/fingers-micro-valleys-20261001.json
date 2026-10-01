@@ -146,5 +146,25 @@
       "name": "micro_valley_cut_local_sections",
       "applicable": true
     }
-  ]
+  ],
+  "supplemental_research": {
+    "date": "2026-10-01 14:38:41 UTC",
+    "phase": "After initial implementation, for interpreting first-round audit; not a claim of pre-implementation browsing",
+    "sources": [
+      {
+        "title": "Blender Manual — Boolean Modifier (mirror)",
+        "url": "https://github.com/dfelinto/blender-manual/blob/main/manual/modeling/modifiers/generate/booleans.rst",
+        "source_type": "technical_article",
+        "relevance": "Manifold required for guaranteed results; Exact tolerates overlaps; Hole Tolerant costs time and is not enabled without evidence.",
+        "verified_blob_sha": "51337e27f8a591fef1e5ca743f760b2d60063e32"
+      },
+      {
+        "title": "Blender — Boolean modifier implementation",
+        "url": "https://github.com/blender/blender/blob/main/source/blender/modifiers/intern/MOD_boolean.cc",
+        "source_type": "official_docs",
+        "relevance": "Solver and watertight assumptions explain possible failure on existing open mesh.",
+        "verified_blob_sha": "fa2d54852210f84509be59eb412a1d3f9e2e77a5"
+      }
+    ]
+  }
 }

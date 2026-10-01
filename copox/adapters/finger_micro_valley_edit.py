@@ -291,7 +291,8 @@ def main():
               "right_hand_mutated": False if outside_exact else None,
               "uv_layers_preserved": uv_before == [layer.name for layer in mesh.uv_layers],
               "local_degenerate_faces": degenerate, "local_ngons": local_ngons, "self_intersection_probe": intersections,
-              "local_sections": rings, "loops_ready": loops_ready, "bridge_ready": loops_ready,
+              "local_sections": rings, "loops_ready": loops_ready, "bridge_ready": False,
+              "bridge_preparation": "local_section_cycles_recorded; palm boundary correspondence not verified",
               "rig_ready": False, "mesh_integrity": finite and not degenerate and intersections["checked"] and intersections["intersections"] == 0,
               "promotion_allowed": False, "promotion_executed": False}
     Path(args.report).write_text(json.dumps(report, indent=2) + "\n")

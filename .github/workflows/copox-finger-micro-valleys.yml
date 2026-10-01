@@ -1,15 +1,6 @@
 name: COPOX · Researched micro valleys
 
 on:
-  pull_request:
-    paths:
-      - "copox/adapters/finger_micro_valley*.py"
-      - "copox/production/finger_micro_valley_campaign.py"
-      - "copox/production/research_iteration_loop.py"
-      - "copox/production/research_gate.py"
-      - "copox/research/fingers-micro-valleys-20261001.json"
-      - "tests/test_copox_research_iteration.py"
-      - ".github/workflows/copox-finger-micro-valleys.yml"
   workflow_dispatch:
 
 permissions:
