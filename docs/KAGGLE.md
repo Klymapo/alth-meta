@@ -10,15 +10,18 @@ chasis de personaje aprobado, un personaje nuevo es variación del chasis y no n
 
 ## Configuración (una sola vez)
 
-1. Crea una cuenta gratuita en [kaggle.com](https://www.kaggle.com). Kaggle pide **verificar el teléfono**
-   para usar GPU.
-2. En Kaggle: tu perfil → **Settings** → sección **API** → **Create New Token**. Se descarga `kaggle.json`
-   con `{"username": "...", "key": "..."}`.
-3. En GitHub: el repo → **Settings → Secrets and variables → Actions → New repository secret**, y crea:
-   - `KAGGLE_USERNAME` con el `username`
-   - `KAGGLE_KEY` con el `key`
+1. Crea una cuenta gratuita en [kaggle.com](https://www.kaggle.com) y **verifica tu teléfono**
+   (Settings → Phone verification). Sin eso Kaggle no da GPU ni internet al kernel, y el push se rechaza.
+2. En Kaggle: tu perfil → **Settings** → sección **API**. Hay dos formas; cualquiera sirve:
+   - **Generate New Token** (forma actual): muestra un token. Cópialo (sólo se ve una vez).
+   - **Create Legacy API Key**: descarga `kaggle.json` con `{"username": "...", "key": "..."}`.
+3. En GitHub: el repo → **Settings → Secrets and variables → Actions → New repository secret**:
+   - `KAGGLE_USERNAME`: tu usuario de Kaggle (**siempre**; el token nuevo no lo trae y hace falta para el
+     id del kernel).
+   - `KAGGLE_API_TOKEN`: el token de "Generate New Token", **o bien**
+   - `KAGGLE_KEY`: el `key` de `kaggle.json`.
 
-No subas `kaggle.json` al repo: es público.
+No subas el token ni `kaggle.json` al repo: es público.
 
 ## Uso
 
@@ -50,29 +53,46 @@ python3 tools/kaggle_proveedor.py armar  refs/personajes/joven-rubio.jpg --nombr
 2. **TripoSG nunca usa RMBG-1.4**: su script oficial quita el fondo con `briaai/RMBG-1.4`, cuyo uso
    comercial exige licencia de pago de BRIA. Si la imagen trae un alfa válido (≥ 1 % transparente y
    ≥ 1 % opaco), `prepare_image` lo usa y no llama a RMBG. El kernel no descarga RMBG.
-3. **Kernel privado** con GPU T4 (16 GB; TripoSG pide ≥ 8 GB) e internet: clona TripoSG en el commit
-   fijo `fc5c40990181e2a756c4e0b1c2f4d6b5202faf8c`, instala `requirements.txt` sin el `numpy==1.22.3`
-   fijado, descarga los pesos `VAST-AI/TripoSG`, genera, reduce con pymeshlab y escribe
-   `propuesta.glb` + `meta.json`.
-4. **Vigilancia**: `kaggle kernels status` cada 30 s hasta completar, fallar o agotar el tiempo;
-   después `kaggle kernels output`.
+3. **Kernel privado** con GPU T4 ×2 (16 GB cada una; TripoSG pide ≥ 8 GB y usa una) e internet: clona
+   TripoSG en el commit fijo `fc5c40990181e2a756c4e0b1c2f4d6b5202faf8c`, instala `requirements.txt` sin
+   `numpy==1.22.3` (no instala en el Python de Kaggle) ni `diso` (ver Licencias), restringido a las
+   versiones que ya trae la imagen (si eso falla, reintenta sin restricción y lo anota), descarga los
+   pesos `VAST-AI/TripoSG` (~8 GB, sin token), genera con `use_flash_decoder=False`, reduce con pymeshlab
+   y escribe `propuesta.glb`, `meta.json` y `pip_freeze.txt`.
+4. **Vigilancia**: el push lleva `-t` = el tiempo máximo (la CLI no puede cancelar un kernel, así que el
+   tope se pone en Kaggle mismo). Se lee la versión que devolvió el push y se consulta el estado cada
+   30 s (la CLI 2.2.x consulta siempre la última versión del kernel); un estado final no se acepta hasta
+   haber visto el kernel en cola o corriendo (o tras 4 consultas), y 5 fallos seguidos de la CLI abortan.
+   Al terminar se baja la salida y se exige que `meta.json` traiga el mismo `pedido_id` que se generó al
+   armar: nunca se toma por buena la malla de una corrida anterior.
 
-Códigos de salida: 0 ok · 2 entrada inválida · 5 falló en Kaggle · 6 tiempo agotado · 7 faltan
-credenciales o CLI · 8 terminó sin `propuesta.glb`.
+Códigos de salida: 0 ok · 2 entrada inválida · 5 falló en Kaggle (push rechazado, kernel con error o la
+CLI de estado falla seguido) · 6 tiempo agotado · 7 faltan credenciales o CLI · 8 terminó sin
+`propuesta.glb` o con la de otro pedido.
+
+Un push rechazado (teléfono sin verificar, cuota agotada) **sale con código 0 en la CLI de Kaggle**; por
+eso se revisa el texto ("Kernel version N successfully pushed" / "Kernel push error").
 
 ## Licencias
 
 - TripoSG: código MIT, pesos `VAST-AI/TripoSG` MIT.
 - RMBG-1.4: **no se usa** (comercial con licencia de pago).
+- `diso` (CC BY-NC 4.0, **no comercial**): TripoSG lo importa siempre, pero sólo lo usa su "flash decoder".
+  **No se instala**: se sustituye por un módulo vacío y se genera con `use_flash_decoder=False`, que extrae
+  la malla con `skimage.measure.marching_cubes` (más lento, misma licencia permisiva de scikit-image).
 - Kaggle: servicio gratuito sujeto a sus términos. Sus páginas de términos y de cuotas no se pudieron
-  leer el 1 oct 2026 (cargan con JavaScript). Fuentes secundarias indican ~30 h/semana de GPU (T4×2 o
-  P100) y sesiones de hasta 12 h. Revisa los términos en tu cuenta antes de usarlo a escala.
+  leer el 1 oct 2026 (cargan con JavaScript). Fuentes secundarias indican ~30 h/semana de GPU (T4×2; la P100
+  ya está retirada en la CLI) y sesiones de hasta 12 h. Revisa los términos en tu cuenta antes de usarlo a escala.
 
 ## Riesgos conocidos (sin probar todavía en Kaggle)
 
-- `diso` (dependencia de TripoSG) compila extensiones CUDA: la primera instalación puede tardar o fallar
-  en la imagen de Kaggle. Si falla, el error queda en `meta.json`.
-- Cada corrida reinstala dependencias y re-descarga pesos (varios GB): consume minutos de la cuota.
+- Verificado contra el código fuente (1 oct 2026): flag `--accelerator NvidiaTeslaT4`, campos de
+  `kernel-metadata.json`, texto de `kernels status`, que `push` ejecuta por defecto, imports de TripoSG,
+  que con alfa válido no se llama a RMBG, fp16 en T4 y que los pesos no piden token.
+- Sin verificar hasta la primera corrida: versiones de Python/pip de la imagen de Kaggle, disco libre
+  (pesos ~8 GB + dependencias), compatibilidad con `diffusers`/`transformers` recientes y tiempo real de
+  la extracción jerárquica.
+- Cada corrida reinstala dependencias y re-descarga pesos: consume minutos de la cuota.
 - El script lleva la imagen incrustada (~0.8 MB). Si Kaggle rechazara el tamaño, pasar la imagen como
   Dataset privado.
 - TripoSG está entrenado con objetos de Objaverse: su respuesta a personajes chibi y a dedos separados

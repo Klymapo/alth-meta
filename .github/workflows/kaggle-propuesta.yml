@@ -8,10 +8,11 @@ run-name: "Kaggle · ${{ inputs.nombre }}"
 # Solo se lanza a mano (Actions → "Propuesta en Kaggle" → Run workflow; también desde la app de GitHub),
 # así que nadie de fuera puede gastar tu cuota.
 #
-# Requiere dos secrets (Settings → Secrets and variables → Actions):
-#   KAGGLE_USERNAME  tu usuario de Kaggle
-#   KAGGLE_KEY       la clave del token de API de Kaggle (Settings de Kaggle → API → Create New Token)
-# Detalles en docs/KAGGLE.md.
+# Secrets (Settings → Secrets and variables → Actions), ver docs/KAGGLE.md:
+#   KAGGLE_USERNAME   tu usuario de Kaggle (siempre)
+#   KAGGLE_API_TOKEN  el token de "Generate New Token" en Kaggle          ← forma actual
+#   KAGGLE_KEY        o bien la llave de "Create Legacy API Key" (kaggle.json) ← forma legacy
+# Basta con uno de los dos últimos.
 
 on:
   workflow_dispatch:
@@ -60,15 +61,22 @@ jobs:
       - name: Credenciales presentes
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
-          if [ -z "$KAGGLE_USERNAME" ] || [ -z "$KAGGLE_KEY" ]; then
-            echo "::error::Faltan los secrets KAGGLE_USERNAME y KAGGLE_KEY (ver docs/KAGGLE.md)"
+          if [ -z "$KAGGLE_USERNAME" ]; then
+            echo "::error::Falta el secret KAGGLE_USERNAME (tu usuario de Kaggle). Ver docs/KAGGLE.md"
             exit 7
           fi
+          if [ -z "$KAGGLE_API_TOKEN" ] && [ -z "$KAGGLE_KEY" ]; then
+            echo "::error::Falta KAGGLE_API_TOKEN (token nuevo) o KAGGLE_KEY (llave legacy). Ver docs/KAGGLE.md"
+            exit 7
+          fi
+          kaggle --version
       - name: Lanzar en Kaggle y esperar
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
           IN_IMAGEN: ${{ inputs.imagen }}
           IN_NOMBRE: ${{ inputs.nombre }}
@@ -80,6 +88,9 @@ jobs:
           args=(lanzar "$IN_IMAGEN" --nombre "$IN_NOMBRE" --caras "$IN_CARAS" --semilla "$IN_SEMILLA"
                 --minutos "$IN_MINUTOS" --salida "propuestas/$IN_NOMBRE")
           [ -n "$IN_RECORTE" ] && args+=(--recorte "$IN_RECORTE")
+          # un secret vacío no debe quedar como variable vacía (la CLI la tomaría como credencial)
+          [ -z "$KAGGLE_API_TOKEN" ] && unset KAGGLE_API_TOKEN
+          [ -z "$KAGGLE_KEY" ] && unset KAGGLE_KEY
           python3 tools/kaggle_proveedor.py "${args[@]}" 2>&1 | tee kaggle.txt
       - name: Resumen
         if: always()
@@ -90,7 +101,7 @@ jobs:
           {
             echo "## Propuesta Kaggle · $IN_NOMBRE"
             if [ -f "$r" ]; then
-              python3 -c "import json,sys; d=json.load(open(sys.argv[1])); m=d.get('meta') or {}; print(f\"- estado: **{d.get('estado')}**\"); print(f\"- minutos en Kaggle: {d.get('minutos')}\"); print(f\"- caras: {m.get('caras')} (crudas {m.get('caras_crudas')}), watertight: {m.get('watertight')}\"); print(f\"- GPU: {m.get('gpu')}\"); print(f\"- pasos (s): {m.get('pasos')}\"); print(f\"- error: {m.get('error')}\" if m.get('error') else '')" "$r"
+              python3 -c "import json,sys; d=json.load(open(sys.argv[1])); m=d.get('meta') or {}; print(f\"- estado: **{d.get('estado')}**\"); print(f\"- minutos en Kaggle: {d.get('minutos')} · versión del kernel: {d.get('version')} · pedido: {d.get('pedido_id')}\"); print(f\"- instalación: {m.get('instalacion')}\"); print(f\"- caras: {m.get('caras')} (crudas {m.get('caras_crudas')}), watertight: {m.get('watertight')}\"); print(f\"- GPU: {m.get('gpu')}\"); print(f\"- pasos (s): {m.get('pasos')}\"); print(f\"- error: {m.get('error')}\" if m.get('error') else '')" "$r"
             else
               echo "- sin resumen (ver el log del paso anterior)"
             fi
