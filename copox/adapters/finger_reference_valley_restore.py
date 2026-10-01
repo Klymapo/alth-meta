@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 from pathlib import Path
 from typing import Any
 
@@ -17,17 +16,6 @@ from copox.adapters.alth_character_audit import (
     person_mask,
     registration_from_baseline,
 )
-
-
-def _rotation() -> np.ndarray:
-    a = math.radians(-90.0)
-    c, s = math.cos(a), math.sin(a)
-    return np.array([
-        [1.0, 0.0, 0.0, 0.0],
-        [0.0, c, -s, 0.0],
-        [0.0, s, c, 0.0],
-        [0.0, 0.0, 0.0, 1.0],
-    ], dtype=float)
 
 
 def _to_h(points: np.ndarray) -> np.ndarray:
@@ -70,20 +58,24 @@ def restore_valleys(
     ref_mask = person_mask(front)
     registration = registration_from_baseline(audit_mesh, "front", ref_mask, cfg)
 
+    # Igual que finger_reference_fit: trimesh ya expone Theo en world Z-up.
+    # La rotación -90° X sólo pertenece a la ruta Blender y NO se aplica aquí.
     scene = trimesh.load(str(input_glb), force="scene")
     node_name, geom_name, node_matrix, geom = _dominant(scene)
     vertices_local = np.asarray(geom.vertices, dtype=float).copy()
-    rotation = _rotation()
-    inv_rotation = np.linalg.inv(rotation)
     inv_node = np.linalg.inv(node_matrix)
-    raw_world_h = (node_matrix @ _to_h(vertices_local).T).T
-    canonical = (rotation @ raw_world_h.T).T[:, :3]
-    lo, hi = canonical.min(axis=0), canonical.max(axis=0)
+    world_h = (node_matrix @ _to_h(vertices_local).T).T
+    world = world_h[:, :3].copy()
+    lo, hi = world.min(axis=0), world.max(axis=0)
     span = np.maximum(hi - lo, 1e-12)
-    norm = (canonical - lo) / span
+    norm = (world - lo) / span
 
-    px = registration["pixel_center_x"] + ((canonical[:, 0] * scale_mm) - registration["horizontal_center"]) * registration["scale"]
-    py = registration["pixel_bottom_y"] - ((canonical[:, 2] * scale_mm) - registration["vertical_min"]) * registration["scale"]
+    coord = cfg["coordinates"]
+    h_axis = int(coord["front_horizontal_axis"])
+    v_axis = int(coord["vertical_axis"])
+    h_sign = float(coord.get("front_sign", 1.0))
+    px = registration["pixel_center_x"] + ((world[:, h_axis] * scale_mm * h_sign) - registration["horizontal_center"]) * registration["scale"]
+    py = registration["pixel_bottom_y"] - ((world[:, v_axis] * scale_mm) - registration["vertical_min"]) * registration["scale"]
 
     finger_boxes = ((cfg.get("morph_regions") or {}).get("fingers") or {}).get("boxes") or []
     if not finger_boxes:
@@ -91,12 +83,12 @@ def restore_valleys(
     left_box = np.asarray(finger_boxes[0], dtype=float)
     inside_box = np.all((norm >= left_box[:3]) & (norm <= left_box[3:]), axis=1)
     width = max(float(left_box[3] - left_box[0]), 1e-9)
-    distal = np.clip((float(left_box[3]) - norm[:, 0]) / width, 0.0, 1.0)
+    distal = np.clip((float(left_box[3]) - norm[:, h_axis]) / width, 0.0, 1.0)
     distal_weight = np.clip((distal - 0.42) / 0.58, 0.0, 1.0)
     distal_weight = distal_weight * distal_weight * (3.0 - 2.0 * distal_weight)
 
-    updated = canonical.copy()
-    selected_total = np.zeros(len(canonical), dtype=bool)
+    updated = world.copy()
+    selected_total = np.zeros(len(world), dtype=bool)
     valley_reports = []
     max_shift = 0.0
 
@@ -112,20 +104,25 @@ def restore_valleys(
 
         active = inside_box & (distal_weight > 0.0) & (vertical > 0.0)
         if not np.any(active):
-            raise RuntimeError(f"Valle {idx} no seleccionó vértices")
+            debug = {
+                "inside_box_vertices": int(inside_box.sum()),
+                "py_inside_min": float(np.min(py[inside_box])) if np.any(inside_box) else None,
+                "py_inside_max": float(np.max(py[inside_box])) if np.any(inside_box) else None,
+                "valley_bbox": bbox,
+            }
+            raise RuntimeError(f"Valle {idx} no seleccionó vértices: {debug}")
 
-        # La profundidad de la muesca se deriva del ancho horizontal del propio valle
-        # visible en referencia. No inventamos una medida anatómica.
+        # Profundidad derivada del ancho horizontal del valle visible en referencia.
         valley_width_px = max(1.0, x1 - x0 + 1.0)
         shift_model = (valley_width_px / max(float(registration["scale"]), 1e-9)) / scale_mm
         shift_model *= float(strength)
-        cap_model = float(span[0] * width * 0.42)
+        cap_model = float(span[h_axis] * width * 0.42)
         shift_model = min(shift_model, cap_model)
         weights = distal_weight * vertical * active.astype(float)
         applied = shift_model * weights
 
-        # Mano izquierda: +X es hacia la muñeca/interior; crea una muesca distal.
-        updated[:, 0] += applied
+        # Mano izquierda: +horizontal*sign apunta hacia la muñeca/interior.
+        updated[:, h_axis] += applied * h_sign
         selected_total |= active
         max_shift = max(max_shift, float(np.max(applied)))
         valley_reports.append({
@@ -137,8 +134,7 @@ def restore_valleys(
             "max_shift_mm": float(np.max(applied) * scale_mm),
         })
 
-    updated_raw_world_h = (inv_rotation @ _to_h(updated).T).T
-    updated_local = (inv_node @ updated_raw_world_h.T).T[:, :3]
+    updated_local = (inv_node @ _to_h(updated).T).T[:, :3]
     updated_local[~selected_total] = vertices_local[~selected_total]
     outside_exact = bool(np.array_equal(updated_local[~selected_total], vertices_local[~selected_total]))
     geom.vertices = updated_local
@@ -153,6 +149,8 @@ def restore_valleys(
         "mode": "reference_valley_restore_experiment",
         "object": node_name,
         "geometry": geom_name,
+        "selection_coordinates": "trimesh_world_z_up_no_extra_rotation",
+        "coordinate_axes": {"horizontal": h_axis, "vertical": v_axis},
         "reference_driven": True,
         "invented_finger_count": False,
         "valley_count": len(valleys),
