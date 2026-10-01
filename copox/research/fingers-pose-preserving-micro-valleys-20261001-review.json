@@ -80,5 +80,7 @@
   "best_metrics_candidate": "c01",
   "promotion_executed": false,
   "review_evidence_run": 36887264686,
-  "visual_learning": "La mano derecha coincide visualmente con Valley. Las muescas no recuperan el segundo valle ni el contorno rectangular estilizado. Un mayor IoU como el+19pp de la ronda vertical no implica mejor likeness."
+  "visual_learning": "La mano derecha coincide visualmente con Valley. Las muescas no recuperan el segundo valle ni el contorno rectangular estilizado. Un mayor IoU como el+19pp de la ronda vertical no implica mejor likeness.",
+  "finger_reframing_verified_run": 36888524658,
+  "review_completed": true
 }

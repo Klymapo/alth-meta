@@ -30,7 +30,132 @@
           "depth_scale": 1.25
         }
       ],
-      "promotion_executed": false
+      "promotion_executed": false,
+      "candidate_metrics": [
+        {
+          "module": "fingers",
+          "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+          "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+          "mesh_integrity": true,
+          "scope_safe": false,
+          "regression_ok": false,
+          "evidence_complete": true,
+          "semantic_ready": false,
+          "target_gain_pp": 4.078285818980838,
+          "global_gain_pp": 0.15254798762505128,
+          "worst_view_delta_pp": -0.0781628568233328,
+          "evidence": [
+            "hand_left",
+            "hand_right",
+            "finger_detail",
+            "topology_report",
+            "learning"
+          ],
+          "flags": [
+            "mitten_shape"
+          ],
+          "params": {
+            "depth_scale": 0.75
+          },
+          "reference_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "model_valleys": {
+            "left": 1,
+            "right": 0
+          },
+          "parent_target_delta_pp": -1.5699063047490796,
+          "parent_global_delta_pp": 0.0024410691211507185,
+          "parent_worst_view_delta_pp": -0.005457468283065481,
+          "local_loops_ready": false,
+          "valley_structural_advantage_preserved": false,
+          "visual_review": "REJECTED",
+          "audit_passed": false
+        },
+        {
+          "module": "fingers",
+          "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+          "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+          "mesh_integrity": false,
+          "scope_safe": false,
+          "regression_ok": false,
+          "evidence_complete": true,
+          "semantic_ready": false,
+          "target_gain_pp": 9.429519490969227,
+          "global_gain_pp": 0.13166520132856796,
+          "worst_view_delta_pp": -0.1893756583162043,
+          "evidence": [
+            "hand_left",
+            "hand_right",
+            "finger_detail",
+            "topology_report",
+            "learning"
+          ],
+          "flags": [
+            "mitten_shape",
+            "finger_merge_regression"
+          ],
+          "params": {
+            "depth_scale": 1
+          },
+          "reference_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "model_valleys": {
+            "left": 1,
+            "right": 0
+          },
+          "parent_target_delta_pp": 2.185136082434163,
+          "parent_global_delta_pp": -0.025377842940255135,
+          "parent_worst_view_delta_pp": -0.10787313136302878,
+          "local_loops_ready": false,
+          "valley_structural_advantage_preserved": false,
+          "visual_review": "REJECTED",
+          "audit_passed": false
+        },
+        {
+          "module": "fingers",
+          "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+          "parent_sha": "d5000a33dcb368031ddbcd0ba9bd666e24c47800a3a95103b1a7a88526f5c81b",
+          "mesh_integrity": true,
+          "scope_safe": false,
+          "regression_ok": false,
+          "evidence_complete": true,
+          "semantic_ready": true,
+          "target_gain_pp": 1.6999986254359962,
+          "global_gain_pp": 0.1507791590590557,
+          "worst_view_delta_pp": -0.07382460842690342,
+          "evidence": [
+            "hand_left",
+            "hand_right",
+            "finger_detail",
+            "topology_report",
+            "learning"
+          ],
+          "flags": [],
+          "params": {
+            "depth_scale": 1.25
+          },
+          "reference_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "model_valleys": {
+            "left": 2,
+            "right": 0
+          },
+          "parent_target_delta_pp": -4.14619945898497,
+          "parent_global_delta_pp": 0.00033718388221526396,
+          "parent_worst_view_delta_pp": -0.022036967560823406,
+          "local_loops_ready": false,
+          "valley_structural_advantage_preserved": false,
+          "visual_review": "REJECTED",
+          "audit_passed": false
+        }
+      ],
+      "next_hypothesis": "Investigar edición local conectada con protección exterior."
     },
     {
       "generation_id": "g02",
@@ -94,7 +219,8 @@
             "forbidden_flags:finger_merge_regression",
             "valley_structural_advantage",
             "local_loops_ready"
-          ]
+          ],
+          "visual_review": "REJECTED"
         },
         {
           "module": "fingers",
@@ -146,7 +272,8 @@
             "forbidden_flags:finger_merge_regression",
             "valley_structural_advantage",
             "local_loops_ready"
-          ]
+          ],
+          "visual_review": "REJECTED"
         },
         {
           "module": "fingers",
@@ -198,7 +325,8 @@
             "forbidden_flags:finger_merge_regression",
             "valley_structural_advantage",
             "local_loops_ready"
-          ]
+          ],
+          "visual_review": "REJECTED"
         }
       ],
       "learning": "2/0 en los3 yIoU grande; mano levantada ycosturas rechazan. Exteriortransportado exacto; index-onlyseams falla.",
@@ -215,7 +343,8 @@
           "depth_scale": 1.15
         }
       ],
-      "promotion_executed": false
+      "promotion_executed": false,
+      "next_hypothesis": "Preservar pose y bloquear aliases geométricos; ningún padre rechazado."
     },
     {
       "generation_id": "g03",
@@ -256,7 +385,7 @@
           "params": {
             "depth_scale": 0.75
           },
-          "visual_review": "PENDING",
+          "visual_review": "REJECTED",
           "reference_valleys": {
             "left": 2,
             "right": 0
@@ -310,7 +439,7 @@
           "params": {
             "depth_scale": 1
           },
-          "visual_review": "PENDING",
+          "visual_review": "REJECTED",
           "reference_valleys": {
             "left": 2,
             "right": 0
@@ -364,7 +493,7 @@
           "params": {
             "depth_scale": 1.25
           },
-          "visual_review": "PENDING",
+          "visual_review": "REJECTED",
           "reference_valleys": {
             "left": 2,
             "right": 0

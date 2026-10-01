@@ -50,8 +50,8 @@ No se declara watertight al parent: ya tiene228 boundary edges. Los 310 de candi
 
 - [Ronda vertical rechazada](https://github.com/Klymapo/alth-meta/actions/runs/36883548374).
 - [Última generación, GLB/blend y todos los reportes](https://github.com/Klymapo/alth-meta/actions/runs/36886096110/artifacts/11174088076).
-- [Revisión multivista de los GLB existentes](https://github.com/Klymapo/alth-meta/actions/runs/36887264686/artifacts/11174633435).
-- La revisión final vuelve a encuadrar exclusivamente finger_region con bounds de la superficie medida; los cinco GLB usados se verifican inmutables.
+- [Revisión multivista de los GLB existentes](https://github.com/Klymapo/alth-meta/actions/runs/36888524658/artifacts/11175447522).
+- [Revisión final verificada](https://github.com/Klymapo/alth-meta/actions/runs/36888524658): 9 pruebas de contrato, cinco GLB inmutables, veto visual de los tres y SHA Alpha confirmado. La revisión final vuelve a encuadrar exclusivamente finger_region con bounds de la superficie medida; los cinco GLB usados se verifican inmutables.
 
 Incluye trial/module_result/gate/learning, topology, regional/full metrics, hand probe, renders front/side/back/3/4, closeups izquierda/derecha/dedos y hoja REFERENCE/ALPHA/C01/C02/C03, además de hoja con Valley. Revisión exporta gates finales con veto visual y reviewed_loop.json. Retención 7 días, hasta el 8 de octubre UTC.
 
