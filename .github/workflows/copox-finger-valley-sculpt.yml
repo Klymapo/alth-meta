@@ -1,0 +1,78 @@
+name: COPOX · Finger valley sculpt
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/finger_valley_sculpt.py"
+      - "copox/production/finger_valley_sculpt_trial.py"
+      - ".github/workflows/copox-finger-valley-sculpt.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  valley-sculpt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - name: Ejecutar tres intensidades sin promoción
+        run: |
+          rm -rf .copox/finger-valley-sculpt
+          for SLOT in 1 2 3; do
+            python3 -m copox.production.finger_valley_sculpt_trial \
+              --baseline assets/joven_rubio/theo_alpha.glb \
+              --reference refs/personajes/joven-rubio-4-vistas.jpg \
+              --config copox/reference_configs/joven_rubio_alpha.json \
+              --policy copox/production/theo_m5_policy.json \
+              --slot "$SLOT" \
+              --output-dir ".copox/finger-valley-sculpt/c0${SLOT}"
+          done
+      - name: Resumir
+        run: |
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path('.copox/finger-valley-sculpt')
+          rows=[]
+          for p in sorted(root.glob('c*/trial.json')):
+              t=json.loads(p.read_text())
+              r=t['result']; d=t['hand_detail']['summary']; s=t['sculpt']
+              assert t['promotion_executed'] is False
+              rows.append({
+                  'candidate':p.parent.name,
+                  'sculpt_strength':t['learning']['sculpt_strength'],
+                  'reference_valleys':d['reference_valleys'],
+                  'model_valleys':d['model_valleys'],
+                  'semantic_ready':r['semantic_ready'],
+                  'mesh_integrity':r['mesh_integrity'],
+                  'scope_safe':r['scope_safe'],
+                  'regression_ok':r['regression_ok'],
+                  'target_gain_pp':r['target_gain_pp'],
+                  'global_gain_pp':r['global_gain_pp'],
+                  'worst_view_delta_pp':r['worst_view_delta_pp'],
+                  'moved_vertices':s['moved_vertices'],
+                  'topology_counts_preserved':s['topology_counts_preserved'],
+                  'reasons':t['gate']['reasons'],
+              })
+          assert len(rows)==3
+          sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
+          assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b'
+          ranking=sorted(rows,key=lambda x:(x['semantic_ready'],x['mesh_integrity'],x['regression_ok'],x['target_gain_pp'],x['global_gain_pp']),reverse=True)
+          (root/'summary.json').write_text(json.dumps({'baseline_sha256':sha,'promotion_executed':False,'research_stage_only':True,'ranking':ranking},indent=2))
+          print(json.dumps(ranking,indent=2))
+          PY
+      - name: Evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-finger-valley-sculpt
+          path: .copox/finger-valley-sculpt/
+          retention-days: 1
+          if-no-files-found: ignore
