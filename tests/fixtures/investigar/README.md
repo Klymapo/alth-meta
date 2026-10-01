@@ -6,6 +6,6 @@
 - `bmesh_ops.html`, `modificadores.html`: reproducción **reducida** del marcado Sphinx de
   docs.blender.org (pocas secciones, texto tomado de la fuente oficial) para probar el parser.
   No es una copia de la página: docs.blender.org no era alcanzable desde la sesión que las escribió.
-- `github_search.json` y `ejemplo_*.py`: respuesta con la forma de la API de búsqueda de código de
+- `github_search.json`, `github_repos.json`, `github_tree.json` y `ejemplo_*.py`: respuestas con la forma de las APIs de búsqueda (código y repos) y árbol de
   GitHub y dos archivos de ejemplo escritos para la prueba (no son repos reales).
 La prueba real con red corre en Actions (`.github/workflows/linea-unica.yml`, job t1).

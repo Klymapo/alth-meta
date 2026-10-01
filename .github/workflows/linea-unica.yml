@@ -53,6 +53,7 @@ jobs:
           name: linea-unica-${{ github.run_id }}
           path: .linea/
           retention-days: 7
+          include-hidden-files: true
 
   t1-investigar:
     runs-on: ubuntu-latest
@@ -96,3 +97,4 @@ jobs:
           name: linea-unica-t1-${{ github.run_id }}
           path: .linea/
           retention-days: 7
+          include-hidden-files: true

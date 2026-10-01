@@ -191,3 +191,28 @@ def test_marcar_estados():
     assert brief["estado"] == "unverified" and indice["entradas"][0]["candidatos"][0]["estado"] == "failed"
     iv.marcar(indice, brief, "x.json", "b", "verified", "pasa")
     assert brief["estado"] == "verified" and brief["techniques"][1]["estado"] == "verified"
+
+
+def test_respaldo_por_repositorios_si_la_busqueda_de_codigo_no_sirve(kb):
+    """Con el token de Actions `search/code` no busca en repos ajenos: se usa search/repositories + árbol."""
+    r = {API + "bmesh.ops.html": (200, leer("bmesh_ops.html")),
+         API + "bpy.ops.mesh.html": (200, leer("bpy_ops_mesh.html")),
+         "https://api.github.com/repos/ejemplo/manos/git/trees/main?recursive=1": (200, leer("github_tree.json")),
+         "https://raw.githubusercontent.com/ejemplo/manos/main/tools/ejemplo_split.py": (200, leer("ejemplo_split.py"))}
+
+    class R(RedFalsa):
+        def get(self, url, aceptar=None):
+            if url.startswith("https://api.github.com/search/code"):
+                self.registro.append({"url": url, "codigo": 403, "bytes": 0})
+                return 403, ""
+            if url.startswith("https://api.github.com/search/repositories"):
+                self.registro.append({"url": url, "codigo": 200, "bytes": 1})
+                return 200, leer("github_repos.json")
+            return super().get(url, aceptar)
+    res = iv.buscar("dedos", "separar y cortar dedos de una mano", R(r), version="5.2.2", ahora=AHORA,
+                    guardar=False, **kb)
+    assert res["estado"] == "CANDIDATOS", res["gate"]
+    b = res["brief"]
+    assert any(s["source_type"] == "community" and "ejemplo/manos" in s["url"] for s in b["sources"])
+    assert any(c.startswith("403 https://api.github.com/search/code") for c in
+               [f"{x['codigo']} {x['url']}" for x in b["consultas_http"]])

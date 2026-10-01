@@ -401,8 +401,28 @@ def recolectar_docs(red: Red, version: str, plazo: float) -> tuple[list[dict], l
     return secciones, fuentes
 
 
-def buscar_codigo(red: Red, consultas: list[str], max_archivos: int, plazo: float) -> list[dict]:
-    """Ejemplos publicados (API de búsqueda de código de GitHub). Requiere token; sin él, no hay ejemplos."""
+def _agregar_ejemplo(red: Red, ejemplos: list, vistos: set, html_url: str, repo: str, ruta: str) -> None:
+    raw = url_raw(html_url)
+    if not raw or raw in vistos:
+        return
+    vistos.add(raw)
+    c, texto = red.get(raw)
+    if c != 200 or not texto:
+        return
+    llamadas = extraer_llamadas(texto)
+    if llamadas:
+        ejemplos.append({"url": html_url, "repo": repo, "ruta": ruta, "llamadas": llamadas, "texto": texto[:20000]})
+
+
+def buscar_codigo(red: Red, consultas: list[str], max_archivos: int, plazo: float,
+                  consulta_repos: str | None = None, max_repos: int = 4) -> list[dict]:
+    """Ejemplos publicados con la API de GitHub.
+
+    1. Búsqueda de código (`search/code`): con un token personal busca en todo GitHub; con el token de
+       Actions suele no devolver repos ajenos.
+    2. Respaldo que sí funciona con el token de Actions: búsqueda de repositorios públicos
+       (`search/repositories`), árbol de cada repo y los .py cuyo nombre coincide con la consulta.
+    """
     if not red.token:
         return []
     vistos, ejemplos = set(), []
@@ -414,17 +434,31 @@ def buscar_codigo(red: Red, consultas: list[str], max_archivos: int, plazo: floa
         if codigo != 200:
             continue
         for item in json.loads(cuerpo or "{}").get("items", []):
-            raw = url_raw(item.get("html_url", ""))
-            if not raw or raw in vistos or len(ejemplos) >= max_archivos or time.time() > plazo:
-                continue
-            vistos.add(raw)
-            c, texto = red.get(raw)
-            if c != 200 or not texto:
-                continue
-            llamadas = extraer_llamadas(texto)
-            if llamadas:
-                ejemplos.append({"url": item["html_url"], "repo": item.get("repository", {}).get("full_name", ""),
-                                 "ruta": item.get("path", ""), "llamadas": llamadas, "texto": texto[:20000]})
+            if len(ejemplos) >= max_archivos or time.time() > plazo:
+                break
+            _agregar_ejemplo(red, ejemplos, vistos, item.get("html_url", ""),
+                             item.get("repository", {}).get("full_name", ""), item.get("path", ""))
+    if len(ejemplos) >= max_archivos or not consulta_repos or time.time() > plazo:
+        return ejemplos
+    url = ("https://api.github.com/search/repositories?sort=stars&order=desc&per_page=10&q="
+           + urllib.parse.quote(consulta_repos))
+    codigo, cuerpo = red.get(url)
+    repos = json.loads(cuerpo or "{}").get("items", []) if codigo == 200 else []
+    palabras = {raiz_en(w) for w in tokens(consulta_repos)} | {"bmesh", "mesh", "op"}
+    for r in repos[:max_repos]:
+        if len(ejemplos) >= max_archivos or time.time() > plazo:
+            break
+        nombre, rama = r.get("full_name", ""), r.get("default_branch", "main")
+        c, cuerpo = red.get(f"https://api.github.com/repos/{nombre}/git/trees/{urllib.parse.quote(rama)}?recursive=1")
+        if c != 200:
+            continue
+        pys = [t["path"] for t in json.loads(cuerpo or "{}").get("tree", [])
+               if t.get("type") == "blob" and t.get("path", "").endswith(".py") and t.get("size", 0) < 200_000]
+        pys.sort(key=lambda ruta: -len({raiz_en(w) for w in tokens(ruta)} & palabras))
+        for ruta in pys[:6]:
+            if len(ejemplos) >= max_archivos or time.time() > plazo:
+                break
+            _agregar_ejemplo(red, ejemplos, vistos, f"https://github.com/{nombre}/blob/{rama}/{ruta}", nombre, ruta)
     return ejemplos
 
 
@@ -573,7 +607,8 @@ def buscar(capacidad: str, problema: str, red: Red, *, version: str | None = Non
     if secciones and principales:
         prev, _ = puntuar(secciones, [], consulta, fallidas, max_candidatos=3)
         consultas_codigo += [f"{c['tecnica']} {principales[0]} language:Python" for c in prev]
-    ejemplos = buscar_codigo(red, consultas_codigo, max_ejemplos, plazo)
+    consulta_repos = " ".join(["bmesh"] + principales[:2]) if principales else None
+    ejemplos = buscar_codigo(red, consultas_codigo, max_ejemplos, plazo, consulta_repos)
     aplicables, descartadas = puntuar(secciones, ejemplos, consulta, fallidas, max_candidatos)
     brief = armar_brief(capacidad, problema, version, consulta, fuentes, ejemplos, aplicables, descartadas,
                         fallidas, red.registro, ahora)
@@ -688,7 +723,9 @@ def main(argv=None) -> int:
         red = Red(token=os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN"))
         r = buscar(a.capacidad, a.problema, red, max_candidatos=a.max_candidatos, max_ejemplos=a.max_ejemplos,
                    max_segundos=a.max_segundos, guardar=not a.no_guardar)
-        r.pop("brief", None)
+        brief = r.pop("brief", None) or {}
+        r["consultas_http"] = [f"{x.get('codigo')} {x['url']}" for x in brief.get("consultas_http", [])]
+        r["ejemplos_de_codigo"] = sorted({u for t in brief.get("techniques", []) for u in t.get("ejemplos", [])})
         print(json.dumps(r, ensure_ascii=False, indent=2))
         if r["estado"] == "RESEARCH_REQUIRED":
             print(f"RESEARCH_REQUIRED: {', '.join(r['gate']['reasons'])}", file=sys.stderr)
