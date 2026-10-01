@@ -1,7 +1,7 @@
 """Banco genérico de tools/investigar.py: ¿el candidato se puede aplicar sin romper la malla?
 
-Solo puede TUMBAR un candidato (`failed`): si truena o deja la malla peor (aristas no-manifold o caras
-degeneradas nuevas). Si pasa, el candidato sigue `unverified`: probar que resuelve el problema le toca
+Solo puede TUMBAR un candidato (`failed`): si truena o deja la malla peor (aristas no-manifold, caras
+degeneradas o aristas sueltas nuevas). Si pasa, el candidato sigue `unverified`: probar que resuelve el problema le toca
 al banco propio de la capacidad (tools/bancos/<capacidad>.py), con la misma interfaz:
 
     probar(tecnica: dict, carpeta: Path) -> {"ok": True | False | None, "motivo": str,
@@ -114,9 +114,11 @@ def probar(tecnica: dict, carpeta: Path) -> dict:
         if huella(bm2) == h0:
             r = {"ok": None, "motivo": "sin efecto en el banco con los parámetros encontrados", "metricas":
                  {"antes": antes, "despues": despues}}
-        elif despues["no_manifold"] > antes["no_manifold"] or despues["degeneradas"] > antes["degeneradas"]:
+        elif any(despues[k] > antes[k] for k in ("no_manifold", "degeneradas", "aristas_sueltas")):
             r = {"ok": False, "motivo": f"rompe la malla: no-manifold {antes['no_manifold']}→{despues['no_manifold']}, "
-                 f"degeneradas {antes['degeneradas']}→{despues['degeneradas']}", "metricas": {"antes": antes, "despues": despues}}
+                 f"degeneradas {antes['degeneradas']}→{despues['degeneradas']}, "
+                 f"aristas sueltas {antes['aristas_sueltas']}→{despues['aristas_sueltas']}",
+                 "metricas": {"antes": antes, "despues": despues}}
         else:
             r = {"ok": True, "motivo": f"aplica sin romper la malla (borde {antes['borde']}→{despues['borde']}, "
                  f"tris {antes['tris']}→{despues['tris']})", "metricas": {"antes": antes, "despues": despues}}
