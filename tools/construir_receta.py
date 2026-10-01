@@ -74,10 +74,10 @@ def spec_asset(receta: dict, objs) -> dict:
     """spec.json mínimo para la verificación: cotas del cuerpo (lo que midió la receta), tope y colores."""
     cuerpo = objs[0].name
     m = receta["medidas_mm"]
-    er = receta["piezas"][0]["params"].get("escala_r", 1.0)
+    # la cota es la medida de la referencia; escala_r es un ajuste para alcanzarla, no la mueve
     return {"nombre": receta["nombre"], "categoria": receta["categoria"], "k": receta["k"],
             "tris_max": receta["tris_max"],
-            "cotas": [{"pieza": cuerpo, "eje": "W", "mm": round(m["cuerpo_ancho"] * er, 2)},
+            "cotas": [{"pieza": cuerpo, "eje": "W", "mm": m["cuerpo_ancho"]},
                       {"pieza": cuerpo, "eje": "H", "mm": m["cuerpo_alto"]}],
             "tolerancia_cotas": TOL_DIM, "colores": {p["id"]: {"hex": p["color"]} for p in receta["piezas"]},
             "receta": receta}
@@ -97,13 +97,19 @@ def construir(receta: dict, salida: Path, modo: str = "iteracion", exportar: Pat
     dims = {"ancho": round(mx.x - mn.x, 3), "fondo": round(mx.y - mn.y, 3), "alto": round(mx.z - mn.z, 3)}
     pedidas = receta["medidas_mm"]
     dif = {k: round(dims[k] / pedidas[k] - 1, 4) for k in ("ancho", "alto") if pedidas.get(k)}
+    dadas = [k for k in pedidas.get("dadas") or list(dif) if k in dif]
+    cu = rep["medidas_mm"][objs[0].name]
     ref = mascara_referencia(receta) if ref is None else ref
     ious = {v: iou_contra(Path(rep["vistas"][v]), ref) for v in VISTAS_IOU if v in rep["vistas"]}
     tris = sum(v["tris_sin_modificadores"] for v in rep["medidas_mm"].values())
     verif = rep.get("verificacion", {})
     res = {"nombre": receta["nombre"], "modo": modo, "hoja": rep["hoja"], "vistas": rep["vistas"],
            "dimensiones_mm": dims, "dimensiones_pedidas_mm": {k: pedidas.get(k) for k in ("ancho", "alto")},
-           "dif_dimensiones": dif, "dimensiones_ok": all(abs(d) <= TOL_DIM for d in dif.values()),
+           "dif_dimensiones": dif, "dimensiones_auditadas": dadas,
+           "dimensiones_ok": all(abs(dif[k]) <= TOL_DIM for k in dadas),
+           "cuerpo_mm": {"W": cu["W"], "H": cu["H"]},
+           "dif_cuerpo": {"W": round(cu["W"] / receta["medidas_mm"]["cuerpo_ancho"] - 1, 4),
+                          "H": round(cu["H"] / receta["medidas_mm"]["cuerpo_alto"] - 1, 4)},
            "tris": tris, "tris_max": receta["tris_max"], "verificacion_ok": bool(verif.get("ok")),
            "verificacion": verif, "iou_por_vista": ious, "iou": max(ious.values()) if ious else 0.0,
            "segundos": round(time.time() - t0, 1)}

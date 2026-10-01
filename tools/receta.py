@@ -211,7 +211,7 @@ def color_paleta(rgb: np.ndarray, m: np.ndarray, paleta) -> str:
 
 
 # ================================================================ armar
-def armar(ficha: dict, raiz: Path = RAIZ, spec: dict | None = None) -> dict:
+def armar(ficha: dict, raiz: Path = RAIZ, spec: dict | None = None, tamano_texto: str | None = None) -> dict:
     spec = spec or json.loads(SPEC.read_text(encoding="utf-8"))
     if ficha.get("tipo") != "objeto":
         raise RecetaNoSoportada(f"tipo '{ficha.get('tipo')}': la receta por código solo arma objetos todavía")
@@ -288,13 +288,20 @@ def armar(ficha: dict, raiz: Path = RAIZ, spec: dict | None = None) -> dict:
                                      f"{p['area_rel'] * 100:.1f} % del área)"})
             k = len(piezas) - 1
             ajustables.append({"ruta": f"piezas.{k}.params.rot.0", "min": 50.0, "max": 90.0, "paso": 10.0})
+    # medidas que dio el usuario: solo esas se auditan a ±2 %; las demás salen de la foto (perspectiva)
+    dado = rec.parsear_tamano(tamano_texto) if tamano_texto else {}
+    if "mayor" in dado:
+        dadas = [max(("alto", "ancho"), key=lambda k: tam.get(k) or 0)]
+    else:
+        dadas = [k for k in ("alto", "ancho", "fondo") if k in dado] or [k for k in ("ancho", "alto") if tam.get(k)][:1]
     cat = (ficha.get("escala") or {}).get("categoria") or "de_mano"
     tope = spec["geometria"]["tris_max"].get(TOPE_POR_CATEGORIA.get(cat, "objeto_mano"), 500)
     receta = {
         "version": "1.0", "nombre": rec.nombre_id(ficha["nombre"]), "tipo": "objeto", "categoria": cat,
         "k": float((ficha.get("escala") or {}).get("k", 1.0)),
         "medidas_mm": {"alto": round(float((y1 - y0 + 1) * esc), 2), "ancho": round(float((x1 - x0 + 1) * esc), 2),
-                       "fondo": tam.get("fondo"), "cuerpo_alto": pt["alto_mm"], "cuerpo_ancho": pt["ancho_mm"]},
+                       "fondo": tam.get("fondo"), "cuerpo_alto": pt["alto_mm"], "cuerpo_ancho": pt["ancho_mm"],
+                       "dadas": dadas},
         "tris_max": int(tope), "piezas": piezas, "ajustables": ajustables,
         "origen": {"imagen": (ficha.get("_meta") or {}).get("imagen", ""),
                    "recorte": list((ficha.get("_meta") or {}).get("recorte") or []) or None,
@@ -337,13 +344,14 @@ def main(argv=None) -> int:
     a = sub.add_parser("armar")
     a.add_argument("ficha")
     a.add_argument("--salida", default=None)
+    a.add_argument("--tamano", default=None, help="el tamaño que dio el usuario (para saber qué medida auditar)")
     v = sub.add_parser("validar")
     v.add_argument("receta")
     args = p.parse_args(argv)
     if args.cmd == "armar":
         ficha = json.loads(Path(args.ficha).read_text(encoding="utf-8"))
         try:
-            receta = armar(ficha)
+            receta = armar(ficha, tamano_texto=args.tamano)
         except RecetaNoSoportada as e:
             print(f"[receta] FALTANTE: {e}", file=sys.stderr)
             return 4

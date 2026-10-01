@@ -21,7 +21,8 @@
         "ancho": {"type": "number", "minimum": 0.1},
         "fondo": {"type": ["number", "null"]},
         "cuerpo_alto": {"type": "number", "minimum": 0.1},
-        "cuerpo_ancho": {"type": "number", "minimum": 0.1}
+        "cuerpo_ancho": {"type": "number", "minimum": 0.1},
+        "dadas": {"type": "array", "items": {"type": "string", "enum": ["alto", "ancho", "fondo"]}}
       }
     },
     "tris_max": {"type": "integer", "minimum": 1},

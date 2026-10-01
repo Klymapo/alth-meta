@@ -115,7 +115,7 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           bash tools/ensure_blender.sh --strict
           uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" numpy scipy Pillow
-      - name: T2 · Entrada única (manzana, 8cm) sin intervención
+      - name: T2+T3 · Entrada única (manzana, 8cm) sin intervención, con ajuste numérico
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

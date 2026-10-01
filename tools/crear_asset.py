@@ -79,7 +79,7 @@ def crear(imagen: str, nombre: str, tamano: str | None, recorte=None, salida: Pa
     # 4. receta (código, desde la ficha)
     t = time.time()
     try:
-        receta = R.armar(ficha)
+        receta = R.armar(ficha, tamano_texto=tamano)
     except R.RecetaNoSoportada as e:
         resumen["faltantes"].append({"capacidad": "receta", "motivo": str(e)})
         resumen.update(estado="FALTANTES", segundos=round(time.time() - t0, 1))
