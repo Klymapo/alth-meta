@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "alth-meta/spec/receta.schema.json",
+  "title": "Receta ALTH",
+  "description": "Plan de construcción de un asset armado por código (tools/receta.py) a partir de la ficha de tools/reconocer.py. Medidas en mm ALTH (1 BU = 1 mm), pies en Z=0, frente hacia -Y. tools/construir_receta.py la convierte en geometría con la librería alth.",
+  "type": "object",
+  "required": ["version", "nombre", "tipo", "categoria", "k", "medidas_mm", "tris_max", "piezas", "ajustables", "origen"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"type": "string", "enum": ["1.0"]},
+    "nombre": {"type": "string", "minLength": 1},
+    "tipo": {"type": "string", "enum": ["objeto"]},
+    "categoria": {"type": "string", "minLength": 1},
+    "k": {"type": "number", "minimum": 0},
+    "medidas_mm": {
+      "type": "object",
+      "required": ["alto", "ancho"],
+      "additionalProperties": false,
+      "properties": {
+        "alto": {"type": "number", "minimum": 0.1},
+        "ancho": {"type": "number", "minimum": 0.1},
+        "fondo": {"type": ["number", "null"]},
+        "cuerpo_alto": {"type": "number", "minimum": 0.1},
+        "cuerpo_ancho": {"type": "number", "minimum": 0.1},
+        "dadas": {"type": "array", "items": {"type": "string", "enum": ["alto", "ancho", "fondo"]}}
+      }
+    },
+    "tris_max": {"type": "integer", "minimum": 1},
+    "piezas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "modulo", "color", "params"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "modulo": {"type": "string", "enum": ["torno", "prisma", "hoja"]},
+          "color": {"type": "string", "pattern": "^#[0-9A-F]{6}$"},
+          "params": {"type": "object"},
+          "origen": {"type": "string"}
+        }
+      }
+    },
+    "ajustables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ruta", "min", "max"],
+        "additionalProperties": false,
+        "properties": {
+          "ruta": {"type": "string", "minLength": 1},
+          "min": {"type": "number"},
+          "max": {"type": "number"},
+          "paso": {"type": "number"}
+        }
+      }
+    },
+    "origen": {
+      "type": "object",
+      "required": ["imagen", "recorte", "metodo"],
+      "additionalProperties": true,
+      "properties": {
+        "imagen": {"type": "string"},
+        "recorte": {"type": ["array", "null"], "items": {"type": "number"}},
+        "metodo": {"type": "string"}
+      }
+    },
+    "avisos": {"type": "array", "items": {"type": "string"}}
+  }
+}

@@ -9,10 +9,10 @@
     "diametro_base": 60
   },
   "medidas_alth_mm": {
-    "alto_con_tapa": 12.86,
-    "diametro_arriba": 10.06,
-    "diametro_base": 6.71,
-    "formula": "mm_real * 0.0559 * 2.0"
+    "alto_con_tapa": 12.23,
+    "diametro_arriba": 9.57,
+    "diametro_base": 6.38,
+    "formula": "mm_real * 0.05316 * 2.0"
   },
   "colores": {
     "vaso": {
@@ -43,12 +43,12 @@
     {
       "pieza": "Vaso_cuerpo",
       "eje": "W",
-      "mm": 10.06
+      "mm": 9.57
     },
     {
       "pieza": "Vaso_cuerpo",
       "eje": "H",
-      "mm": 12.86
+      "mm": 12.23
     }
   ],
   "historial": [
@@ -63,6 +63,17 @@
     {
       "vuelta": 2,
       "nota": "aprobada; funda cambiada a carton_kraft #B08A62 (nuevo en paleta_notas)"
+    },
+    {
+      "vuelta": "escala v2",
+      "nota": "×0.9510 (s0 0.0559 → 0.05316); solo tamaño, aprobado sin rehacer",
+      "fecha": "2026-10-01"
     }
-  ]
+  ],
+  "escala": {
+    "version": "v2.0",
+    "s0": 0.05316,
+    "factor": 0.95098,
+    "nota": "re-dimensionado uniforme con tools/redimensionar.py; forma sin cambios"
+  }
 }

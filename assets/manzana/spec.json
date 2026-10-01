@@ -8,9 +8,9 @@
     "alto_cuerpo": 72
   },
   "medidas_alth_mm": {
-    "diametro": 8.94,
-    "alto_cuerpo": 8.05,
-    "formula": "mm_real * 0.0559 * 2.0"
+    "diametro": 8.5,
+    "alto_cuerpo": 7.66,
+    "formula": "mm_real * 0.05316 * 2.0"
   },
   "colores": {
     "cuerpo": {
@@ -65,19 +65,30 @@
     {
       "vuelta": 6,
       "nota": "aprobada"
+    },
+    {
+      "vuelta": "escala v2",
+      "nota": "×0.9510 (s0 0.0559 → 0.05316); solo tamaño, aprobado sin rehacer",
+      "fecha": "2026-10-01"
     }
   ],
   "cotas": [
     {
       "pieza": "Manzana_cuerpo",
       "eje": "W",
-      "mm": 8.94
+      "mm": 8.5
     },
     {
       "pieza": "Manzana_cuerpo",
       "eje": "H",
-      "mm": 8.05
+      "mm": 7.66
     }
   ],
-  "nota_cotas": "D (fondo) no se verifica: mide 8.64 a propósito por la irregularidad del torno (aprobado en la vuelta 6)"
+  "nota_cotas": "D (fondo) no se verifica: mide 8.64 a propósito por la irregularidad del torno (aprobado en la vuelta 6)",
+  "escala": {
+    "version": "v2.0",
+    "s0": 0.05316,
+    "factor": 0.95098,
+    "nota": "re-dimensionado uniforme con tools/redimensionar.py; forma sin cambios"
+  }
 }

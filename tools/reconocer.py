@@ -526,14 +526,21 @@ def distancia_color(a: list, b: list) -> float:
 
 
 def parecidos(sil: dict, colores: list[dict], huellas: list[dict], n: int = 3) -> list[dict]:
+    """Similitud con cada asset memorizado; si la huella trae varias vistas, cuenta la más parecida."""
     v = vector_forma(sil)
     mios = colores_lab(colores)
     salida = []
     for h in huellas:
-        ds = float(np.linalg.norm(v - np.array(h["forma"])))
-        dc = distancia_color(mios, h.get("colores", []))
+        vistas = h.get("vistas") or {"frente": {"forma": h["forma"], "colores": h.get("colores", [])}}
+        mejor = None
+        for nombre_vista, hv in vistas.items():
+            ds = float(np.linalg.norm(v - np.array(hv["forma"])))
+            dc = distancia_color(mios, hv.get("colores", []))
+            if mejor is None or ds + dc < mejor[0] + mejor[1]:
+                mejor = (ds, dc, nombre_vista)
+        ds, dc, nombre_vista = mejor
         salida.append({"asset": h["asset"], "nombre": h["nombre"], "similitud": round(math.exp(-2.5 * (ds + dc)), 3),
-                       "distancia_forma": round(ds, 3), "distancia_color": round(dc, 3)})
+                       "distancia_forma": round(ds, 3), "distancia_color": round(dc, 3), "vista": nombre_vista})
     return sorted(salida, key=lambda s: -s["similitud"])[:n]
 
 
@@ -817,21 +824,46 @@ def validar_ficha(ficha: dict, vocab: dict) -> dict:
 
 
 # ================================================================ memoria
+# Cuadrantes de la hoja 2x2 de alth.hoja_contacto (título arriba): frente, lateral / espalda, 3/4.
+VISTAS_HOJA = {"frente": (0.0, 0.03, 0.5, 0.5), "lateral": (0.5, 0.03, 1.0, 0.5),
+               "espalda": (0.0, 0.53, 0.5, 1.0), "tres_cuartos": (0.5, 0.53, 1.0, 1.0)}
+
+
+def huella_de_vista(final: Path, recorte, paleta) -> dict | None:
+    rgb = cargar(final, recorte)
+    figura, _ = separar_figura(rgb)
+    if figura.sum() < 50:
+        return None
+    sil, lleno, _ = medir_silueta(figura)
+    colores = colores_dominantes(rgb, lleno, paleta)
+    return {"sil": sil, "colores": colores,
+            "resumen": {"forma": [round(float(x), 4) for x in vector_forma(sil)], "colores": colores_lab(colores)}}
+
+
 def huella_de_asset(carpeta: Path, vocab: dict, spec: dict) -> dict:
-    """Huella de un asset aprobado: silueta y colores de la vista de FRENTE de su final.png (hoja 2x2)."""
+    """Huella de un asset aprobado: silueta y colores de las 4 vistas de su final.png (hoja 2x2).
+
+    `forma`/`colores` de arriba son los de FRENTE (compatibilidad); `vistas` trae las cuatro, y
+    `parecidos` compara contra la más parecida (la memoria ya no depende de la vista de la foto).
+    """
     carpeta = Path(carpeta)
     final = carpeta / "final.png"
     asset_spec = json.loads((carpeta / "spec.json").read_text(encoding="utf-8"))
-    rgb = cargar(final, (0.0, 0.03, 0.5, 0.5))
-    figura, _ = separar_figura(rgb)
-    sil, lleno, _ = medir_silueta(figura)
-    colores = colores_dominantes(rgb, lleno, cargar_paleta(spec))
+    paleta = cargar_paleta(spec)
+    vistas = {}
+    for nombre_vista, rec_vista in VISTAS_HOJA.items():
+        hv = huella_de_vista(final, rec_vista, paleta)
+        if hv:
+            vistas[nombre_vista] = hv
+    frente = vistas["frente"]
+    sil, colores = frente["sil"], frente["colores"]
     nombre = nombre_id(asset_spec.get("nombre") or carpeta.name)
     return {"asset": str(carpeta.relative_to(RAIZ)) if carpeta.is_absolute() and RAIZ in carpeta.parents else str(carpeta),
             "nombre": nombre, "alias": sorted({nombre_id(carpeta.name)} - {nombre}),
             "tipo": "objeto", "categoria": asset_spec.get("categoria"),
             "medidas_reales_mm": medidas_de_spec(asset_spec.get("medidas_reales_mm")),
             "forma": [round(float(x), 4) for x in vector_forma(sil)], "colores": colores_lab(colores),
+            "vistas": {k: v["resumen"] for k, v in vistas.items()},
             "familias": familias(colores),
             "evidencia": str(final.relative_to(RAIZ)) if final.is_absolute() and RAIZ in final.parents else str(final),
             "fecha": datetime.now(timezone.utc).date().isoformat()}

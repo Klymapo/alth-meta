@@ -1,0 +1,22 @@
+{
+ "total_count": 2,
+ "incomplete_results": false,
+ "items": [
+  {
+   "name": "ejemplo_split.py",
+   "path": "tools/ejemplo_split.py",
+   "html_url": "https://github.com/ejemplo/manos/blob/abc123/tools/ejemplo_split.py",
+   "repository": {
+    "full_name": "ejemplo/manos"
+   }
+  },
+  {
+   "name": "ejemplo_weld.py",
+   "path": "scan/ejemplo_weld.py",
+   "html_url": "https://github.com/ejemplo/escaneo/blob/def456/scan/ejemplo_weld.py",
+   "repository": {
+    "full_name": "ejemplo/escaneo"
+   }
+  }
+ ]
+}

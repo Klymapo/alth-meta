@@ -1,0 +1,129 @@
+name: Crear asset (línea única)
+run-name: "Crear · ${{ inputs.nombre || github.event.issue.title }}"
+
+# Entrada única: imagen + nombre + tamaño real. Sin IA ni claves.
+#  - Desde la app de GitHub en el celular: abre un issue con la plantilla "Crear asset" (adjunta la
+#    foto), o Actions → "Crear asset (línea única)" → Run workflow con una imagen que ya esté en refs/.
+#  - Encadena reconocer → capacidades → investigar (si hay brechas) → receta → construir → ajustar.
+#  - Deja la hoja y el resumen como artifact (y, con T4, como comentario del issue). No publica nada.
+on:
+  workflow_dispatch:
+    inputs:
+      imagen:
+        description: "Ruta de la imagen en el repo (p. ej. refs/infografias/objeto-01-manzana.png)"
+        required: true
+      nombre:
+        description: "Nombre (p. ej. manzana)"
+        required: true
+      tamano:
+        description: "Tamaño REAL (p. ej. 8cm)"
+        required: true
+      recorte:
+        description: "Opcional: x0,y0,x1,y1 (infografías)"
+        default: ""
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: write     # solo para la rama de revisión linea/revision-issue-N (nunca main)
+  issues: write
+
+concurrency:   # abrir con la plantilla dispara "opened" y "labeled": solo sigue la última
+  group: crear-asset-${{ github.event.issue.number || inputs.nombre }}
+  cancel-in-progress: true
+
+jobs:
+  crear:
+    # no reacciona a las etiquetas aprobado/rechazado (esas son de aprobar-linea.yml)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.action == 'opened' && contains(github.event.issue.labels.*.name, 'crear-asset')) ||
+      (github.event.action == 'labeled' && github.event.label.name == 'crear-asset')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+      - name: Blender headless
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          bash tools/ensure_blender.sh --strict
+          uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" numpy scipy Pillow
+      - name: Entrada
+        id: entrada
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          IN_IMAGEN: ${{ inputs.imagen }}
+          IN_NOMBRE: ${{ inputs.nombre }}
+          IN_TAMANO: ${{ inputs.tamano }}
+          IN_RECORTE: ${{ inputs.recorte }}
+        run: |
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            alth-python tools/entrada_issue.py "$GITHUB_EVENT_PATH" --destino refs/pendientes > entrada.json
+          else
+            alth-python -c "import json,os; print(json.dumps({'imagen': os.environ['IN_IMAGEN'], 'nombre': os.environ['IN_NOMBRE'], 'tamano': os.environ['IN_TAMANO'], 'recorte': os.environ.get('IN_RECORTE') or None}))" > entrada.json
+          fi
+          cat entrada.json
+      - name: Línea única
+        id: linea
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          read -r IMG NOM TAM REC < <(alth-python -c "import json; e=json.load(open('entrada.json')); print(e['imagen'], e['nombre'].replace(' ','_'), e['tamano'].replace(' ',''), e.get('recorte') or '-')")
+          args=(--imagen "$IMG" --nombre "$NOM" --tamano "$TAM" --salida ".linea/crear/$NOM")
+          [ "$REC" != "-" ] && args+=(--recorte "$REC")
+          mkdir -p .linea
+          set +e
+          alth-python tools/crear_asset.py "${args[@]}" 2>&1 | grep -v -E "INFO|CUEW|^Fra|Saved" | tee .linea/crear_salida.txt
+          echo "salida=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          echo "carpeta=.linea/crear/$NOM" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Resumen
+        if: always()
+        run: |
+          r="${{ steps.linea.outputs.carpeta }}/resumen.json"
+          [ -f "$r" ] && alth-python tools/resumen_linea.py "$r" >> "$GITHUB_STEP_SUMMARY" || echo "sin resumen" >> "$GITHUB_STEP_SUMMARY"
+      - name: Hoja de revisión en el issue (rama linea/revision-issue-N, no main)
+        if: github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.event.issue.number }}
+          CARPETA: ${{ steps.linea.outputs.carpeta }}
+        run: |
+          rama="linea/revision-issue-$N"
+          if [ ! -f "$CARPETA/receta.json" ] || [ ! -f "$CARPETA/resumen.json" ]; then
+            { echo "No se pudo armar el asset. Faltantes:"; echo; alth-python tools/resumen_linea.py "$CARPETA/resumen.json" 2>/dev/null || cat .linea/crear_salida.txt | tail -20; } > comentario.md
+            gh issue comment "$N" --body-file comentario.md
+            exit 0
+          fi
+          nom=$(basename "$CARPETA")
+          alth-python tools/hoja_revision.py "$CARPETA" --salida "$CARPETA/revision.png"
+          hoja=$(alth-python -c "import json; print(json.load(open('$CARPETA/resumen.json'))['final']['hoja'])")
+          dest="revision/$nom"
+          mkdir -p "$dest"
+          cp "$CARPETA"/{receta.json,resumen.json,ficha.json,capacidades.json,investigacion.json,revision.png} "$dest"/
+          cp "$hoja" "$dest/hoja.png"
+          [ -f entrada.json ] && cp entrada.json "$dest/"
+          img=$(alth-python -c "import json; print(json.load(open('entrada.json'))['imagen'])")
+          git config user.name "alth-linea[bot]"
+          git config user.email "alth-linea@users.noreply.github.com"
+          git checkout -B "$rama"
+          git add -f "$dest" "$img" kb/investigacion.json kb/investigacion 2>/dev/null || git add -f "$dest" "$img"
+          git commit -q -m "revisión: $nom (issue #$N, sin publicar)"
+          git push -q -f origin "$rama"
+          url="https://github.com/${{ github.repository }}/blob/$rama/$dest/revision.png?raw=true"
+          corrida="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          alth-python tools/resumen_linea.py "$CARPETA/resumen.json" --comentario --imagen "$url" --rama "$rama" --corrida "$corrida" > comentario.md
+          gh issue comment "$N" --body-file comentario.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crear-asset-${{ github.run_id }}
+          path: .linea/
+          include-hidden-files: true
+          retention-days: 14

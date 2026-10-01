@@ -1,0 +1,215 @@
+name: Línea única · pruebas por bloque
+
+# Corrida real de cada bloque de docs/BRIEF_LINEA_UNICA.md (T0…T6) en un runner gratuito.
+# Sin IA ni claves: Blender headless, numpy, scipy y Pillow.
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "tools/**"
+      - "alth/**"
+      - "spec/**"
+      - "kb/**"
+      - "data/**"
+      - "assets/**"
+      - "tests/**"
+      - ".github/workflows/linea-unica.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  t0-escala:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+      - name: Blender headless
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          bash tools/ensure_blender.sh --strict
+          uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" pytest numpy scipy trimesh Pillow pyyaml
+      - name: T0 · Alpha intacto y medido igual que en la spec
+        run: |
+          mkdir -p .linea
+          echo "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b  assets/joven_rubio/theo_alpha.glb" | sha256sum -c -
+          /usr/bin/time -f "medir_alpha %e s" alth-python tools/medir_alpha.py --comprobar 2>&1 | grep -v INFO | tee .linea/t0_medir.txt
+      - name: T0 · Assets en escala v2 (redimensionar debe decir "ya en v2.0")
+        run: |
+          alth-python tools/redimensionar.py | tee .linea/t0_redimensionar.txt
+          test "$(grep -c '"estado": "ya en v2.0"' .linea/t0_redimensionar.txt)" -eq 5
+      - name: Pruebas
+        run: /usr/bin/time -f "pytest %e s" alth-python -m pytest tests -q 2>&1 | tail -5 | tee .linea/pytest.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linea-unica-${{ github.run_id }}
+          path: .linea/
+          retention-days: 7
+          include-hidden-files: true
+
+  t1-investigar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+      - name: Blender headless
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          bash tools/ensure_blender.sh --strict
+          uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" pytest numpy scipy trimesh Pillow pyyaml
+      - name: T1 · Buscar con red real (docs de Blender + API de GitHub, sin IA)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p .linea
+          set +e
+          /usr/bin/time -f "buscar %e s" alth-python tools/investigar.py buscar dedos \
+            "separar los dedos de una mano tipo mitón sin romper la malla" | tee .linea/t1_buscar.json
+          echo "salida=${PIPESTATUS[0]}" | tee .linea/t1_salida.txt
+          set -e
+          cp -r kb .linea/kb || true
+      - name: T1 · Probar candidatos en Blender
+        run: |
+          brief=$(alth-python -c "import json; d=json.load(open('.linea/t1_buscar.json')); print(d.get('ruta_brief',''))")
+          if [ -z "$brief" ]; then echo "RESEARCH_REQUIRED: no hay brief que probar"; exit 0; fi
+          /usr/bin/time -f "probar %e s" alth-python tools/investigar.py probar "$brief" --salida .linea/t1_probar \
+            | grep -v INFO | tee .linea/t1_probar.json
+          cp -r kb .linea/kb_despues
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linea-unica-t1-${{ github.run_id }}
+          path: .linea/
+          retention-days: 7
+          include-hidden-files: true
+
+  t2-t4-crear-publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+      - name: Blender headless
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          bash tools/ensure_blender.sh --strict
+          uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" numpy scipy Pillow
+      - name: T2+T3 · Entrada única (manzana, 8cm) sin intervención, con ajuste numérico
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p .linea
+          set +e
+          /usr/bin/time -f "crear_asset %e s" alth-python tools/crear_asset.py --imagen refs/infografias/objeto-01-manzana.png \
+            --nombre manzana --tamano 8cm --recorte 0.52,0.1,1,1 --salida .linea/crear/manzana 2>&1 \
+            | grep -v -E "INFO|CUEW|^Fra|Saved" | tee .linea/t2_salida.txt
+          echo "salida=${PIPESTATUS[0]}"
+          set -e
+          test -f .linea/crear/manzana/resumen.json
+          alth-python tools/resumen_linea.py .linea/crear/manzana/resumen.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: T5 · Aceptación 1 (criterios automáticos contra la manzana aprobada)
+        run: |
+          alth-python tools/aceptacion.py .linea/crear/manzana --contra assets/manzana --max-minutos 15 \
+            | tee .linea/t5_aceptacion.json
+      - name: T4 · Hoja de revisión y publicación simulada (en el runner; no se sube nada)
+        run: |
+          alth-python tools/hoja_revision.py .linea/crear/manzana --salida .linea/crear/manzana/revision.png
+          /usr/bin/time -f "publicar %e s" alth-python tools/publicar.py .linea/crear/manzana --issue 0 2>&1 \
+            | grep -v -E "INFO|CUEW|^Fra|Saved|Draco|MeshOpt" | tee .linea/t4_publicar.txt
+          git status --short | tee .linea/t4_cambios.txt
+          for f in assets/manzana/manzana.glb assets/manzana/final.png assets/manzana/spec.json data/medidas.csv kb/capacidades.json kb/huellas.json; do
+            grep -q "$f" .linea/t4_cambios.txt || { echo "::error::publicar no tocó $f"; exit 1; }
+          done
+          cp -r assets/manzana .linea/t4_asset_publicado
+          git checkout -- assets data kb
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linea-unica-t2-${{ github.run_id }}
+          path: .linea/
+          retention-days: 7
+          include-hidden-files: true
+
+  t6-dedos-theo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+      - name: Blender headless
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          bash tools/ensure_blender.sh --strict
+          uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" numpy scipy Pillow
+      - name: T6 · Entrada "Theo, 180cm" (la ficha marca dedos como brecha fallida)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p .linea/t6
+          echo "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b  assets/joven_rubio/theo_alpha.glb" | sha256sum -c -
+          alth-python tools/reconocer.py reconocer refs/personajes/joven-rubio.jpg --nombre Theo --tamano 180cm \
+            --salida .linea/t6/ficha.json | tee .linea/t6/ficha.txt
+          set +e
+          alth-python tools/capacidades.py comparar .linea/t6/ficha.json > .linea/t6/capacidades.json
+          echo "capacidades: salida $? (3 = hay brechas)"
+          set -e
+      - name: T6 · Investigar (red real, sin IA) dedos y reducción de la malla de SAM
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          alth-python tools/investigar.py buscar dedos "separar los dedos de una mano tipo mitón sin romper la malla" \
+            > .linea/t6/buscar_dedos.json
+          echo "dedos: $?"
+          alth-python tools/investigar.py buscar cuerpo_humanoide \
+            "reducir triángulos de una malla escaneada: soldar vértices duplicados y simplificar protegiendo cara y dedos" \
+            > .linea/t6/buscar_reduccion.json
+          echo "reducción: $?"
+          set -e
+      - name: T6 · Campaña de dedos (3 hermanos × máx. 3 generaciones) y reducción
+        run: |
+          set +e
+          b=$(alth-python -c "import json; print(json.load(open('.linea/t6/buscar_dedos.json')).get('ruta_brief',''))")
+          if [ -n "$b" ]; then
+            /usr/bin/time -f "campaña dedos %e s" alth-python tools/campana_dedos.py --brief "$b" --salida .linea/t6/dedos 2>&1 | grep -v INFO | tee .linea/t6/dedos.txt
+          else echo "RESEARCH_REQUIRED: sin brief de dedos" | tee .linea/t6/dedos.txt; fi
+          r=$(alth-python -c "import json; print(json.load(open('.linea/t6/buscar_reduccion.json')).get('ruta_brief',''))")
+          if [ -n "$r" ]; then
+            /usr/bin/time -f "reducción %e s" alth-python tools/reducir_sam.py --brief "$r" --salida .linea/t6/reduccion 2>&1 | grep -v -E "INFO|Draco|MeshOpt" | tee .linea/t6/reduccion.txt
+          else echo "RESEARCH_REQUIRED: sin brief de reducción" | tee .linea/t6/reduccion.txt; fi
+          cp -r kb .linea/t6/kb
+          set -e
+          echo "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b  assets/joven_rubio/theo_alpha.glb" | sha256sum -c -
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linea-unica-t6-${{ github.run_id }}
+          path: .linea/
+          retention-days: 14
+          include-hidden-files: true
