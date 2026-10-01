@@ -18,6 +18,7 @@ from mathutils.bvhtree import BVHTree
 from mathutils.geometry import intersect_ray_tri
 
 from copox.production.research_gate import require_research
+from copox.adapters.finger_connected_profile import DEPTH_SCALES, SECTION_FRACTIONS, notch_x
 
 ALPHA_SHA = "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b"
 
@@ -60,7 +61,7 @@ def outside_fingerprint(mesh, matrix, lo, span, box):
 def normals_snapshot(mesh, matrix, lo, span, box):
     result = {}
     for poly in mesh.polygons:
-        if any(inside(normalized(matrix @ mesh.vertices[i].co, lo, span), box) for i in poly.vertices):
+        if all(inside(normalized(matrix @ mesh.vertices[i].co, lo, span), box) for i in poly.vertices):
             continue
         face_key = tuple(sorted(key(mesh.vertices[i].co) for i in poly.vertices))
         for li in poly.loop_indices:
@@ -80,25 +81,6 @@ def restore_normals(mesh, snapshot):
                 count += 1
     mesh.normals_split_custom_set(normals)
     return count
-
-
-def prism(name, profile, ya, yb, inverse_rotation):
-    mesh = bpy.data.meshes.new(name)
-    n = len(profile)
-    points = [inverse_rotation @ Vector((x, y, z)) for y in (ya, yb) for x, z in profile]
-    faces = [tuple(range(n - 1, -1, -1)), tuple(range(n, 2 * n))]
-    faces += [(i, (i + 1) % n, (i + 1) % n + n, i + n) for i in range(n)]
-    mesh.from_pydata(points, [], faces)
-    bm = bmesh.new()
-    try:
-        bm.from_mesh(mesh)
-        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
-        bm.to_mesh(mesh)
-    finally:
-        bm.free()
-    obj = bpy.data.objects.new(name, mesh)
-    bpy.context.scene.collection.objects.link(obj)
-    return obj
 
 
 def cycles(edges):
@@ -165,142 +147,248 @@ def local_intersections(mesh, matrix, lo, span, box):
             "limitations": ["Coplanar overlap and adjacent-face foldover require a later specialized auditor."]}
 
 
+
+def face_rows(mesh):
+    uv = mesh.uv_layers.active
+    rows = []
+    for poly in mesh.polygons:
+        corners = [(key(mesh.vertices[mesh.loops[li].vertex_index].co),
+                    key(uv.data[li].uv) if uv else ()) for li in poly.loop_indices]
+        rows.append((tuple(sorted(corners)), poly.material_index, poly.use_smooth))
+    return rows
+
+
+def protected_rows(mesh, matrix, lo, span, box):
+    # Protect crossing faces as well, not just faces with every corner outside.
+    rows = face_rows(mesh)
+    return Counter(rows[p.index] for p in mesh.polygons
+                   if not all(inside(normalized(matrix @ mesh.vertices[i].co, lo, span), box) for i in p.vertices))
+
+
+def linear(value, xs, ys):
+    if value <= xs[0]:
+        return ys[0]
+    if value >= xs[-1]:
+        return ys[-1]
+    for index in range(1, len(xs)):
+        if value <= xs[index]:
+            t = (value - xs[index - 1]) / (xs[index] - xs[index - 1])
+            return ys[index - 1] * (1 - t) + ys[index] * t
+    return ys[-1]
+
+
+def contour_z(point, plan):
+    rows = plan["contour_envelope"]
+    xs = [row["x"] for row in rows]
+    model = [linear(point.x, xs, [row["model_z"][i] for row in rows]) for i in (0, 1)]
+    reference = [linear(point.x, xs, [row["reference_z"][i] for row in rows]) for i in (0, 1)]
+    za, zb = plan["scope_box"][2], plan["scope_box"][5]
+    goal = linear(point.z, [za, *model, zb], [za, *reference, zb])
+    full, anchor = plan["contour_full_influence_x"], plan["contour_anchor_x"]
+    t = max(0., min(1., (anchor - point.x) / (anchor - full)))
+    weight = t * t * (3 - 2 * t)
+    return point.z + weight * (goal - point.z)
+
+
+def bisect_local(bm, layer, matrix, lo, span, axis, normalized_value):
+    faces = [f for f in bm.faces if f[layer]]
+    if len(faces) > 20000:
+        raise RuntimeError("TOPOLOGY_BUDGET_EXCEEDED: local patch >20000 faces")
+    face_set = set(faces)
+    # Bisect splits radial faces too. Never pass an edge incident to a protected face.
+    edges = {e for f in faces for e in f.edges if all(other in face_set for other in e.link_faces)}
+    verts = {v for e in edges for v in e.verts}
+    point = lo.copy()
+    point[axis] += normalized_value * span[axis]
+    normal = Vector(tuple(1. if i == axis else 0. for i in range(3)))
+    bmesh.ops.bisect_plane(bm, geom=list(verts) + list(edges) + faces,
+        dist=span.length * 1e-9, plane_co=matrix.inverted() @ point,
+        plane_no=matrix.to_3x3().transposed() @ normal, use_snap_center=False,
+        clear_inner=False, clear_outer=False)
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Micro-valleys + measured local sections; never promotes")
+    parser = argparse.ArgumentParser(description="Connected reference-driven local notch; no Boolean or promotion")
     for name in ("input", "alpha", "plan", "research", "output", "report"):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--depth-scale", type=float, required=True)
     args = parser.parse_args()
-    if args.depth_scale not in (0.75, 1.0, 1.25):
-        raise RuntimeError("PARAMETER_INVALID: sólo tres profundidades hermanas")
+    if args.depth_scale not in DEPTH_SCALES:
+        raise RuntimeError("PARAMETER_INVALID: exactly three researched sibling depths")
     if Path(args.output).resolve() in {Path(args.alpha).resolve(), Path(args.input).resolve()}:
-        raise RuntimeError("PROTECTED_BASELINE: output no puede reemplazar Alpha ni working parent")
+        raise RuntimeError("PROTECTED_BASELINE: output cannot replace Alpha or parent")
     if sha(args.alpha) != ALPHA_SHA:
-        raise RuntimeError("PROTECTED_BASELINE: SHA Alpha inesperado")
-    require_research(args.research, "fingers", technique="micro_valley_cut_local_sections")
+        raise RuntimeError("PROTECTED_BASELINE: unexpected Alpha SHA")
+    for technique in ("connected_reference_notch_sections", "anchored_reference_contour_warp"):
+        require_research(args.research, "fingers", technique=technique)
     plan = json.loads(Path(args.plan).read_text())
     if plan["parent_sha"] != sha(args.input):
-        raise RuntimeError("PARENT_MISMATCH: hermanos requieren working parent idéntico")
+        raise RuntimeError("PARENT_MISMATCH: expected immutable sibling parent")
     if plan["reference_valleys"] != {"left": 2, "right": 0} or len(plan["targets"]) != 2:
-        raise RuntimeError("DIAGNOSTIC_REQUIRED: plan no respeta asimetría")
+        raise RuntimeError("DIAGNOSTIC_REQUIRED: reference asymmetry missing")
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=str(Path(args.input).resolve()))
-    meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
-    obj = max(meshes, key=lambda o: len(o.data.polygons))
+    obj = max((o for o in bpy.context.scene.objects if o.type == "MESH"), key=lambda o: len(o.data.polygons))
     mesh = obj.data
-    rotation = Matrix.Rotation(math.radians(-90), 4, "X")
-    matrix = rotation @ obj.matrix_world
+    matrix = Matrix.Rotation(math.radians(-90), 4, "X") @ obj.matrix_world
+    inverse = matrix.inverted()
     lo, hi = (Vector(p) for p in plan["canonical_bounds"])
-    span = hi - lo
-    box = plan["scope_box"]
-    hand_lo, hand_hi = (Vector(p) for p in plan["measured_hand_bounds_normalized"])
+    span, box = hi - lo, plan["scope_box"]
     uv_before = [layer.name for layer in mesh.uv_layers]
-    outside_before = outside_fingerprint(mesh, matrix, lo, span, box)
+    protected = protected_rows(mesh, matrix, lo, span, box)
+    protected_vertex_keys = {key(mesh.vertices[i].co) for p in mesh.polygons
+        if not all(inside(normalized(matrix @ mesh.vertices[j].co, lo, span), box) for j in p.vertices)
+        for i in p.vertices}
+    outside_vertices = Counter(key(v.co) for v in mesh.vertices if key(v.co) in protected_vertex_keys or not inside(normalized(matrix @ v.co, lo, span), box))
     normals = normals_snapshot(mesh, matrix, lo, span, box)
-    outside_vertices = Counter(key(v.co) for v in mesh.vertices if not inside(normalized(matrix @ v.co, lo, span), box))
     before = {"vertices": len(mesh.vertices), "faces": len(mesh.polygons)}
-    # Exact local weld preserves UV per loop. No complete mesh split, no global merge.
+    other_meshes = {o.name: Counter(face_rows(o.data)) for o in bpy.context.scene.objects if o.type == "MESH" and o != obj}
+    cuts, rings = [], []
+    contour_moved = 0
     bm = bmesh.new()
     try:
         bm.from_mesh(mesh)
-        selected = [v for v in bm.verts if inside(normalized(matrix @ v.co, lo, span), box)]
+        layer = bm.faces.layers.int.new("copox_local_patch")
+        for face in bm.faces:
+            face[layer] = int(all(inside(normalized(matrix @ v.co, lo, span), box) for v in face.verts))
+        selected = [v for v in bm.verts if v.link_faces and all(f[layer] for f in v.link_faces)]
         bmesh.ops.remove_doubles(bm, verts=selected, dist=span.length * 1e-9)
-        bm.to_mesh(mesh)
-    finally:
-        bm.free()
-    tip = float(hand_lo.x)
-    hand_width = float(hand_hi.x - hand_lo.x)
-    y_margin = (hand_hi.y - hand_lo.y) * 0.05
-    ya, yb = lo.y + (hand_lo.y - y_margin) * span.y, lo.y + (hand_hi.y + y_margin) * span.y
-    cuts = []
-    for target in plan["targets"]:
-        za, zb = target["z_range"]
-        center, half = (za + zb) / 2, (zb - za) / 2
-        depth = min(float(target["reference_depth_normalized"]) * args.depth_scale, box[3] - tip, hand_width * 0.58)
-        if depth <= 0 or half <= 0:
-            raise RuntimeError("SCOPE_UNSAFE: cutter sin profundidad o anchura")
-        # Rounded U root keeps a narrow slot. Only depth changes among siblings.
-        start = tip - hand_width * 0.05
-        profile_norm = [(start, za), (tip + depth * 0.75, za),
-                        (tip + depth, center - half * 0.35),
-                        (tip + depth, center + half * 0.35),
-                        (tip + depth * 0.75, zb), (start, zb)]
-        profile = [(lo.x + x * span.x, lo.z + z * span.z) for x, z in profile_norm]
-        cutter = prism(target["id"], profile, ya, yb, rotation.inverted())
-        bpy.context.view_layer.objects.active = obj
-        obj.select_set(True)
-        modifier = obj.modifiers.new("COPOX_MicroValley", "BOOLEAN")
-        modifier.operation, modifier.solver, modifier.object = "DIFFERENCE", "EXACT", cutter
-        try:
-            bpy.ops.object.modifier_apply(modifier=modifier.name)
-        finally:
-            bpy.data.objects.remove(cutter, do_unlink=True)
-        cuts.append({**target, "depth_normalized": depth, "depth_mm": depth * span.x * 1000,
-                     "slot_height_mm": (zb - za) * span.z * 1000, "profile_normalized_xz": profile_norm})
-    mesh = obj.data
-    # Local cross-sections, not a global density increase. Prove cycles, do not infer them.
-    rings = []
-    bm = bmesh.new()
-    try:
-        bm.from_mesh(mesh)
-        max_depth = max(row["depth_normalized"] for row in cuts)
-        for label, fraction in (("distal", 0.15), ("middle", 0.40), ("proximal", 0.65), ("base", 0.90)):
-            xnorm = tip + max_depth * fraction
-            xworld = lo.x + xnorm * span.x
-            local_plane = matrix.inverted() @ Vector((xworld, lo.y, lo.z))
-            local_normal = matrix.to_3x3().transposed() @ Vector((1, 0, 0))
-            faces = [f for f in bm.faces if all(inside(normalized(matrix @ v.co, lo, span), box) for v in f.verts)]
-            edges = {e for f in faces for e in f.edges}
-            verts = {v for e in edges for v in e.verts}
-            if len(faces) > 20000:
-                raise RuntimeError("TOPOLOGY_BUDGET_EXCEEDED: patch demasiado grande")
-            result = bmesh.ops.bisect_plane(bm, geom=list(verts) + list(edges) + faces,
-                                           dist=span.length * 1e-9, plane_co=local_plane,
-                                           plane_no=local_normal, clear_inner=False, clear_outer=False)
-            cut_edges = [e for e in result["geom_cut"] if isinstance(e, bmesh.types.BMEdge)]
-            closed, opened = cycles(cut_edges)
-            rings.append({"section": label, "x_normalized": xnorm, "closed_cycles": closed, "open_components": opened})
-        local_faces = [f for f in bm.faces if all(inside(normalized(matrix @ v.co, lo, span), box) for v in f.verts)]
+        tris = [f for f in bm.faces if f[layer] and len(f.verts) == 3]
+        if tris:
+            # Only coplanar compatible faces; delimit UV/material/shading boundaries.
+            bmesh.ops.join_triangles(bm, faces=tris, cmp_seam=True, cmp_sharp=True, cmp_uvs=True,
+                cmp_vcols=True, cmp_materials=True, angle_face_threshold=1e-5, angle_shape_threshold=math.pi)
+        current = [normalized(matrix @ v.co, lo, span) for v in bm.verts if v.link_faces and all(f[layer] for f in v.link_faces)]
+        zmin, zmax = min(p.z for p in current), max(p.z for p in current)
+        xmin = min(p.x for p in current)
+        # A small fixed common grid prepares interpolation; all dimensions are measured.
+        for fraction in (.2, .4, .6, .8):
+            bisect_local(bm, layer, matrix, lo, span, 2, zmin + (zmax - zmin) * fraction)
+            bisect_local(bm, layer, matrix, lo, span, 0, xmin + (box[3] - xmin) * fraction)
+        for vert in bm.verts:
+            if not vert.link_faces or not all(f[layer] for f in vert.link_faces):
+                continue
+            point = normalized(matrix @ vert.co, lo, span)
+            target = contour_z(point, plan)
+            if abs(target - point.z) > 1e-12:
+                point.z = target
+                if not inside(point, box):
+                    raise RuntimeError("SCOPE_UNSAFE: contour warp escaped measured left patch")
+                vert.co = inverse @ Vector(tuple(lo[i] + point[i] * span[i] for i in range(3)))
+                contour_moved += 1
+        for target in plan["targets"]:
+            za, zb = target["z_range"]
+            for fraction in (0., .2, .4, .6, .8, 1.):
+                bisect_local(bm, layer, matrix, lo, span, 2, za + (zb - za) * fraction)
+        for target in plan["targets"]:
+            za, zb = target["z_range"]
+            active = [normalized(matrix @ v.co, lo, span) for v in bm.verts
+                      if v.link_faces and all(f[layer] for f in v.link_faces)
+                      and za <= normalized(matrix @ v.co, lo, span).z <= zb]
+            if not active:
+                raise RuntimeError("DIAGNOSTIC_REQUIRED: no volume in mapped valley after contour warp")
+            tip = min(p.x for p in active)
+            support = box[3]
+            measured_depth = target["mapped_x"][1] - tip
+            if measured_depth <= 0:
+                raise RuntimeError("DIAGNOSTIC_REQUIRED: reference valley root is already beyond distal surface")
+            depth = min(measured_depth * args.depth_scale, (support - tip) * .85)
+            moved = 0
+            for vert in bm.verts:
+                if not vert.link_faces or not all(f[layer] for f in vert.link_faces):
+                    continue
+                point = normalized(matrix @ vert.co, lo, span)
+                if not za < point.z < zb:
+                    continue
+                new_x = notch_x(point.x, point.z, tip=tip, support_root=support, depth=depth, z_range=(za, zb))
+                if abs(new_x - point.x) > 1e-12:
+                    point.x = new_x
+                    vert.co = inverse @ Vector(tuple(lo[i] + point[i] * span[i] for i in range(3)))
+                    moved += 1
+            cuts.append({**target, "distal_x": tip, "support_root_x": support, "depth_normalized": depth,
+                "depth_mm": depth * span.x * 1000, "slot_height_mm": (zb - za) * span.z * 1000,
+                "root_x": tip + depth, "moved_vertices": moved, "monotone_x_derivative_min": 1-depth/(support-tip)})
+        # Each visible digit gets its own length and four measured section planes.
+        ordered = sorted(cuts, key=lambda row: sum(row["z_range"]) / 2)
+        centers = [sum(row["z_range"]) / 2 for row in ordered]
+        bands = [(box[2], centers[0]), (centers[0], centers[1]), (centers[1], box[5])]
+        sections = []
+        for digit, band in enumerate(bands):
+            points = [normalized(matrix @ v.co, lo, span) for v in bm.verts if v.link_faces and all(f[layer] for f in v.link_faces)
+                      and band[0] <= normalized(matrix @ v.co, lo, span).z <= band[1]]
+            adjacent = [ordered[0]] if digit == 0 else [ordered[1]] if digit == 2 else ordered
+            tip = min(p.x for p in points)
+            root = min(row["root_x"] for row in adjacent)
+            if root <= tip:
+                sections.append({"digit": digit + 1, "section": "missing_length", "x_normalized": None,
+                                 "closed_cycles": [], "open_components": [], "verified": False})
+                continue
+            for label, fraction in SECTION_FRACTIONS:
+                x = tip + (root - tip) * fraction
+                bisect_local(bm, layer, matrix, lo, span, 0, x)
+                sections.append({"digit": digit + 1, "section": label, "x_normalized": x, "z_band": band})
+        epsilon = 2e-6
+        for row in sections:
+            if row["x_normalized"] is None:
+                rings.append(row)
+                continue
+            edges = [e for e in bm.edges if all(f[layer] for f in e.link_faces) and len(e.link_faces) == 2
+                     and all(abs(normalized(matrix @ v.co, lo, span).x - row["x_normalized"]) < epsilon for v in e.verts)]
+            closed, opened = cycles(edges)
+            def in_digit(cycle):
+                points = [normalized(matrix @ Vector(p), lo, span) for p in cycle["points_local"]]
+                return all(row["z_band"][0] + epsilon < p.z < row["z_band"][1] - epsilon for p in points)
+            matched = [cycle for cycle in closed if in_digit(cycle)]
+            rings.append({**row, "closed_cycles": matched, "open_components": opened, "other_closed_cycles": len(closed)-len(matched),
+                          "verified": len(matched) == 1 and not opened})
+        local_faces = [f for f in bm.faces if f[layer]]
         ngons = [f for f in local_faces if len(f.verts) > 4]
         if ngons:
             bmesh.ops.triangulate(bm, faces=ngons, quad_method="BEAUTY", ngon_method="BEAUTY")
-        local_faces = [f for f in bm.faces if all(inside(normalized(matrix @ v.co, lo, span), box) for v in f.verts)]
+        local_faces = [f for f in bm.faces if f[layer]]
         bmesh.ops.recalc_face_normals(bm, faces=local_faces)
         degenerate = sum(f.calc_area() <= (span.length * 1e-10) ** 2 for f in local_faces)
+        quads = sum(len(f.verts) == 4 for f in local_faces)
+        tris_count = sum(len(f.verts) == 3 for f in local_faces)
         local_ngons = sum(len(f.verts) > 4 for f in local_faces)
+        # Do not leave experimental custom layers in transport.
+        bm.faces.layers.int.remove(layer)
         bm.to_mesh(mesh)
     finally:
         bm.free()
     mesh.update()
     restored = restore_normals(mesh, normals)
-    outside_after = outside_fingerprint(mesh, matrix, lo, span, box)
-    remaining = Counter(key(v.co) for v in mesh.vertices if not inside(normalized(matrix @ v.co, lo, span), box))
-    outside_exact = outside_before == outside_after and not (outside_vertices - remaining)
+    missing_faces = protected - Counter(face_rows(mesh))
+    remaining = Counter(key(v.co) for v in mesh.vertices)
+    missing_vertices = outside_vertices - remaining
+    other_exact = all(Counter(face_rows(bpy.data.objects[name].data)) == rows for name, rows in other_meshes.items())
+    outside_exact = not missing_faces and not missing_vertices and other_exact
     intersections = local_intersections(mesh, matrix, lo, span, box)
     finite = all(math.isfinite(c) for v in mesh.vertices for c in v.co)
-    loops_ready = all(len(row["closed_cycles"]) >= 3 and not row["open_components"] for row in rings)
+    loops_ready = len(rings) == 12 and all(row["verified"] for row in rings)
     out = Path(args.output).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=str(out.with_suffix(".blend")))
     bpy.ops.export_scene.gltf(filepath=str(out), export_format="GLB")
-    report = {"mode": "micro_valley_cut_local_sections_v1", "parent_sha": plan["parent_sha"],
-              "research_id": "fingers-micro-valleys-20261001", "depth_scale": args.depth_scale,
-              "cuts": cuts, "before": before, "after": {"vertices": len(mesh.vertices), "faces": len(mesh.polygons)},
-              "outside_scope_exact": outside_exact, "outside_face_fingerprint_matches": outside_before == outside_after,
-              "outside_missing_vertices": sum((outside_vertices - remaining).values()), "outside_normals_restored": restored,
-              "right_hand_mutated": False if outside_exact else None,
-              "uv_layers_preserved": uv_before == [layer.name for layer in mesh.uv_layers],
-              "local_degenerate_faces": degenerate, "local_ngons": local_ngons, "self_intersection_probe": intersections,
-              "local_sections": rings, "loops_ready": loops_ready, "bridge_ready": False,
-              "bridge_preparation": "local_section_cycles_recorded; palm boundary correspondence not verified",
-              "rig_ready": False, "mesh_integrity": finite and not degenerate and intersections["checked"] and intersections["intersections"] == 0,
-              "promotion_allowed": False, "promotion_executed": False}
+    report = {"mode": "connected_reference_notch_sections_v2", "parent_sha": plan["parent_sha"],
+        "research_id": "fingers-connected-micro-valleys-20261001", "depth_scale": args.depth_scale,
+        "contour_warp": {"source": "global_parent_registration_reference_envelope", "moved_vertices": contour_moved,
+                         "common_to_all_siblings": True, "y_thickness_unchanged": True},
+        "cuts": cuts, "before": before, "after": {"vertices": len(mesh.vertices), "faces": len(mesh.polygons)},
+        "outside_scope_exact": outside_exact, "outside_face_fingerprint_matches": not missing_faces,
+        "outside_missing_faces": sum(missing_faces.values()), "outside_missing_vertices": sum(missing_vertices.values()),
+        "outside_normals_restored": restored, "other_objects_exact": other_exact, "right_hand_mutated": False if outside_exact else None,
+        "uv_layers_preserved": uv_before == [layer.name for layer in mesh.uv_layers], "local_degenerate_faces": degenerate,
+        "local_ngons": local_ngons, "local_quads": quads, "local_triangles": tris_count, "all_quads": tris_count == 0,
+        "self_intersection_probe": intersections, "local_sections": rings, "loops_ready": loops_ready,
+        "bridge_ready": False, "bridge_preparation": "per_digit_sections_recorded; palm correspondence not verified",
+        "rig_ready": False, "mesh_integrity": finite and not degenerate and intersections["checked"] and intersections["intersections"] == 0,
+        "promotion_allowed": False, "promotion_executed": False}
     Path(args.report).write_text(json.dumps(report, indent=2) + "\n")
     if sha(args.alpha) != ALPHA_SHA or sha(args.input) != plan["parent_sha"]:
-        raise RuntimeError("PROTECTED_BASELINE: parent o Alpha cambiaron")
-    print(json.dumps({k: report[k] for k in ("depth_scale", "outside_scope_exact", "mesh_integrity", "loops_ready", "local_ngons")}))
+        raise RuntimeError("PROTECTED_BASELINE: Alpha or parent changed")
+    print("COPOX_MUTATION:" + json.dumps({k: report[k] for k in ("mode", "outside_scope_exact", "outside_missing_faces", "outside_missing_vertices", "mesh_integrity", "loops_ready", "local_quads", "local_triangles")}))
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

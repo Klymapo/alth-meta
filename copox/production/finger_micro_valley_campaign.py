@@ -13,6 +13,8 @@ from PIL import Image, ImageDraw, ImageOps
 from copox.adapters.alth_character import ensure_runtime
 from copox.adapters.alth_character_audit import audit as audit_full, crop_norm
 from copox.adapters.finger_micro_valley_plan import plan_micro_valleys
+from copox.adapters.finger_connected_profile import DEPTH_SCALES
+from copox.adapters.finger_connected_scope import exterior_transport
 from copox.adapters.hand_detail_probe import probe as hand_probe
 from copox.adapters.mesh_topology_probe import probe as topology_probe
 from copox.adapters.regional_reference_audit import audit_regions
@@ -23,7 +25,7 @@ from copox.production.research_gate import require_research
 from copox.production.research_iteration_loop import run_generations, write_json
 
 ALPHA_SHA = "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b"
-TECHNIQUE = "micro_valley_cut_local_sections"
+TECHNIQUE = "connected_reference_notch_sections"
 
 
 def protect(alpha, parent=None, expected_parent=None):
@@ -46,41 +48,13 @@ def render(python, model, config, directory):
 
 
 def compare_sheet(root, reference, config):
-    """True renders, not metric masks; consistent column/row labels."""
+    from copox.production.finger_micro_valley_review import comparison
     cfg = _read(config)
-    sheet = Image.open(reference).convert("RGB")
-    ref_front = Image.fromarray(crop_norm(__import__("numpy").array(sheet), cfg["views"]["front"]))
-    ref_threeq = Image.fromarray(crop_norm(__import__("numpy").array(sheet), cfg["views"]["threeq"]))
-    # Image ROI is anchored to the detected person's bounding box, as in region_mask.
-    from copox.adapters.alth_character_audit import person_mask, region_mask
-    import numpy as np
-    roi = region_mask(person_mask(np.array(ref_front)), cfg["regions_by_view"]["hands"][0]["box"])
-    yy, xx = np.where(roi)
-    ref_hand = ref_front.crop((int(xx.min()), int(yy.min()), int(xx.max()) + 1, int(yy.max()) + 1))
-    columns = [("REFERENCE", [ref_front, ref_threeq, ref_hand]),
-               ("ALPHA", [Image.open(root / "alpha_render" / f"{view}.png") for view in ("front", "threeq", "hand_left")])]
-    for candidate in ("c01", "c02", "c03"):
-        directory = root / "g01" / candidate / "renders"
-        images = []
-        for view in ("front", "threeq", "hand_left"):
-            path = directory / (view + ".png")
-            images.append(Image.open(path) if path.exists() else Image.new("RGB", (400, 400), "#efe6e6"))
-        columns.append((candidate.upper(), images))
-    cell, label = 300, 30
-    canvas = Image.new("RGB", (cell * 5 + 100, (cell + label) * 3 + 45), "#f5f5f5")
-    draw = ImageDraw.Draw(canvas)
-    for column, (name, images) in enumerate(columns):
-        draw.text((110 + column * cell, 10), name, fill="#222")
-        for row, img in enumerate(images):
-            tile = ImageOps.contain(img.convert("RGB"), (cell - 10, cell - 10))
-            canvas.paste(tile, (100 + column * cell + (cell - tile.width) // 2, 45 + row * (cell + label) + (cell - tile.height) // 2))
-    for row, name in enumerate(("FRONT", "3/4", "LEFT HAND")):
-        draw.text((5, 65 + row * (cell + label)), name, fill="#222")
-    canvas.save(root / "comparison.png")
-    preview = ImageOps.contain(canvas, (1400, 1000))
-    preview.save(root / "comparison_preview.jpg", quality=80)
+    comparison(root, reference, cfg, root / "comparison.png")
+    gallery = comparison(root, reference, cfg, root / "comparison_with_valley.png", include_parent=True)
+    preview = ImageOps.contain(gallery, (1800, 1000))
+    preview.save(root / "comparison_preview.jpg", quality=85)
     print("COPOX_REVIEW_IMAGE:" + base64.b64encode((root / "comparison_preview.jpg").read_bytes()).decode())
-
 
 def audit_candidate(root, params, parent_sha, *, alpha, parent, reference, config, policy_path, plan_path, brief, python):
     root.mkdir(parents=True, exist_ok=True)
@@ -94,6 +68,8 @@ def audit_candidate(root, params, parent_sha, *, alpha, parent, reference, confi
                    plan=plan_path.resolve(), research=Path(brief).resolve(), depth_scale=params["depth_scale"],
                    output=model.resolve(), report=mutation_report.resolve())
         mutation = _read(mutation_report)
+        transport = exterior_transport(parent, str(model), _read(plan_path))
+        write_json(root / "transport_scope_report.json", transport)
         regional = audit_regions(alpha, str(model), reference, config, str(root / "regional_metrics.json"), str(root / "evidence"))
         parent_regions = audit_regions(parent, str(model), reference, config, str(root / "parent_regional_metrics.json"), str(root / "parent_evidence"))
         full = audit_full(alpha, str(model), reference, "hands,fingers", config, None, str(root / "full_metrics.json"), str(root / "full_evidence"))
@@ -124,7 +100,11 @@ def audit_candidate(root, params, parent_sha, *, alpha, parent, reference, confi
         worst = min(float(x) for x in full["visual"]["full"]["delta_pp"].values())
         parent_worst = min(float(x) for x in parent_full["visual"]["full"]["delta_pp"].values())
         # Declared tolerances, not measured claims. Preserve Valley's strong structural advantage.
-        valley_advantage = parent_target >= -0.20 and parent_global >= -0.05 and parent_worst >= -0.10
+        parent_original = _read(root.parents[1] / "working_parent.json")["metrics"]
+        alpha_locked_target_difference = target - float(parent_original["target_gain_pp"])
+        alpha_locked_global_difference = global_gain - float(parent_original["global_gain_pp"])
+        valley_advantage = (alpha_locked_target_difference >= -0.20 and alpha_locked_global_difference >= -0.05
+                           and parent_target >= -0.20 and parent_global >= -0.05 and parent_worst >= -0.10)
         uv_ok = mutation["uv_layers_preserved"] and topo["dominant"]["uv"]["available"]
         mesh_ok = bool(mutation["mesh_integrity"] and topology_ok and uv_ok)
         regression_ok = bool(not frozen and not parent_frozen and worst >= -0.10 and global_gain >= 0.05 and valley_advantage)
@@ -134,22 +114,24 @@ def audit_candidate(root, params, parent_sha, *, alpha, parent, reference, confi
         labels = ["hand_left", "hand_right", "finger_detail", "topology_report", "learning"]
         flags = ([] if semantic else ["mitten_shape"]) + ([] if mesh_ok else ["finger_merge_regression"])
         learning = {"module": "fingers", "technique": TECHNIQUE, "parent_sha": parent_sha,
-                    "research_id": "fingers-micro-valleys-20261001", "parameters": params,
+                    "research_id": "fingers-connected-micro-valleys-20261001", "parameters": params,
                     "reference_valleys": reference_valleys, "model_valleys": model_valleys,
                     "frozen_region_failures": frozen, "parent_frozen_region_failures": parent_frozen,
                     "valley_structural_advantage_preserved": valley_advantage,
                     "local_sections_closed": mutation["loops_ready"], "bridge_ready": mutation["bridge_ready"],
                     "rig_ready": False, "visual_review": "PENDING",
-                    "next_hypothesis": "Si cortes no conservan silueta/topología, sustituir sólo el patch de raíz de valles por quads emparejados al borde medido; investigar antes de bridge.",
+                    "next_hypothesis": "Si correspondence/valleys todavía fallan, inspeccionar material por banda y límites del patch; no aumentar profundidad sin evidencia. Bridge requiere nuevo research.",
                     "promotion_executed": False}
         write_json(root / "learning.json", learning)
         result = {"module": "fingers", "baseline_sha256": ALPHA_SHA, "parent_sha": parent_sha,
-                  "mesh_integrity": mesh_ok, "scope_safe": bool(mutation["outside_scope_exact"]),
+                  "mesh_integrity": mesh_ok, "scope_safe": bool(mutation["outside_scope_exact"] and transport["scope_safe"]),
                   "regression_ok": regression_ok, "evidence_complete": evidence_complete,
                   "semantic_ready": semantic, "target_gain_pp": target, "global_gain_pp": global_gain,
                   "worst_view_delta_pp": worst, "evidence": labels, "flags": flags, "params": params,
                   "reference_valleys": reference_valleys, "model_valleys": model_valleys,
                   "parent_target_delta_pp": parent_target, "parent_global_delta_pp": parent_global,
+                  "alpha_locked_target_difference_to_valley_pp": alpha_locked_target_difference,
+                  "alpha_locked_global_difference_to_valley_pp": alpha_locked_global_difference,
                   "parent_worst_view_delta_pp": parent_worst, "local_loops_ready": mutation["loops_ready"],
                   "valley_structural_advantage_preserved": valley_advantage}
         strict_policy = _read(policy_path)
@@ -167,10 +149,24 @@ def audit_candidate(root, params, parent_sha, *, alpha, parent, reference, confi
                  "gate": gate, "learning": learning, "mutation": mutation,
                  "promotion_executed": False, "visual_review": "PENDING"}
         write_json(root / "trial.json", trial)
+        diagnostic = {"candidate": candidate, "topology": after, "parent_topology": before,
+                      "outside_missing_vertices": mutation["outside_missing_vertices"],
+                      "outside_missing_faces": mutation["outside_missing_faces"],
+                      "outside_face_fingerprint_matches": mutation["outside_face_fingerprint_matches"],
+                      "other_objects_exact": mutation["other_objects_exact"], "transport_scope": transport,
+                      "sections": [{"digit": s["digit"], "section": s["section"], "closed_cycles": len(s["closed_cycles"]),
+                                    "open_components": len(s["open_components"]), "verified": s["verified"]} for s in mutation["local_sections"]],
+                      "local_quads": mutation["local_quads"], "local_triangles": mutation["local_triangles"],
+                      "contour_warp": mutation["contour_warp"], "cuts": mutation["cuts"],
+                      "self_intersection_probe": mutation["self_intersection_probe"],
+                      "frozen_region_failures": frozen, "parent_frozen_region_failures": parent_frozen}
+        write_json(root / "diagnostic.json", diagnostic)
+        print("COPOX_DIAGNOSTIC:" + json.dumps(diagnostic))
         row = {**result, "candidate": candidate, "audit_passed": passed, "reasons": gate["reasons"]}
     except Exception as exc:
         protect(alpha, parent, parent_sha)
         error = {"status": "ERROR", "error": str(exc), "traceback": traceback.format_exc()}
+        print("COPOX_ERROR:" + json.dumps({"candidate": candidate, **error}))
         result = {"module": "fingers", "baseline_sha256": ALPHA_SHA, "parent_sha": parent_sha,
                   "mesh_integrity": False, "scope_safe": False, "regression_ok": False,
                   "evidence_complete": False, "semantic_ready": False, "target_gain_pp": None,
@@ -192,30 +188,45 @@ def main():
     p.add_argument("--reference", default="refs/personajes/joven-rubio-4-vistas.jpg")
     p.add_argument("--config", default="copox/reference_configs/joven_rubio_alpha.json")
     p.add_argument("--policy", default="copox/production/theo_m5_policy.json")
-    p.add_argument("--research", default="copox/research/fingers-micro-valleys-20261001.json")
-    p.add_argument("--output", default=".copox/finger-micro-valleys")
+    p.add_argument("--research", default="copox/research/fingers-connected-micro-valleys-20261001.json")
+    p.add_argument("--parent-source", help="Existing audited Valley artifact; never rejected candidate lineage")
+    p.add_argument("--output", default=".copox/finger-connected-valleys")
     a = p.parse_args()
     root = Path(a.output)
     root.mkdir(parents=True, exist_ok=True)
     protect(a.alpha)
     try:
-        for technique in ("semantic_finish", "valley_surface_sculpt", TECHNIQUE):
+        for technique in ("semantic_finish", "valley_surface_sculpt", "anchored_reference_contour_warp", TECHNIQUE):
             require_research(a.research, "fingers", output=root / ("research_" + technique + ".json"), technique=technique)
         python = ensure_runtime(Path.cwd())
         # Reproduce measured Valley Sculpt c01 once; never overwrite or promote it.
         parent_dir = root / "working_parent"
-        valley = valley_trial(a.alpha, a.reference, a.config, a.policy, 1, str(parent_dir))
+        if a.parent_source:
+            source = Path(a.parent_source)
+            metadata = _read(source / "working_parent.json")
+            if metadata["accepted_baseline_sha"] != ALPHA_SHA:
+                raise RuntimeError("PARENT_MISMATCH: source Alpha identity differs")
+            source_parent = source / "working_parent" / "model.glb"
+            if _sha256(source_parent) != metadata["working_parent_sha"]:
+                raise RuntimeError("PARENT_MISMATCH: downloaded Valley parent SHA differs")
+            shutil.copytree(source / "working_parent", parent_dir)
+            shutil.copy2(source / "working_parent.json", root / "working_parent.json")
+            shutil.copytree(source / "alpha_render", root / "alpha_render")
+        else:
+            valley = valley_trial(a.alpha, a.reference, a.config, a.policy, 1, str(parent_dir))
+            parent_sha = _sha256(parent_dir / "model.glb")
+            write_json(root / "working_parent.json", {"accepted_baseline_sha": ALPHA_SHA, "working_parent_sha": parent_sha,
+                       "origin": "Valley Sculpt c01; trial parent only, not promoted or accepted as new baseline",
+                       "metrics": valley["result"], "promotion_executed": False})
         parent = str(parent_dir / "model.glb")
         parent_sha = _sha256(parent)
-        write_json(root / "working_parent.json", {"accepted_baseline_sha": ALPHA_SHA, "working_parent_sha": parent_sha,
-                   "origin": "Valley Sculpt c01; trial parent only, not promoted or accepted as new baseline",
-                   "metrics": valley["result"], "promotion_executed": False})
         plan_path = root / "micro_valley_plan.json"
         plan_micro_valleys(parent, a.reference, a.config, plan_path)
-        render(python, a.alpha, a.config, root / "alpha_render")
-        render(python, parent, a.config, parent_dir / "renders")
+        if not a.parent_source:
+            render(python, a.alpha, a.config, root / "alpha_render")
+            render(python, parent, a.config, parent_dir / "renders")
         spec = {"brief": a.research, "technique": TECHNIQUE,
-                "parameters": [{"depth_scale": scale} for scale in (0.75, 1.0, 1.25)],
+                "parameters": [{"depth_scale": scale} for scale in DEPTH_SCALES],
                 "next_hypothesis": "Validar quads locales en raíces de valles sin sustituir la mano; bridge y flexión sólo con research específico."}
         result = run_generations(parent_sha=parent_sha, module="fingers", specs=[spec], output=root,
             mutate_and_audit=lambda directory, params, sha: audit_candidate(directory, params, sha, alpha=a.alpha,
