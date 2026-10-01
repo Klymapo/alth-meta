@@ -40,3 +40,6 @@ desktop.ini
 renders/
 .copox/
 exports/
+
+# Evidencia temporal de la línea única (va a artifacts de Actions, no al repo)
+.linea/

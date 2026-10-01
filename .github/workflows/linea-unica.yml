@@ -53,3 +53,46 @@ jobs:
           name: linea-unica-${{ github.run_id }}
           path: .linea/
           retention-days: 7
+
+  t1-investigar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+      - name: Blender headless
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          bash tools/ensure_blender.sh --strict
+          uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" pytest numpy scipy trimesh Pillow pyyaml
+      - name: T1 · Buscar con red real (docs de Blender + API de GitHub, sin IA)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p .linea
+          set +e
+          /usr/bin/time -f "buscar %e s" alth-python tools/investigar.py buscar dedos \
+            "separar los dedos de una mano tipo mitón sin romper la malla" | tee .linea/t1_buscar.json
+          echo "salida=${PIPESTATUS[0]}" | tee .linea/t1_salida.txt
+          set -e
+          cp -r kb .linea/kb || true
+      - name: T1 · Probar candidatos en Blender
+        run: |
+          brief=$(alth-python -c "import json; d=json.load(open('.linea/t1_buscar.json')); print(d.get('ruta_brief',''))")
+          if [ -z "$brief" ]; then echo "RESEARCH_REQUIRED: no hay brief que probar"; exit 0; fi
+          /usr/bin/time -f "probar %e s" alth-python tools/investigar.py probar "$brief" --salida .linea/t1_probar \
+            | grep -v INFO | tee .linea/t1_probar.json
+          cp -r kb .linea/kb_despues
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linea-unica-t1-${{ github.run_id }}
+          path: .linea/
+          retention-days: 7
