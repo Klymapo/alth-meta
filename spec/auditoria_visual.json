@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "calibrado": false,
+  "nota": "Umbrales PROVISIONALES del 1 oct 2026. Puestos con 2 positivos (manzana y lata aprobadas contra sus infografías) y 8 negativos (cada referencia contra los otros 4 assets aprobados del repo). Separan los 10 pares, pero con poco margen: en color entre cilindros (lata vs taza/vaso de café) y en contorno_p95 de la manzana. Se reemplazan con tools/calibrar_auditoria.py cuando haya veredictos del dueño (aprobado/rechazado) sobre pares reales.",
+  "umbrales": {
+    "silueta_iou": {
+      "min": 0.8,
+      "por_que": "único umbral publicado (snapwright, IoU >= 0.8); manzana aprobada 0.837 (frente), mejor negativo de manzana 0.744"
+    },
+    "contorno_p95": {
+      "max": 0.145,
+      "por_que": "p95 de la distancia entre bordes / alto de la figura; manzana aprobada 0.140 (su hoja es más chica que la de la ref), peor negativo de manzana 0.149: margen mínimo"
+    },
+    "contorno_chamfer": {
+      "max": 0.045,
+      "por_que": "media de esa distancia; positivos <= 0.040, negativos de manzana >= 0.061"
+    },
+    "compacidad": {
+      "max": 0.08,
+      "por_que": "primer momento de Hu (|ln| del cociente); positivos <= 0.055, vaso >= 0.115"
+    },
+    "bandas_media": {
+      "max": 0.12,
+      "por_que": "ancho medio por franja / alto; positivos <= 0.096, negativos de manzana >= 0.172"
+    },
+    "aspecto": {
+      "max": 0.15,
+      "por_que": "|ln| del cociente ancho/alto; positivos <= 0.122"
+    },
+    "color_regiones": {
+      "max": 15.0,
+      "por_que": "ΔE (L* a la mitad) por celda 4x3; positivos en su vista elegida <= 11.9, lata vs taza 15.8"
+    },
+    "color_dominante": {
+      "max": 10.5,
+      "por_que": "6 colores dominantes emparejados; positivos <= 8.8, lata vs taza 11.1"
+    }
+  },
+  "tolerancia_vs_aprobado": {
+    "silueta_iou": 0.01,
+    "contorno_p95": 0.005
+  }
+}

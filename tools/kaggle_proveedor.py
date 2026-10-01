@@ -48,6 +48,7 @@ from PIL import Image
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from mascaras import BORDE_SOMBRA_DE, SOMBRA_DESDE, quitar_sombra_pegada  # noqa: E402,F401  (compartido con la auditoría)
 
 # Versión fijada de TripoSG: último commit de main al 1 oct 2026 (licencia MIT).
 TRIPOSG_REPO = "https://github.com/VAST-AI-Research/TripoSG.git"
@@ -56,8 +57,6 @@ TRIPOSG_PESOS = "VAST-AI/TripoSG"          # Hugging Face, licencia MIT
 ACELERADOR = "NvidiaTeslaT4"                # T4 ×2 (16 GB cada una); TripoSG pide >= 8 GB y usa una
 LADO_ENTRADA = 1024                          # lado mayor de la imagen que se manda
 SLUG_DEFECTO = "alth-meta-propuesta"
-SOMBRA_DESDE = 0.40      # la sombra del piso sólo se busca en el 60 % inferior de la figura
-BORDE_SOMBRA_DE = 11.0   # contraste de borde (ΔE) bajo el cual una mancha gris es sombra, no pieza
 MAX_FALLOS_STATUS = 5    # `kaggle kernels status` fallando seguido (401/404…) → abortar, no esperar 90 min
 SONDEOS_SIN_VER_CORRER = 4  # estado final sin haber visto QUEUED/RUNNING: puede ser de la versión anterior
 
@@ -65,51 +64,6 @@ EXIT_OK, EXIT_ENTRADA, EXIT_FALLO, EXIT_TIEMPO, EXIT_CREDENCIALES, EXIT_SIN_SALI
 
 
 # ================================================================ 1. imagen
-def quitar_sombra_pegada(rgb: np.ndarray, figura: np.ndarray, fondo_rgb) -> tuple[np.ndarray, float]:
-    """Quita la sombra del piso que queda PEGADA a la figura (separar_figura sólo quita la que se
-    desvanece hacia el fondo). Una sombra de render es gris neutro (mismo tinte que el fondo), un poco
-    más oscura que él, en la parte baja, y no tiene figura debajo en su misma columna.
-
-    Se conserva lo oscuro de verdad (zapatos negros: L muy bajo), cualquier gris que tenga figura
-    debajo, y toda mancha gris de BORDE NÍTIDO: una sombra se desvanece hacia el fondo (contraste de
-    borde ΔE ≈ 6-8 en las referencias del repo), una pieza real no (aro metálico de la lata: 16.8).
-    Calibrado el 1 oct 2026 con joven-rubio, alastor, manzana y lata (infografías) y taza/lata (renders).
-    Devuelve (figura_limpia, fracción quitada).
-    """
-    import reconocer
-    from scipy import ndimage
-    lab = reconocer._srgb_a_lab(rgb)
-    lab_f = reconocer._srgb_a_lab(np.asarray(fondo_rgb, dtype=np.float64))
-    croma = np.hypot(lab[..., 1] - lab_f[1], lab[..., 2] - lab_f[2])
-    de = np.linalg.norm(lab - lab_f, axis=-1)
-    L = lab[..., 0]
-    filas = np.where(figura.any(1))[0]
-    if len(filas) == 0:
-        return figura, 0.0
-    corte = filas[0] + SOMBRA_DESDE * (filas[-1] - filas[0])
-    abajo = np.zeros_like(figura)
-    abajo[int(corte):] = True
-    candidata = figura & abajo & (croma < 8) & (L < lab_f[0] - 2) & (L > lab_f[0] - 50)
-    solida = figura & ~candidata
-    # ¿hay figura sólida más abajo en la misma columna? (acumulado desde abajo)
-    hay_debajo = np.flipud(np.cumsum(np.flipud(solida), axis=0)) - solida > 0
-    posible = candidata & ~hay_debajo
-    fuera = ndimage.binary_dilation(~figura, iterations=2)
-    et, n = ndimage.label(posible)
-    sombra = np.zeros_like(figura)
-    for i in range(1, n + 1):
-        comp = et == i
-        borde = comp & fuera
-        if borde.any() and float(de[borde].mean()) < BORDE_SOMBRA_DE:
-            sombra |= comp
-    limpia = ndimage.binary_opening(figura & ~sombra, iterations=1)
-    et, n = ndimage.label(limpia)
-    if n > 1:
-        tam = ndimage.sum(limpia, et, range(1, n + 1))
-        limpia = et == (int(np.argmax(tam)) + 1)
-    return limpia, float(sombra.sum() / max(figura.sum(), 1))
-
-
 def preparar_imagen(ruta, recorte=None, lado: int = LADO_ENTRADA) -> tuple[Image.Image, dict]:
     """RGBA con el fondo y la sombra quitados por el código del repo (sin RMBG).
 

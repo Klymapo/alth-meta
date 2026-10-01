@@ -114,7 +114,9 @@ def construir(receta: dict, salida: Path, modo: str = "iteracion", exportar: Pat
            "verificacion": verif, "iou_por_vista": ious, "iou": max(ious.values()) if ious else 0.0,
            "segundos": round(time.time() - t0, 1)}
     res["ok"] = res["dimensiones_ok"] and res["verificacion_ok"] and tris <= receta["tris_max"]
-    if exportar:
+    if exportar and not res["ok"]:
+        res["exportado"] = None           # nunca se exporta algo que no pasó la verificación
+    elif exportar:
         exportar = Path(exportar)
         exportar.mkdir(parents=True, exist_ok=True)
         (exportar / "spec.json").write_text(json.dumps({k: v for k, v in asset.items()}, ensure_ascii=False,

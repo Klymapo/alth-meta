@@ -23,6 +23,21 @@ def markdown(r: dict, url_hoja: str | None = None) -> str:
                    f"| diferencia vs pedido | " + ", ".join(f"{k} {v * 100:+.1f} %" for k, v in dif.items()) + " |",
                    f"| triángulos | {f.get('tris')} |",
                    f"| verificación (cotas, paleta, flotantes, apoyo) | {'OK' if f.get('verificacion_ok') else 'con fallas'} |"]
+    au = r.get("auditoria")
+    if au:
+        lineas += ["", f"**Auditoría visual: {au.get('decision')}**"
+                   + (f" · vista {au['vista']}" if au.get("vista") else "")
+                   + (f" · fallas: {', '.join(au['fallas'])}" if au.get("fallas") else "")
+                   + ("" if au.get("calibrado") else " · umbrales provisionales")]
+        if au.get("error"):
+            lineas.append(f"Error de entrada: {au['error']}")
+        pm, md = au.get("por_medida") or {}, au.get("medidas") or {}
+        if pm:
+            lineas += ["", "| medida | valor | |", "|---|---|---|"] + [
+                f"| {k} | {md.get(k, '')} | {v} |" for k, v in pm.items()]
+        if au.get("aprobado"):
+            lineas.append(f"\nContra el aprobado anterior: no peor {au.get('no_peor_que_aprobado')}, "
+                          f"lo supera {au.get('supera_aprobado')}.")
     aj = r.get("ajuste")
     if aj:
         lineas += ["", f"Ajuste numérico: **{aj['estado']}** en {aj['rondas']} ronda(s), IoU {aj['iou_base']} → {aj['iou_final']}."]
@@ -33,11 +48,24 @@ def markdown(r: dict, url_hoja: str | None = None) -> str:
     return "\n".join(lineas) + "\n"
 
 
-def comentario(r: dict, imagen: str, rama: str, corrida: str) -> str:
+def _siguiente(r: dict) -> str:
+    estado = r.get("estado")
+    if estado == "APROBADO_POR_AUDITORIA":
+        return ("**La auditoría visual lo aprueba.** Se abre un PR de publicación (GLB, final.png, medidas, "
+                "evidencia); entra a `main` cuando lo fusionas.")
+    if estado == "AUDITORIA_FALLIDA":
+        return ("**La auditoría visual lo rechaza**: no se publica. La comparación (azul = sólo referencia, "
+                "naranja = sólo el modelo) está en la rama de revisión, carpeta `auditoria/`.")
+    if estado == "FALTANTES":
+        return "**No se puede aprobar todavía**: faltan capacidades (arriba). No se publica nada."
+    return "**Falló la verificación técnica**: no se publica nada."
+
+
+def comentario(r: dict, imagen: str, rama: str, corrida: str, comparacion: str | None = None) -> str:
     """Comentario del issue: resumen + hoja de revisión + cómo aprobar."""
-    return ("<!-- alth-linea:revision -->\n" + markdown(r, imagen) +
-            "\n**¿Lo apruebas?** Pon la etiqueta `aprobado` para publicarlo en `main` (GLB, .blend, final.png, "
-            "medidas) o `rechazado` para descartarlo. Sin etiqueta no se publica nada.\n\n"
+    extra = (f"\n![auditoría: referencia | modelo | superposición]({comparacion})\n" if comparacion else "")
+    return ("<!-- alth-linea:revision -->\n" + markdown(r, imagen) + extra +
+            "\n" + _siguiente(r) + "\n\n"
             f"Revisión en la rama `{rama}` · corrida {corrida}\n")
 
 
@@ -49,6 +77,7 @@ if __name__ == "__main__":
     ap.add_argument("--imagen", default=None)
     ap.add_argument("--rama", default="")
     ap.add_argument("--corrida", default="")
+    ap.add_argument("--comparacion", default=None, help="URL de auditoria/comparacion.png")
     a = ap.parse_args()
     datos = json.loads(Path(a.resumen).read_text(encoding="utf-8"))
-    print(comentario(datos, a.imagen, a.rama, a.corrida) if a.comentario else markdown(datos, a.imagen))
+    print(comentario(datos, a.imagen, a.rama, a.corrida, a.comparacion) if a.comentario else markdown(datos, a.imagen))

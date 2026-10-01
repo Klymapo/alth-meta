@@ -19,6 +19,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash   # pipefail: un fallo dentro de "| tee" / "| tail" pone el paso en rojo (antes se tragaba)
+
 jobs:
   t0-escala:
     runs-on: ubuntu-latest
@@ -115,7 +119,8 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           bash tools/ensure_blender.sh --strict
           uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" numpy scipy Pillow
-      - name: T2+T3 · Entrada única (manzana, 8cm) sin intervención, con ajuste numérico
+      - name: T2+T3 · Entrada única (manzana, 8cm) sin intervención, con ajuste numérico y auditoría
+        id: t2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -124,25 +129,42 @@ jobs:
           /usr/bin/time -f "crear_asset %e s" alth-python tools/crear_asset.py --imagen refs/infografias/objeto-01-manzana.png \
             --nombre manzana --tamano 8cm --recorte 0.52,0.1,1,1 --salida .linea/crear/manzana 2>&1 \
             | grep -v -E "INFO|CUEW|^Fra|Saved" | tee .linea/t2_salida.txt
-          echo "salida=${PIPESTATUS[0]}"
+          code=${PIPESTATUS[0]}
           set -e
+          echo "salida=$code" | tee -a "$GITHUB_OUTPUT"
           test -f .linea/crear/manzana/resumen.json
           alth-python tools/resumen_linea.py .linea/crear/manzana/resumen.json | tee -a "$GITHUB_STEP_SUMMARY"
-      - name: T5 · Aceptación 1 (criterios automáticos contra la manzana aprobada)
+          # 0 = aprobado por la auditoría, 3 = la auditoría lo rechazó: las dos son corridas completas.
+          # Cualquier otro código es un fallo de la línea y pone el job en rojo.
+          case "$code" in 0|3) ;; *) echo "::error::crear_asset salió con $code"; exit "$code" ;; esac
+      - name: T4 · Gate de publicación (en el runner; no se sube nada)
+        run: |
+          alth-python tools/hoja_revision.py .linea/crear/manzana --salida .linea/crear/manzana/revision.png
+          set +e
+          alth-python tools/publicar.py .linea/crear/manzana --issue 0 > .linea/t4_publicar.json 2> .linea/t4_err.txt
+          pub=$?
+          set -e
+          grep -v -E "INFO|CUEW|^Fra|Saved|Draco|MeshOpt" .linea/t4_err.txt | tail -5 || true
+          git status --short | tee .linea/t4_cambios.txt
+          if [ "${{ steps.t2.outputs.salida }}" = "0" ]; then
+            test "$pub" -eq 0 || { echo "::error::auditoría PASS pero publicar falló ($pub)"; exit 1; }
+            for f in assets/manzana/manzana.glb assets/manzana/final.png assets/manzana/spec.json assets/manzana/auditoria.json data/medidas.csv kb/capacidades.json kb/huellas.json; do
+              grep -q "$f" .linea/t4_cambios.txt || { echo "::error::publicar no tocó $f"; exit 1; }
+            done
+            cp -r assets/manzana .linea/t4_asset_publicado
+            git checkout -- assets data kb
+          else
+            test "$pub" -eq 3 || { echo "::error::auditoría FAIL y publicar no se negó (salida $pub)"; exit 1; }
+            if grep -E "assets/|data/medidas.csv" .linea/t4_cambios.txt; then
+              echo "::error::publicar se negó pero tocó assets/ o data/"; exit 1
+            fi
+            echo "Gate OK: la auditoría rechazó la manzana y publicar no escribió nada."
+          fi
+          echo "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b  assets/joven_rubio/theo_alpha.glb" | sha256sum -c -
+      - name: T5 · ¿Supera a la manzana aprobada? (rojo mientras no)
         run: |
           alth-python tools/aceptacion.py .linea/crear/manzana --contra assets/manzana --max-minutos 15 \
             | tee .linea/t5_aceptacion.json
-      - name: T4 · Hoja de revisión y publicación simulada (en el runner; no se sube nada)
-        run: |
-          alth-python tools/hoja_revision.py .linea/crear/manzana --salida .linea/crear/manzana/revision.png
-          /usr/bin/time -f "publicar %e s" alth-python tools/publicar.py .linea/crear/manzana --issue 0 2>&1 \
-            | grep -v -E "INFO|CUEW|^Fra|Saved|Draco|MeshOpt" | tee .linea/t4_publicar.txt
-          git status --short | tee .linea/t4_cambios.txt
-          for f in assets/manzana/manzana.glb assets/manzana/final.png assets/manzana/spec.json data/medidas.csv kb/capacidades.json kb/huellas.json; do
-            grep -q "$f" .linea/t4_cambios.txt || { echo "::error::publicar no tocó $f"; exit 1; }
-          done
-          cp -r assets/manzana .linea/t4_asset_publicado
-          git checkout -- assets data kb
       - uses: actions/upload-artifact@v4
         if: always()
         with:

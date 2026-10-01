@@ -4,8 +4,12 @@ run-name: "Crear · ${{ inputs.nombre || github.event.issue.title }}"
 # Entrada única: imagen + nombre + tamaño real. Sin IA ni claves.
 #  - Desde la app de GitHub en el celular: abre un issue con la plantilla "Crear asset" (adjunta la
 #    foto), o Actions → "Crear asset (línea única)" → Run workflow con una imagen que ya esté en refs/.
-#  - Encadena reconocer → capacidades → investigar (si hay brechas) → receta → construir → ajustar.
-#  - Deja la hoja y el resumen como artifact (y, con T4, como comentario del issue). No publica nada.
+#  - Encadena reconocer → capacidades → investigar (si hay brechas) → receta → construir → ajustar
+#    → AUDITORÍA VISUAL contra la referencia, que decide (tools/auditoria_visual.py).
+#  - Deja la hoja, la comparación y el resumen como artifact y como comentario del issue.
+#  - Con auditoría PASS (y sin faltantes) abre un PR de publicación (tools/publicar_pr.sh). Nunca
+#    empuja a main: el dueño fusiona el PR.
+#  - El job sale en ROJO si el asset no quedó aprobado (verificación, auditoría o faltantes).
 on:
   workflow_dispatch:
     inputs:
@@ -25,8 +29,13 @@ on:
     types: [opened, labeled]
 
 permissions:
-  contents: write     # solo para la rama de revisión linea/revision-issue-N (nunca main)
+  contents: write     # sólo ramas linea/revision-issue-N y publicar/* (nunca main)
   issues: write
+  pull-requests: write
+
+defaults:
+  run:
+    shell: bash       # pipefail
 
 concurrency:   # abrir con la plantilla dispara "opened" y "labeled": solo sigue la última
   group: crear-asset-${{ github.event.issue.number || inputs.nombre }}
@@ -87,8 +96,10 @@ jobs:
           mkdir -p .linea
           set +e
           alth-python tools/crear_asset.py "${args[@]}" 2>&1 | grep -v -E "INFO|CUEW|^Fra|Saved" | tee .linea/crear_salida.txt
-          echo "salida=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          code=${PIPESTATUS[0]}
+          echo "salida=$code" >> "$GITHUB_OUTPUT"
           echo "carpeta=.linea/crear/$NOM" >> "$GITHUB_OUTPUT"
+          # el código real se aplica en el último paso ("Resultado"), después de comentar el issue
           exit 0
       - name: Resumen
         if: always()
@@ -96,6 +107,7 @@ jobs:
           r="${{ steps.linea.outputs.carpeta }}/resumen.json"
           [ -f "$r" ] && alth-python tools/resumen_linea.py "$r" >> "$GITHUB_STEP_SUMMARY" || echo "sin resumen" >> "$GITHUB_STEP_SUMMARY"
       - name: Hoja de revisión en el issue (rama linea/revision-issue-N, no main)
+        id: revision
         if: github.event_name == 'issues'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -110,11 +122,13 @@ jobs:
           fi
           nom=$(basename "$CARPETA")
           alth-python tools/hoja_revision.py "$CARPETA" --salida "$CARPETA/revision.png"
+          echo "rama=$rama" >> "$GITHUB_OUTPUT"
           hoja=$(alth-python -c "import json; print(json.load(open('$CARPETA/resumen.json'))['final']['hoja'])")
           dest="revision/$nom"
           mkdir -p "$dest"
           cp "$CARPETA"/{receta.json,resumen.json,ficha.json,capacidades.json,investigacion.json,revision.png} "$dest"/
           cp "$hoja" "$dest/hoja.png"
+          [ -d "$CARPETA/auditoria" ] && cp -r "$CARPETA/auditoria" "$dest/"
           [ -f entrada.json ] && cp entrada.json "$dest/"
           img=$(alth-python -c "import json; print(json.load(open('entrada.json'))['imagen'])")
           git config user.name "alth-linea[bot]"
@@ -125,8 +139,18 @@ jobs:
           git push -q -f origin "$rama"
           url="https://github.com/${{ github.repository }}/blob/$rama/$dest/revision.png?raw=true"
           corrida="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          alth-python tools/resumen_linea.py "$CARPETA/resumen.json" --comentario --imagen "$url" --rama "$rama" --corrida "$corrida" > comentario.md
+          comp=()
+          [ -f "$dest/auditoria/comparacion.png" ] && comp=(--comparacion "https://github.com/${{ github.repository }}/blob/$rama/$dest/auditoria/comparacion.png?raw=true")
+          alth-python tools/resumen_linea.py "$CARPETA/resumen.json" --comentario --imagen "$url" --rama "$rama" --corrida "$corrida" "${comp[@]}" > comentario.md
           gh issue comment "$N" --body-file comentario.md
+      - name: Publicar por PR (sólo con auditoría PASS)
+        if: github.event_name == 'issues' && steps.linea.outputs.salida == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.event.issue.number }}
+          CARPETA: ${{ steps.linea.outputs.carpeta }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: bash tools/publicar_pr.sh "$CARPETA" "$N" "${{ steps.revision.outputs.rama }}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -134,3 +158,14 @@ jobs:
           path: .linea/
           include-hidden-files: true
           retention-days: 14
+      - name: Resultado (rojo si el asset no quedó aprobado por la auditoría)
+        if: always()
+        run: |
+          code="${{ steps.linea.outputs.salida }}"
+          case "$code" in
+            0) echo "APROBADO_POR_AUDITORIA" ;;
+            3) echo "::error::La auditoría visual rechazó el asset (ver auditoria/comparacion.png en el artifact)"; exit 3 ;;
+            4) echo "::error::Faltantes: no se pudo construir o falta una capacidad (ver resumen)"; exit 4 ;;
+            "") echo "::error::La línea no llegó a correr"; exit 1 ;;
+            *) echo "::error::Falló la verificación técnica o la línea (código $code)"; exit "$code" ;;
+          esac

@@ -1,18 +1,26 @@
 name: Aprobar asset (línea única)
 run-name: "Aprobar · issue #${{ github.event.issue.number }} · ${{ github.event.label.name }}"
 
-# El usuario aprueba o rechaza con una ETIQUETA en el issue de "Crear asset":
+# La AUDITORÍA VISUAL decide (decisión del dueño, 1 oct 2026). Normalmente "Crear asset" ya abre el PR
+# de publicación cuando la auditoría da PASS. Esta etiqueta sirve para reintentarlo a mano:
 #   aprobado  → reconstruye en modo final desde la receta revisada (rama linea/revision-issue-N),
-#               publica en main assets/<nombre>/ (GLB raíz ×0.01, .blend, final.png, spec.json),
-#               fila en data/medidas.csv, capacidades aprendidas y huella memorizada; cierra el issue.
+#               vuelve a auditar y, SÓLO con PASS, abre un PR con assets/<nombre>/ (GLB raíz ×0.01,
+#               final.png, spec.json, evidencia), fila en data/medidas.csv, capacidades y huella.
+#               Con FAIL no publica nada aunque tenga la etiqueta, y el job sale en rojo.
 #   rechazado → no publica nada; lo deja anotado en el issue.
+# Nunca empuja a main: entra a main cuando el dueño fusiona el PR.
 on:
   issues:
     types: [labeled]
 
 permissions:
-  contents: write
+  contents: write        # sólo ramas publicar/* (nunca main)
   issues: write
+  pull-requests: write
+
+defaults:
+  run:
+    shell: bash          # pipefail: un fallo dentro de "| tee" pone el job en rojo
 
 concurrency:
   group: publicar-main
@@ -54,22 +62,26 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           bash tools/ensure_blender.sh --strict
           uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" numpy scipy Pillow
-      - name: Publicar lo revisado
+      - name: Publicar lo revisado (auditoría + PR)
         if: github.event.label.name == 'aprobado'
         run: |
           rama="linea/revision-issue-$N"
           git fetch -q origin "$rama" || { gh issue comment "$N" --body "No encontré la rama \`$rama\`: no hay revisión que aprobar."; exit 1; }
-          git checkout "origin/$rama" -- revision kb/investigacion.json kb/investigacion 2>/dev/null || git checkout "origin/$rama" -- revision
-          carpeta=$(ls -d revision/*/ | head -1)
-          img=$(alth-python -c "import json; print(json.load(open('${carpeta}entrada.json'))['imagen'])")
-          git checkout "origin/$rama" -- "$img" || true
-          alth-python tools/publicar.py "$carpeta" --issue "$N" 2>&1 | grep -v -E "INFO|CUEW|^Fra|Saved|Draco|MeshOpt" | tee publicar.txt
-          nom=$(basename "$carpeta")
+          git checkout -q "origin/$rama" -- revision
+          git checkout -q "origin/$rama" -- kb/investigacion.json kb/investigacion 2>/dev/null || true
+          mkdir -p "$RUNNER_TEMP/rev" && cp -r revision/. "$RUNNER_TEMP/rev/"
           git rm -r -q --cached revision && rm -rf revision
+          carpeta=$(ls -d "$RUNNER_TEMP"/rev/*/ | head -1)
           git config user.name "alth-linea[bot]"
           git config user.email "alth-linea@users.noreply.github.com"
-          git add "assets/$nom" data/medidas.csv kb "$img"
-          git commit -q -m "publica $nom (aprobado por el usuario en #$N)"
-          git push -q origin HEAD:${{ github.event.repository.default_branch }}
-          gh issue comment "$N" --body "Publicado en \`${{ github.event.repository.default_branch }}\`: \`assets/$nom/\` (GLB, .blend, final.png, spec.json), fila en \`data/medidas.csv\`, capacidades aprendidas y huella memorizada. Commit $(git rev-parse --short HEAD)."
-          gh issue close "$N"
+          BASE_BRANCH="${{ github.event.repository.default_branch }}" bash tools/publicar_pr.sh "$carpeta" "$N" "origin/$rama"
+      - uses: actions/upload-artifact@v4
+        if: always() && github.event.label.name == 'aprobado'
+        with:
+          name: aprobar-${{ github.event.issue.number }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/rev/
+            publicar.json
+            publicar_err.txt
+          retention-days: 14
+          if-no-files-found: warn

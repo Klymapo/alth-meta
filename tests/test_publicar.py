@@ -56,10 +56,57 @@ def test_memoria_de_cuatro_vistas():
     assert f["parecidos"][0]["nombre"] == "taza" and f["parecidos"][0]["vista"] == "lateral"
 
 
-def test_aceptacion_mide_el_aprobado_igual_que_el_nuevo():
+def _corrida(tmp_path, hoja, verif_ok=True):
+    """Corrida falsa de crear_asset (sin Blender) con la hoja indicada como versión final."""
+    final = tmp_path / "final"
+    final.mkdir(parents=True)
+    (final / "resultado.json").write_text(json.dumps({"verificacion": {"checks": [
+        {"check": c, "ok": verif_ok} for c in ("paleta", "flotantes", "apoyo")]}}), encoding="utf-8")
+    import shutil
+    shutil.copyfile(hoja, final / "hoja.png")
+    (tmp_path / "receta.json").write_text(json.dumps(dict(RECETA, tris_max=300)), encoding="utf-8")
+    (tmp_path / "resumen.json").write_text(json.dumps({
+        "imagen": str(RAIZ / RECETA["origen"]["imagen"]), "recorte": RECETA["origen"]["recorte"], "segundos": 60,
+        "final": {"hoja": str(final / "hoja.png"), "dimensiones_ok": True, "tris": 200,
+                  "dif_dimensiones": {"ancho": 0.0}}}), encoding="utf-8")
+    return tmp_path
+
+
+def test_aceptacion_exige_auditoria_visual(tmp_path):
     import aceptacion as ac
+    ok = ac.evaluar(_corrida(tmp_path / "a", RAIZ / "assets" / "manzana" / "final.png"), RAIZ / "assets" / "manzana")
+    assert ok["criterios"]["auditoria_visual"] and ok["criterios"]["no_peor_que_aprobado"] and ok["aceptado"]
+    mal = ac.evaluar(_corrida(tmp_path / "b", RAIZ / "assets" / "taza" / "final.png"), RAIZ / "assets" / "manzana")
+    assert not mal["criterios"]["auditoria_visual"] and not mal["aceptado"]
+
+
+def test_publicar_no_toca_assets_si_la_auditoria_falla(tmp_path, monkeypatch):
+    """Gate de publicación sin Blender: construir 'pasa' la verificación pero la hoja es de otro objeto."""
     import construir_receta as C
-    receta = {"origen": RECETA["origen"]}
-    ref = C.mascara_referencia(receta)
-    iou = ac.iou_de_hoja(RAIZ / "assets" / "manzana" / "final.png", ref)
-    assert set(iou) == {"frente", "tres_cuartos"} and 0.5 < iou["frente"] < 1.0
+    hoja = RAIZ / "assets" / "taza" / "final.png"
+    carpeta = _corrida(tmp_path / "c", hoja)
+
+    def construir_falso(receta, salida, modo="iteracion", exportar=None, ref=None):
+        Path(exportar).mkdir(parents=True, exist_ok=True)
+        (Path(exportar) / "manzana.glb").write_bytes(b"glb falso")
+        return {"ok": True, "hoja": str(hoja), "dif_dimensiones": {}, "verificacion_ok": True, "iou": 0.0}
+    monkeypatch.setattr(C, "construir", construir_falso)
+    antes = {p: p.stat().st_mtime_ns for p in (RAIZ / "assets" / "manzana").iterdir()}
+    try:
+        pub.publicar(carpeta, issue=0)
+    except pub.PublicacionRechazada as e:
+        assert "auditoría visual" in str(e)
+    else:
+        raise AssertionError("debió rechazar la publicación")
+    assert {p: p.stat().st_mtime_ns for p in (RAIZ / "assets" / "manzana").iterdir()} == antes
+
+
+def test_publicar_no_escribe_en_la_carpeta_de_theo(tmp_path):
+    carpeta = _corrida(tmp_path / "d", RAIZ / "assets" / "manzana" / "final.png")
+    (carpeta / "receta.json").write_text(json.dumps(dict(RECETA, nombre="joven_rubio")), encoding="utf-8")
+    try:
+        pub.publicar(carpeta, issue=0)
+    except pub.PublicacionRechazada as e:
+        assert "protegido" in str(e)
+    else:
+        raise AssertionError("debió negarse a publicar en assets/joven_rubio")

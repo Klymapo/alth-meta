@@ -5,10 +5,12 @@
 
 Encadena, sin IA ni intervención:
   reconocer → capacidades comparar → investigar (si hay brechas) → receta → construir (→ ajustar, T3)
-y deja en --salida: ficha.json, capacidades.json, investigacion.json, receta.json, la hoja de 4 vistas
-y resumen.json (qué quedó, qué falta y cuánto tardó). Lo que no se pudo cerrar se reporta como
-faltante; nunca se inventa.
-Código de salida: 0 = hoja lista para revisión, 4 = faltantes que impiden construir, 1 = falló la verificación.
+  → auditoría visual contra la referencia (tools/auditoria_visual.py: la que DECIDE)
+y deja en --salida: ficha.json, capacidades.json, investigacion.json, receta.json, la hoja de 4 vistas,
+auditoria/ (auditoria.json + comparacion.png) y resumen.json (qué quedó, qué falta y cuánto tardó).
+Lo que no se pudo cerrar se reporta como faltante; nunca se inventa.
+Código de salida: 0 = APROBADO_POR_AUDITORIA (se puede publicar), 1 = falló la verificación técnica,
+3 = la auditoría visual lo rechazó, 4 = faltantes (no se pudo construir o falta una capacidad).
 """
 from __future__ import annotations
 
@@ -26,6 +28,40 @@ sys.path.insert(0, str(RAIZ / "tools"))
 
 def _guardar(ruta: Path, datos) -> None:
     ruta.write_text(json.dumps(datos, ensure_ascii=False, indent=2, default=str) + "\n", encoding="utf-8")
+
+
+ESTADOS_SALIDA = {"APROBADO_POR_AUDITORIA": 0, "VERIFICACION_FALLIDA": 1, "AUDITORIA_FALLIDA": 3,
+                  "FALTANTES": 4}
+
+
+def auditar_corrida(imagen, recorte, hoja, nombre_asset: str, salida: Path) -> dict:
+    """Corre tools/auditoria_visual.py sobre la hoja final. Si ya hay un asset aprobado con ese nombre,
+    el candidato no puede quedar peor que él (RegressionGuard). Un error de entrada es FAIL, nunca PASS."""
+    import auditoria_visual as AV
+    aprobado = RAIZ / "assets" / nombre_asset / "final.png"
+    try:
+        r = AV.auditar_archivos(imagen, salida, recorte, hoja=hoja, aprobado=aprobado if aprobado.exists() else None)
+    except (ValueError, OSError) as e:
+        return {"decision": "FAIL", "fallas": ["entrada"], "error": str(e)}
+    out = {k: r.get(k) for k in ("decision", "fallas", "vista", "medidas", "por_medida", "calibrado",
+                                 "no_peor_que_aprobado", "supera_aprobado", "evidencia")}
+    out["medidas"] = {k: v for k, v in (out["medidas"] or {}).items() if not isinstance(v, list)}
+    if r.get("aprobado"):
+        out["aprobado"] = {"vista": r["aprobado"]["vista"], "medidas": {k: v for k, v in r["aprobado"]["medidas"].items()
+                                                                     if not isinstance(v, list)}}
+    return out
+
+
+def estado_final(verificacion_ok: bool, auditoria: dict, faltantes: list) -> str:
+    """La verificación técnica es requisito; la auditoría visual decide; una capacidad faltante (p. ej.
+    dedos) impide aprobar aunque la silueta pase, porque la auditoría de figura completa no la ve."""
+    if not verificacion_ok:
+        return "VERIFICACION_FALLIDA"
+    if auditoria.get("decision") != "PASS":
+        return "AUDITORIA_FALLIDA"
+    if faltantes:
+        return "FALTANTES"
+    return "APROBADO_POR_AUDITORIA"
 
 
 def crear(imagen: str, nombre: str, tamano: str | None, recorte=None, salida: Path | None = None,
@@ -112,7 +148,11 @@ def crear(imagen: str, nombre: str, tamano: str | None, recorte=None, salida: Pa
                 final = aj["resultado"]
     resumen["final"] = {k: final[k] for k in ("hoja", "iou", "iou_por_vista", "dimensiones_ok", "dif_dimensiones",
                                               "dimensiones_mm", "verificacion_ok", "tris", "ok")}
-    resumen["estado"] = "LISTO_PARA_REVISION" if final["ok"] else "VERIFICACION_FALLIDA"
+    # 6. auditoría visual contra la referencia: es la que decide (gate de aprobación)
+    t = time.time()
+    resumen["auditoria"] = auditar_corrida(imagen, recorte, final["hoja"], receta["nombre"], salida / "auditoria")
+    paso("auditoria", t)
+    resumen["estado"] = estado_final(final["ok"], resumen["auditoria"], resumen["faltantes"])
     resumen["segundos"] = round(time.time() - t0, 1)
     _guardar(salida / "resumen.json", resumen)
     return resumen
@@ -133,7 +173,7 @@ def main(argv=None) -> int:
     r = crear(a.imagen, a.nombre, a.tamano, rec._recorte(a.recorte), Path(a.salida) if a.salida else None,
               a.max_brechas, a.max_segundos, ajustar=not a.sin_ajuste)
     print(json.dumps(r, ensure_ascii=False, indent=2, default=str))
-    return {"LISTO_PARA_REVISION": 0, "FALTANTES": 4}.get(r["estado"], 1)
+    return ESTADOS_SALIDA.get(r["estado"], 1)
 
 
 if __name__ == "__main__":
