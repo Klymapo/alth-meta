@@ -7,6 +7,9 @@ from copox.engine import run_campaign
 from copox.maturity import assess_coverage, compute_level
 
 
+POLICY = "copox/production/theo_m5_policy.json"
+
+
 class CopoxMaturityTests(unittest.TestCase):
     def test_levels_are_computed_from_real_capabilities(self):
         self.assertEqual(compute_level({}), "M0")
@@ -17,8 +20,8 @@ class CopoxMaturityTests(unittest.TestCase):
         self.assertEqual(compute_level({"evidence": True, "auditor": True, "mutator": True, "learning": True, "regression": True, "persistence": True, "loop_gate": True}), "M5")
 
     def test_every_model_area_is_registered(self):
-        result = assess_coverage("copox/maturity/theo.json", min_level="M4", critical_only=True)
-        ids = {m["id"] for m in result["modules"]}
+        raw = assess_coverage("copox/maturity/theo.json", min_level="M4", critical_only=True)
+        ids = {m["id"] for m in raw["modules"]}
         expected = {
             "whole_body_silhouette", "global_proportions", "head_shape", "hair", "ears", "face", "neck",
             "torso", "shoulders", "arms", "elbows_forearms", "hands", "fingers", "pelvis_hips", "legs",
@@ -26,17 +29,14 @@ class CopoxMaturityTests(unittest.TestCase):
             "facial_animation_readiness",
         }
         self.assertEqual(ids, expected)
-        self.assertTrue(result["ready"])
-        blockers = {m["id"] for m in result["blockers"]}
-        # Las regiones anatómicas validadas ya deben estar en M4 o M5.
-        for mature in ("head_shape", "ears", "hands", "fingers", "legs", "feet_footwear"):
-            self.assertNotIn(mature, blockers)
-        self.assertEqual(blockers, set())
+        self.assertTrue(raw["ready"])
+        self.assertEqual(raw["blockers"], [])
         self.assertFalse(assess_coverage("copox/maturity/theo.json", min_level="M5")["ready"])
-        hair = next(m for m in result["modules"] if m["id"] == "hair")
-        self.assertEqual(hair["computed_level"], "M5")
-        fingers = next(m for m in result["modules"] if m["id"] == "fingers")
-        self.assertEqual(fingers["computed_level"], "M4")
+
+        product = assess_coverage("copox/maturity/theo.json", min_level="M5", production_policy=POLICY)
+        self.assertTrue(product["ready"], product["blockers"])
+        self.assertEqual(product["summary"]["M5"], 23)
+        self.assertEqual(product["learning_backlog"], [])
 
     def test_global_module_catalog_also_has_maturity(self):
         result = assess_coverage("copox/maturity/modules.json", min_level="M4", critical_only=False)
@@ -45,7 +45,7 @@ class CopoxMaturityTests(unittest.TestCase):
         self.assertFalse(result["ready"])
         self.assertEqual(next(m for m in result["modules"] if m["id"] == "alth_character_alpha")["computed_level"], "M5")
 
-    def test_model_loop_is_blocked_before_candidates(self):
+    def test_model_loop_is_blocked_if_any_m5_prerequisite_regresses(self):
         with tempfile.TemporaryDirectory(dir=".") as td:
             root = Path(td).resolve()
             coverage = json.loads(Path("copox/maturity/theo.json").read_text())
@@ -66,7 +66,7 @@ class CopoxMaturityTests(unittest.TestCase):
             self.assertEqual(data["candidates"], [])
             self.assertTrue((manifests[0].parent / "maturity.json").exists())
 
-    def test_m4_does_not_enable_a_productive_campaign(self):
+    def test_m5_readiness_does_not_enable_a_productive_campaign(self):
         enabled = Path("copox/cassettes/enabled")
         self.assertEqual(list(enabled.glob("*.json")), [])
 

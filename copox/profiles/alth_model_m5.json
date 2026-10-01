@@ -1,0 +1,13 @@
+{
+  "id": "alth_model_m5_v1",
+  "description": "Perfil productivo universal para módulos de modelo. El gate M5 ya aplica umbrales por módulo; estos auditores exigen además contrato, evidencia y regresión sin excepciones.",
+  "auditors": [
+    {"id":"ProductionM5Gate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","ProductionM5Gate","--metrics","{candidate_dir}/metrics.json","--metric","production.gate_pass","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"MeshIntegrityGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","MeshIntegrityGate","--metrics","{candidate_dir}/metrics.json","--metric","technical.mesh_integrity","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"ScopeSafetyGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","ScopeSafetyGate","--metrics","{candidate_dir}/metrics.json","--metric","technical.scope_safe","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"RegressionGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","RegressionGate","--metrics","{candidate_dir}/metrics.json","--metric","regression.ok","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"EvidenceGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","EvidenceGate","--metrics","{candidate_dir}/metrics.json","--metric","evidence.complete","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"SemanticGate","critical":true,"command":["python3","-m","copox.auditors.metric_gate","--agent","SemanticGate","--metrics","{candidate_dir}/metrics.json","--metric","semantic.ready","--op","true","--result","{audit_result}","--critical"]},
+    {"id":"TargetGainScore","command":["python3","-m","copox.auditors.metric_gate","--agent","TargetGainScore","--metrics","{candidate_dir}/metrics.json","--metric","production.target_gain_pp","--op","ge","--threshold","-1000","--result","{audit_result}"]}
+  ]
+}

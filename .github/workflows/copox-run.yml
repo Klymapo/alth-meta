@@ -35,17 +35,31 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: astral-sh/setup-uv@v6
+
       - name: Validar cassette
+        id: cassette
         env:
           CASSETTE: ${{ inputs.cassette }}
         run: |
           python3 - <<'PY'
           import os
+          from pathlib import Path
           from copox.contracts import load_cassette
           c = load_cassette(os.environ["CASSETTE"])
           print(f"Cassette válido: {c.id} ({c.kind})")
           print(f"Torneo={c.tournament_size}; máximo={c.max_candidates}; unanimidad={c.unanimity_required}")
+          with Path(os.environ['GITHUB_OUTPUT']).open('a') as f:
+              f.write(f"kind={c.kind}\n")
           PY
+
+      - name: Preparar análisis 3D ALTH
+        if: startsWith(steps.cassette.outputs.kind, 'alth_')
+        run: |
+          python3 -m pip install -q numpy scipy trimesh Pillow
+          # Blender/bpy se instala de forma lazy por el adapter únicamente cuando
+          # una técnica de topología, rig o render real lo necesita.
+          echo "Runtime geométrico ALTH listo; uv disponible para bpy lazy."
 
       - name: Ejecutar campaña
         id: run

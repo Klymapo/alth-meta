@@ -1,0 +1,81 @@
+name: COPOX · M5 engine validation
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/alth_model_m5.py"
+      - "copox/production/**"
+      - "copox/profiles/alth_model_m5.json"
+      - "copox/cassettes/examples/theo_model_m5_validation.json"
+      - "copox/adapters/finger_reference_fit.py"
+      - "copox/adapters/regional_vertex_morph.py"
+      - ".github/workflows/copox-m5-engine-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  engine-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+
+      - name: Ejecutar máximo dos torneos sin persistencia
+        run: |
+          rm -rf .copox/engine-validation
+          set +e
+          python3 -m copox.engine copox/cassettes/examples/theo_model_m5_validation.json \
+            --output-root .copox/engine-validation
+          RC=$?
+          set -e
+          if [ "$RC" -ne 0 ] && [ "$RC" -ne 2 ]; then
+            echo "Engine terminó con código inesperado: $RC" >&2
+            exit "$RC"
+          fi
+          echo "$RC" > .copox/engine-validation/exit_code.txt
+
+      - name: Verificar contrato real del loop
+        run: |
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root=Path('.copox/engine-validation')
+          manifests=list(root.rglob('manifest.json'))
+          assert len(manifests)==1, manifests
+          manifest=json.loads(manifests[0].read_text())
+          assert manifest['status'] in {'PLATEAU','PROMOTED'}, manifest['status']
+          assert 1 <= len(manifest['candidates']) <= 6
+          assert all(c['status'] in {'REJECTED','ELIGIBLE','ERROR'} for c in manifest['candidates'])
+          # Este cassette no contiene promote/state-branch: aun si hubiera un candidato elegible,
+          # la validación no puede escribir una baseline remota.
+          cassette=json.loads(Path('copox/cassettes/examples/theo_model_m5_validation.json').read_text())
+          assert 'promote' not in cassette['commands']
+          assert 'state_branch' not in cassette.get('variables',{})
+          sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
+          assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b'
+
+          tournaments=sorted({int(c['tournament']) for c in manifest['candidates']})
+          if manifest['status']=='PLATEAU':
+              assert tournaments == [1,2], tournaments
+              run_dir=manifests[0].parent
+              assert (run_dir/'learning_t01.json').exists()
+              assert (run_dir/'learning_t02.json').exists()
+          print(json.dumps({'status':manifest['status'],'candidates':len(manifest['candidates']),'tournaments':tournaments}, indent=2))
+          PY
+
+      - name: Evidencia engine M5
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-theo-m5-engine-validation
+          path: .copox/engine-validation/
+          retention-days: 1
+          if-no-files-found: ignore
