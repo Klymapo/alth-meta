@@ -98,3 +98,40 @@ jobs:
           path: .linea/
           retention-days: 7
           include-hidden-files: true
+
+  t2-crear:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+      - name: Blender headless
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libxrender1 libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          bash tools/ensure_blender.sh --strict
+          uv pip install --python "$(alth-python -c 'import sys; print(sys.executable)')" numpy scipy Pillow
+      - name: T2 · Entrada única (manzana, 8cm) sin intervención
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p .linea
+          set +e
+          /usr/bin/time -f "crear_asset %e s" alth-python tools/crear_asset.py --imagen refs/infografias/objeto-01-manzana.png \
+            --nombre manzana --tamano 8cm --recorte 0.52,0.1,1,1 --salida .linea/crear/manzana 2>&1 \
+            | grep -v -E "INFO|CUEW|^Fra|Saved" | tee .linea/t2_salida.txt
+          echo "salida=${PIPESTATUS[0]}"
+          set -e
+          test -f .linea/crear/manzana/resumen.json
+          alth-python tools/resumen_linea.py .linea/crear/manzana/resumen.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linea-unica-t2-${{ github.run_id }}
+          path: .linea/
+          retention-days: 7
+          include-hidden-files: true

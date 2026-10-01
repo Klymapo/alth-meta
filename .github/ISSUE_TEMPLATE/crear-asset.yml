@@ -1,0 +1,32 @@
+name: Crear asset
+description: Foto + nombre + tamaño real. El repo arma el asset solo y te deja la hoja aquí para aprobar.
+title: "crear: "
+labels: ["crear-asset"]
+body:
+  - type: input
+    id: nombre
+    attributes:
+      label: Nombre
+      placeholder: manzana
+    validations:
+      required: true
+  - type: input
+    id: tamano
+    attributes:
+      label: Tamaño real
+      description: La medida mayor (p. ej. 8cm) o alto=10cm, 10x8cm.
+      placeholder: 8cm
+    validations:
+      required: true
+  - type: input
+    id: recorte
+    attributes:
+      label: Recorte
+      description: Opcional, solo para infografías (x0,y0,x1,y1 en fracciones).
+  - type: textarea
+    id: imagen
+    attributes:
+      label: Imagen
+      description: Arrastra o adjunta la foto de referencia.
+    validations:
+      required: true
