@@ -1,0 +1,77 @@
+name: COPOX · Finger valley scope expand
+
+on:
+  pull_request:
+    paths:
+      - "copox/production/finger_valley_scope_expand_trial.py"
+      - ".github/workflows/copox-finger-valley-scope-expand.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  valley-scope-expand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - name: Probar tres alcances proximales
+        run: |
+          rm -rf .copox/finger-valley-scope-expand
+          for SLOT in 1 2 3; do
+            python3 -m copox.production.finger_valley_scope_expand_trial \
+              --baseline assets/joven_rubio/theo_alpha.glb \
+              --reference refs/personajes/joven-rubio-4-vistas.jpg \
+              --config copox/reference_configs/joven_rubio_alpha.json \
+              --policy copox/production/theo_m5_policy.json \
+              --slot "$SLOT" \
+              --output-dir ".copox/finger-valley-scope-expand/c0${SLOT}"
+          done
+      - name: Resumir sin promoción
+        run: |
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path('.copox/finger-valley-scope-expand')
+          rows=[]
+          for p in sorted(root.glob('c*/trial.json')):
+              t=json.loads(p.read_text())
+              r=t['result']; d=t['hand_detail']['summary']; s=t['sculpt']
+              first=(s.get('targets') or [{}])[0]
+              assert t['promotion_executed'] is False
+              rows.append({
+                  'candidate':p.parent.name,
+                  'experimental_finger_x1':t['experimental_finger_x1'],
+                  'first_valley_selected_vertices':first.get('selected_vertices',0),
+                  'reference_valleys':d['reference_valleys'],
+                  'model_valleys':d['model_valleys'],
+                  'semantic_ready':r['semantic_ready'],
+                  'scope_safe':r['scope_safe'],
+                  'regression_ok':r['regression_ok'],
+                  'target_gain_pp':r['target_gain_pp'],
+                  'global_gain_pp':r['global_gain_pp'],
+                  'worst_view_delta_pp':r['worst_view_delta_pp'],
+                  'promotion_allowed':t['gate']['promotion_allowed'],
+                  'reasons':t['gate']['reasons'],
+              })
+          assert len(rows)==3
+          sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
+          assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b'
+          ranking=sorted(rows,key=lambda x:(x['promotion_allowed'],x['semantic_ready'],x['first_valley_selected_vertices'],x['target_gain_pp'],x['global_gain_pp']),reverse=True)
+          (root/'summary.json').write_text(json.dumps({'baseline_sha256':sha,'promotion_executed':False,'ranking':ranking},indent=2))
+          print(json.dumps(ranking,indent=2))
+          PY
+      - name: Evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-finger-valley-scope-expand
+          path: .copox/finger-valley-scope-expand/
+          retention-days: 1
+          if-no-files-found: ignore
