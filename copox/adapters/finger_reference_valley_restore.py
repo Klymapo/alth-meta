@@ -58,7 +58,6 @@ def restore_valleys(
     ref_mask = person_mask(front)
     registration = registration_from_baseline(audit_mesh, "front", ref_mask, cfg)
 
-    # Igual que finger_reference_fit: trimesh ya expone Theo en world Z-up.
     scene = trimesh.load(str(input_glb), force="scene")
     node_name, geom_name, node_matrix, geom = _dominant(scene)
     vertices_local = np.asarray(geom.vertices, dtype=float).copy()
@@ -72,6 +71,7 @@ def restore_valleys(
     coord = cfg["coordinates"]
     h_axis = int(coord["front_horizontal_axis"])
     v_axis = int(coord["vertical_axis"])
+    d_axis = int(coord["depth_axis"])
     h_sign = float(coord.get("front_sign", 1.0))
     px = registration["pixel_center_x"] + ((world[:, h_axis] * scale_mm * h_sign) - registration["horizontal_center"]) * registration["scale"]
     py = registration["pixel_bottom_y"] - ((world[:, v_axis] * scale_mm) - registration["vertical_min"]) * registration["scale"]
@@ -82,21 +82,23 @@ def restore_valleys(
     if not finger_boxes or not hand_boxes:
         raise RuntimeError("Config sin morph_regions.fingers/hands")
 
-    # Contexto 3D seguro: hands permite el pequeño margen vertical que la referencia
-    # necesita. El alcance horizontal distal sigue gobernado por fingers, por lo que
-    # muñeca/antebrazo no entran aunque hands sea más amplia.
     finger_box = np.asarray(finger_boxes[0], dtype=float)
     hand_box = np.asarray(hand_boxes[0], dtype=float)
-    inside_hand = np.all((norm >= hand_box[:3]) & (norm <= hand_box[3:]), axis=1)
 
-    fx0, fx1 = float(finger_box[0]), float(finger_box[3])
+    # La profundidad 3D permanece limitada al contexto de mano. La altura NO usa
+    # una caja Z predefinida: la propia fila py de cada valle de la referencia es el
+    # límite vertical, evitando que una ROI 3D antigua contradiga la evidencia 2D.
+    depth_lo = float(hand_box[d_axis])
+    depth_hi = float(hand_box[d_axis + 3])
+    inside_depth = (norm[:, d_axis] >= depth_lo) & (norm[:, d_axis] <= depth_hi)
+
+    fx0, fx1 = float(finger_box[h_axis]), float(finger_box[h_axis + 3])
     finger_width = max(fx1 - fx0, 1e-9)
+    inside_horizontal = (norm[:, h_axis] >= fx0) & (norm[:, h_axis] <= fx1)
     distal = np.clip((fx1 - norm[:, h_axis]) / finger_width, 0.0, 1.0)
-    # Sólo el extremo distal: evita palma, muñeca y antebrazo aun usando hands como
-    # contexto vertical/depth.
     distal_weight = np.clip((distal - 0.42) / 0.58, 0.0, 1.0)
     distal_weight = distal_weight * distal_weight * (3.0 - 2.0 * distal_weight)
-    distal_scope = inside_hand & (norm[:, h_axis] <= fx1) & (distal_weight > 0.0)
+    distal_scope = inside_depth & inside_horizontal & (distal_weight > 0.0)
 
     updated = world.copy()
     selected_total = np.zeros(len(world), dtype=bool)
@@ -123,12 +125,11 @@ def restore_valleys(
                 "py_scope_min": py_scope_min,
                 "py_scope_max": py_scope_max,
                 "valley_bbox": bbox,
-                "finger_box": [float(v) for v in finger_box],
-                "hand_box": [float(v) for v in hand_box],
+                "horizontal_norm": [fx0, fx1],
+                "depth_norm": [depth_lo, depth_hi],
             }
             raise RuntimeError(f"Valle {idx} no seleccionó vértices: {debug}")
 
-        # Profundidad derivada del ancho horizontal del valle visible en referencia.
         valley_width_px = max(1.0, x1 - x0 + 1.0)
         shift_model = (valley_width_px / max(float(registration["scale"]), 1e-9)) / scale_mm
         shift_model *= float(strength)
@@ -137,7 +138,7 @@ def restore_valleys(
         weights = distal_weight * vertical * active.astype(float)
         applied = shift_model * weights
 
-        # Mano izquierda: +horizontal*sign apunta hacia la muñeca/interior.
+        # Mano izquierda: desplazar hacia interior crea la muesca entre bandas.
         updated[:, h_axis] += applied * h_sign
         selected_total |= active
         max_shift = max(max_shift, float(np.max(applied)))
@@ -166,8 +167,9 @@ def restore_valleys(
         "object": node_name,
         "geometry": geom_name,
         "selection_coordinates": "trimesh_world_z_up_no_extra_rotation",
-        "coordinate_axes": {"horizontal": h_axis, "vertical": v_axis},
-        "scope_box_source": "hands",
+        "coordinate_axes": {"horizontal": h_axis, "vertical": v_axis, "depth": d_axis},
+        "vertical_scope_source": "reference_projected_py",
+        "depth_scope_source": "hands",
         "distal_horizontal_source": "fingers",
         "distal_scope_vertices": int(distal_scope.sum()),
         "projected_scope_py": [py_scope_min, py_scope_max],
@@ -181,7 +183,7 @@ def restore_valleys(
         "max_shift_mm": float(max_shift * scale_mm),
         "valleys": valley_reports,
         "promotion_allowed": False,
-        "note": "Hands aporta sólo contexto vertical/depth; el alcance distal horizontal sigue limitado por fingers. Auditoría regional veta cualquier fuga hacia muñeca/antebrazo.",
+        "note": "La referencia gobierna la altura; hands limita profundidad y fingers limita X distal. La auditoría regional veta cualquier fuga a muñeca/antebrazo.",
     }
     Path(report_path).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return result
