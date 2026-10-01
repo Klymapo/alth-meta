@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -13,11 +14,28 @@ def _read_json(path: str | Path) -> dict[str, Any]:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def _dominant_geometry(scene: trimesh.Scene) -> tuple[str, trimesh.Trimesh]:
-    items = [(name, geom) for name, geom in scene.geometry.items() if hasattr(geom, "vertices")]
-    if not items:
+def _canonical_rotation() -> np.ndarray:
+    # Mismo -90° X usado por renderer/topology: raw GLB -> COPOX Z-up.
+    a = math.radians(-90.0)
+    c, s = math.cos(a), math.sin(a)
+    return np.array([
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, c, -s, 0.0],
+        [0.0, s, c, 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ], dtype=float)
+
+
+def _dominant_geometry(scene: trimesh.Scene) -> tuple[str, str, np.ndarray, trimesh.Trimesh]:
+    rows = []
+    for node in scene.graph.nodes_geometry:
+        matrix, geom_name = scene.graph.get(node)
+        geom = scene.geometry[geom_name]
+        if hasattr(geom, "vertices"):
+            rows.append((str(node), str(geom_name), np.asarray(matrix, dtype=float), geom))
+    if not rows:
         raise RuntimeError("GLB sin geometría editable")
-    return max(items, key=lambda item: len(item[1].vertices))
+    return max(rows, key=lambda item: len(item[3].vertices))
 
 
 def _smoothstep01(x: np.ndarray) -> np.ndarray:
@@ -45,60 +63,93 @@ def _box_weights(norm_vertices: np.ndarray, box: list[float], feather: float) ->
     return weights
 
 
+def _to_h(points: np.ndarray) -> np.ndarray:
+    return np.column_stack([points, np.ones(len(points), dtype=float)])
+
+
 def _named_node_morph(scene: trimesh.Scene, nodes: list[str], scale: list[float], shift: list[float]) -> dict[str, Any]:
     available = set(scene.graph.nodes_geometry)
     missing = sorted(set(nodes) - available)
     if missing:
         raise RuntimeError(f"Nodos requeridos ausentes: {missing}")
+    rotation = _canonical_rotation()
+    inv_rotation = np.linalg.inv(rotation)
     points: list[np.ndarray] = []
     for node in nodes:
         matrix, geom_name = scene.graph.get(node)
         geom = scene.geometry[geom_name]
-        corners = np.column_stack([np.asarray(geom.bounding_box.vertices), np.ones(8)])
-        world = (np.asarray(matrix) @ corners.T).T[:, :3]
-        points.append(world)
+        world_raw = (np.asarray(matrix) @ _to_h(np.asarray(geom.bounding_box.vertices)).T).T
+        canonical = (rotation @ world_raw.T).T[:, :3]
+        points.append(canonical)
     all_points = np.vstack(points)
     center = (all_points.min(axis=0) + all_points.max(axis=0)) / 2.0
+
     s = np.eye(4)
     s[0, 0], s[1, 1], s[2, 2] = [float(x) for x in scale]
     t0 = np.eye(4); t0[:3, 3] = -center
     t1 = np.eye(4); t1[:3, 3] = center + np.asarray(shift, dtype=float)
-    transform = t1 @ s @ t0
+    canonical_transform = t1 @ s @ t0
+    raw_world_transform = inv_rotation @ canonical_transform @ rotation
+
     before = {}
     for node in nodes:
         matrix, geom_name = scene.graph.get(node)
         before[node] = np.asarray(matrix).copy()
-        scene.graph.update(frame_to=node, matrix=transform @ np.asarray(matrix), geometry=geom_name)
-    return {"mode": "named_nodes", "nodes": nodes, "center": center.tolist(), "changed": len(nodes), "before": {k: v.tolist() for k, v in before.items()}}
+        scene.graph.update(frame_to=node, matrix=raw_world_transform @ np.asarray(matrix), geometry=geom_name)
+    return {
+        "mode": "named_nodes",
+        "nodes": nodes,
+        "center_canonical": center.tolist(),
+        "changed": len(nodes),
+        "before": {k: v.tolist() for k, v in before.items()},
+        "selection_coordinates": "canonical_z_up",
+    }
 
 
 def _vertex_region_morph(scene: trimesh.Scene, boxes: list[list[float]], scale: list[float], shift: list[float], feather: float) -> dict[str, Any]:
-    geom_name, geom = _dominant_geometry(scene)
-    vertices = np.asarray(geom.vertices, dtype=float).copy()
-    lo, hi = vertices.min(axis=0), vertices.max(axis=0)
+    node_name, geom_name, node_matrix, geom = _dominant_geometry(scene)
+    vertices_local = np.asarray(geom.vertices, dtype=float).copy()
+    rotation = _canonical_rotation()
+    inv_rotation = np.linalg.inv(rotation)
+    inv_node = np.linalg.inv(node_matrix)
+
+    world_raw_h = (node_matrix @ _to_h(vertices_local).T).T
+    canonical_h = (rotation @ world_raw_h.T).T
+    canonical = canonical_h[:, :3]
+    lo, hi = canonical.min(axis=0), canonical.max(axis=0)
     span = np.maximum(hi - lo, 1e-9)
-    norm = (vertices - lo) / span
-    weights = np.zeros(len(vertices), dtype=float)
+    norm = (canonical - lo) / span
+
+    weights = np.zeros(len(canonical), dtype=float)
     for box in boxes:
         weights = np.maximum(weights, _box_weights(norm, box, feather))
     selected = weights > 0.0
     if not np.any(selected):
-        raise RuntimeError("La región anatómica no seleccionó vértices")
-    center = np.average(vertices[selected], axis=0, weights=np.maximum(weights[selected], 1e-9))
+        raise RuntimeError("La región anatómica no seleccionó vértices en coordenadas canónicas")
+
+    center = np.average(canonical[selected], axis=0, weights=np.maximum(weights[selected], 1e-9))
     scale_vec = np.asarray(scale, dtype=float)
     shift_vec = np.asarray(shift, dtype=float)
-    target = center + (vertices - center) * scale_vec + shift_vec
-    updated = vertices + weights[:, None] * (target - vertices)
-    untouched_ok = bool(np.array_equal(updated[~selected], vertices[~selected]))
-    geom.vertices = updated
+    target_canonical = center + (canonical - center) * scale_vec + shift_vec
+    updated_canonical = canonical + weights[:, None] * (target_canonical - canonical)
+
+    updated_canonical_h = _to_h(updated_canonical)
+    updated_world_raw_h = (inv_rotation @ updated_canonical_h.T).T
+    updated_local_h = (inv_node @ updated_world_raw_h.T).T
+    updated_local = updated_local_h[:, :3]
+
+    untouched_ok = bool(np.array_equal(updated_local[~selected], vertices_local[~selected]))
+    geom.vertices = updated_local
     return {
         "mode": "vertex_region",
+        "node": node_name,
         "geometry": geom_name,
         "selected_vertices": int(selected.sum()),
-        "total_vertices": int(len(vertices)),
+        "total_vertices": int(len(vertices_local)),
         "selected_ratio": float(selected.mean()),
-        "center": center.tolist(),
+        "center_canonical": center.tolist(),
         "untouched_vertices_unchanged": untouched_ok,
+        "selection_coordinates": "canonical_z_up",
     }
 
 
@@ -138,6 +189,7 @@ def morph(
         "params": params,
         "detail": detail,
         "safe_scope": bool(detail.get("untouched_vertices_unchanged", True)),
+        "coordinate_system": "canonical_z_up_for_selection_and_delta",
     }
     rp = Path(report_path)
     rp.parent.mkdir(parents=True, exist_ok=True)
