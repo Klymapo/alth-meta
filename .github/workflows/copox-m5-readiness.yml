@@ -27,6 +27,7 @@ jobs:
 
       - name: Verificar cobertura M5 con policy
         run: |
+          mkdir -p .copox/m5
           python3 -m copox.maturity copox/maturity/theo.json \
             --min-level M5 \
             --production-policy copox/production/theo_m5_policy.json \
@@ -55,7 +56,6 @@ jobs:
             'global_gain_pp':0.05,'worst_view_delta_pp':-0.02,
             'evidence':policy['modules'][module]['required_evidence'],'flags':[]
           }
-          Path('.copox/m5').mkdir(parents=True,exist_ok=True)
           Path('.copox/m5/good.json').write_text(json.dumps(result))
           PY
           python3 -m copox.production.module_gate \
