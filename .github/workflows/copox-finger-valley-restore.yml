@@ -1,0 +1,80 @@
+name: COPOX · Finger reference valley restore
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/finger_reference_valley_restore.py"
+      - "copox/production/finger_valley_restore_trial.py"
+      - ".github/workflows/copox-finger-valley-restore.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  valley-restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - name: Ejecutar tres intensidades reference-driven
+        run: |
+          rm -rf .copox/finger-valley-restore
+          for SLOT in 1 2 3; do
+            python3 -m copox.production.finger_valley_restore_trial \
+              --baseline assets/joven_rubio/theo_alpha.glb \
+              --reference refs/personajes/joven-rubio-4-vistas.jpg \
+              --config copox/reference_configs/joven_rubio_alpha.json \
+              --policy copox/production/theo_m5_policy.json \
+              --slot "$SLOT" \
+              --output-dir ".copox/finger-valley-restore/c0${SLOT}"
+          done
+      - name: Resumir resultado sin promoción
+        run: |
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path('.copox/finger-valley-restore')
+          rows=[]
+          for p in sorted(root.glob('c*/trial.json')):
+              t=json.loads(p.read_text())
+              assert t['promotion_executed'] is False
+              assert t['plan']['reference_driven'] is True
+              assert t['plan']['invented_finger_count'] is False
+              r=t['result']; d=t['hand_detail']['summary']
+              rows.append({
+                  'candidate':p.parent.name,
+                  'valley_strength':t['params']['valley_strength'],
+                  'reference_valleys':d['reference_valleys'],
+                  'model_valleys':d['model_valleys'],
+                  'semantic_ready':r['semantic_ready'],
+                  'mesh_integrity':r['mesh_integrity'],
+                  'scope_safe':r['scope_safe'],
+                  'regression_ok':r['regression_ok'],
+                  'target_gain_pp':r['target_gain_pp'],
+                  'global_gain_pp':r['global_gain_pp'],
+                  'worst_view_delta_pp':r['worst_view_delta_pp'],
+                  'gate_would_allow_promotion':t['gate']['promotion_allowed'],
+                  'reasons':t['gate']['reasons'],
+              })
+          assert len(rows)==3
+          sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
+          assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b'
+          ranking=sorted(rows,key=lambda x:(x['semantic_ready'],x['gate_would_allow_promotion'],x['target_gain_pp'],x['global_gain_pp']),reverse=True)
+          summary={'baseline_sha256':sha,'promotion_executed':False,'ranking':ranking}
+          (root/'summary.json').write_text(json.dumps(summary,indent=2))
+          print(json.dumps(summary,indent=2))
+          PY
+      - name: Evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-finger-reference-valley-restore
+          path: .copox/finger-valley-restore/
+          retention-days: 1
+          if-no-files-found: ignore
