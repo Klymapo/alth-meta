@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "target": "Theo Alpha",
+  "baseline_sha256": "ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b",
+  "min_target_gain_pp": 0.10,
+  "min_global_gain_pp": 0.0,
+  "max_single_view_drop_pp": -0.10,
+  "principle": "Una mejora local nunca compensa una regresión global ni evidencia incompleta.",
+  "modules": {
+    "whole_body_silhouette": {"min_target_gain_pp": 0.05, "required_evidence": ["overlay_front", "overlay_side", "overlay_back", "overlay_threeq", "learning"]},
+    "global_proportions": {"min_target_gain_pp": 0.05, "required_evidence": ["overlay_front", "overlay_side", "overlay_back", "overlay_threeq", "learning"]},
+    "head_shape": {"required_evidence": ["region_front", "region_side", "region_threeq", "learning"]},
+    "hair": {"required_evidence": ["hoja", "overlay_front", "overlay_side", "overlay_threeq", "structure", "learning"], "forbidden_flags": ["hair_randomness", "frozen_region_regression"]},
+    "ears": {"required_evidence": ["region_side", "region_threeq", "uv_probe", "learning"], "forbidden_flags": ["phantom_ear", "material_scope_leak"]},
+    "face": {"required_evidence": ["region_front", "region_threeq", "landmarks", "learning"]},
+    "neck": {"required_evidence": ["region_front", "region_side", "learning"]},
+    "torso": {"required_evidence": ["region_front", "region_side", "region_back", "learning"]},
+    "shoulders": {"required_evidence": ["region_front", "region_back", "region_threeq", "learning"]},
+    "arms": {"required_evidence": ["region_front", "region_side", "learning"]},
+    "elbows_forearms": {"required_evidence": ["region_front", "region_side", "learning"]},
+    "hands": {"required_evidence": ["hand_left", "hand_right", "hand_detail", "learning"], "forbidden_flags": ["mitten_shape", "thumb_unreadable"]},
+    "fingers": {"required_evidence": ["hand_left", "hand_right", "finger_detail", "topology_report", "learning"], "forbidden_flags": ["mitten_shape", "finger_merge_regression"]},
+    "pelvis_hips": {"required_evidence": ["region_front", "region_back", "region_threeq", "learning"]},
+    "legs": {"required_evidence": ["region_front", "region_side", "learning"]},
+    "knees": {"required_evidence": ["region_front", "region_side", "learning"]},
+    "ankles": {"required_evidence": ["region_front", "region_side", "learning"]},
+    "feet_footwear": {"required_evidence": ["region_front", "region_side", "learning"]},
+    "materials_colors": {"min_target_gain_pp": 0.05, "required_evidence": ["uv_probe", "material_report", "render", "learning"], "forbidden_flags": ["material_scope_leak"]},
+    "mesh_topology": {"min_target_gain_pp": 0.0, "required_evidence": ["topology_report", "regional_audit", "learning"], "forbidden_flags": ["surface_change", "uv_loss", "bounds_change"]},
+    "orientation": {"min_target_gain_pp": 0.0, "required_evidence": ["orientation_report", "render", "learning"], "forbidden_flags": ["lying_down", "upside_down"]},
+    "rig_readiness": {"min_target_gain_pp": 0.0, "required_evidence": ["rig_report", "rest_pose", "pose_test", "learning"], "forbidden_flags": ["weight_gap", "nonfinite_deformation", "rest_pose_change"]},
+    "facial_animation_readiness": {"min_target_gain_pp": 0.0, "required_evidence": ["morph_report", "rest_pose", "active_preview", "learning"], "forbidden_flags": ["rest_pose_change", "control_outside_region"]}
+  },
+  "router": {
+    "priority_order": ["ears", "hands", "fingers", "head_shape", "face", "hair", "neck", "shoulders", "arms", "elbows_forearms", "torso", "pelvis_hips", "legs", "knees", "ankles", "feet_footwear", "materials_colors", "mesh_topology", "rig_readiness", "facial_animation_readiness", "whole_body_silhouette", "global_proportions", "orientation"],
+    "one_primary_module_per_campaign": true,
+    "global_modules_only_when_regional_explanation_insufficient": true
+  }
+}
