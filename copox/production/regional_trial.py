@@ -63,8 +63,9 @@ def run_trial(
     process = run_process(baseline, reference, config, module, params, str(root))
     model = root / "model.glb"
 
+    # Sólo necesitamos el cambio global/per-view; usamos el modo ya validado para Alpha.
     full = audit_full(
-        baseline, str(model), reference, "head,hair,arms,legs,feet", config,
+        baseline, str(model), reference, "hair,profile", config,
         None, str(root / "full_metrics.json"), str(root / "full_evidence")
     )
     labels: set[str] = {"learning"}
@@ -107,7 +108,6 @@ def run_trial(
     target = process.get("target_metrics") or {}
     view_deltas = full["visual"]["full"]["delta_pp"]
     required = set(policy["modules"][module].get("required_evidence") or [])
-    # Algunos labels son reportes lógicos, no PNG; sólo se añaden tras producir su artefacto.
     evidence_complete = required <= labels
     result = {
         "module": module,
