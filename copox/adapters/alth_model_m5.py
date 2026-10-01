@@ -82,7 +82,6 @@ def cmd_prepare(args: argparse.Namespace) -> int:
     policy = _read((repo / args.policy).resolve())
     route = choose_module(policy, diagnostics)
     if not route.get("selected"):
-        # Si el cooldown deja cero candidatos, se consume y se reintenta sin él.
         diagnostics = build_diagnostics(regional)
         diagnostics = _route_supported(diagnostics, cfg, set())
         route = choose_module(policy, diagnostics)
@@ -152,16 +151,14 @@ def cmd_capture(args: argparse.Namespace) -> int:
         src = candidate / name
         if src.exists():
             shutil.copy2(src, evidence / name)
-    # El engine exige al menos una evidencia visual; copiamos closeups regionales existentes.
     for src in (candidate / "evidence").glob("*.png"):
-        # si evidence_dir coincide con candidate/evidence no hace falta copiar sobre sí mismo
         dst = evidence / src.name
         if src.resolve() != dst.resolve():
             shutil.copy2(src, dst)
     return 0
 
 
-def _reroute(run_dir: Path, policy_path: Path, config_path: Path, failed_module: str) -> dict[str, Any]:
+def _reroute(run_dir: Path, policy_path: Path, failed_module: str) -> dict[str, Any]:
     diagnostics = _read(run_dir / "diagnostics.json")
     row = (diagnostics.get("modules") or {}).get(failed_module)
     if row:
@@ -179,7 +176,7 @@ def cmd_learn(args: argparse.Namespace) -> int:
     run_dir = Path(args.run_dir).resolve()
     route = _read(run_dir / "route.json")
     failed_module = str(route.get("selected"))
-    new_route = _reroute(run_dir, (repo / args.policy).resolve(), (repo / args.config).resolve(), failed_module)
+    new_route = _reroute(run_dir, (repo / args.policy).resolve(), failed_module)
 
     learning = {
         "failed_module": failed_module,
@@ -191,7 +188,6 @@ def cmd_learn(args: argparse.Namespace) -> int:
     _write(run_dir / f"learning_t{int(args.tournament):02d}.json", learning)
 
     if args.state_branch:
-        # Persistimos únicamente aprendizaje y el MISMO GLB de baseline.
         save_bundle(
             repo, args.state_branch,
             run_dir / "baseline" / "params.json",
@@ -214,11 +210,14 @@ def cmd_promote(args: argparse.Namespace) -> int:
     if gate.get("promotion_allowed") is not True:
         raise RuntimeError("Intento de promote sin gate M5 PASS")
     result = _read(candidate / "module_result.json")
+    candidate_params = candidate / "params.json"
+    if not candidate_params.exists():
+        raise RuntimeError("Candidato M5 sin params.json; no se persiste estado incompleto")
     state_commit = None
     if args.state_branch:
         state_commit = save_bundle(
             repo, args.state_branch,
-            Path(args.baseline_params).resolve() if Path(args.baseline_params).is_absolute() else (repo / args.baseline_params).resolve(),
+            candidate_params,
             candidate / "model.glb",
             {
                 "cassette_id": args.cassette_id,
