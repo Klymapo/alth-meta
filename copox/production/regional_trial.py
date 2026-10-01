@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from copox.adapters.alth_character_audit import audit as audit_full
+from copox.adapters.finger_reference_fit import fit_fingers
 from copox.adapters.hand_detail_probe import probe as hand_probe
 from copox.adapters.mesh_topology_probe import probe as topology_probe
 from copox.adapters.regional_process import run_process
+from copox.adapters.regional_reference_audit import audit_regions
 from copox.adapters.uv_region_probe import probe as uv_probe
 from copox.production.module_gate import evaluate
 
@@ -28,10 +30,12 @@ def _sha256(path: str | Path) -> str:
 
 
 def _variant(module: str, slot: int, tournament: int = 1) -> dict[str, Any]:
-    # Hermanos pequeños y deterministas. No se intenta "adivinar" un sculpt complejo.
     if module == "ears":
         scales = ([0.70, 0.70, 0.70], [0.40, 0.40, 0.40], [0.10, 0.10, 0.10])
         return {"scale": list(scales[(slot - 1) % 3]), "shift_mm": [0.0, 0.0, 0.0]}
+    if module == "fingers":
+        strengths = (0.35, 0.65, 1.00) if tournament % 2 else (0.50, 0.80, 1.15)
+        return {"strength": float(strengths[(slot - 1) % 3])}
     variants = [
         [0.98, 1.00, 1.00],
         [1.02, 1.00, 1.00],
@@ -47,6 +51,64 @@ def _copy_region_evidence(root: Path, module: str, labels: set[str]) -> None:
         if hits:
             shutil.copy2(hits[0], ev / f"region_{view}.png")
             labels.add(f"region_{view}")
+
+
+def _finger_process(baseline: str, reference: str, config: str, params: dict[str, Any], root: Path) -> dict[str, Any]:
+    root.mkdir(parents=True, exist_ok=True)
+    model = root / "model.glb"
+    morph = fit_fingers(
+        baseline, reference, config, str(model), str(root / "morph.json"),
+        float(params.get("strength", 0.65)),
+    )
+    regional = audit_regions(
+        baseline, str(model), reference, config,
+        str(root / "regional_metrics.json"), str(root / "evidence"),
+    )
+    target = regional["regions"]["fingers"]
+    cfg = _read(config)
+    tolerance = float((cfg.get("approval") or {}).get("freeze_tolerance_pp", -0.20))
+    coupled = {"fingers", "hands"}
+    failures = []
+    for name, data in regional["regions"].items():
+        if name in coupled:
+            continue
+        delta = float(data.get("delta_pp", 0.0))
+        if delta < tolerance:
+            failures.append({"region": name, "delta_pp": delta})
+    regression = {"ok": not failures, "freeze_tolerance_pp": tolerance, "failed_regions": failures, "coupled_regions": sorted(coupled)}
+    learning = {
+        "mode": "reference_contour_learning",
+        "priority": [{
+            "region": "fingers",
+            "error_score": float(target.get("error_score", 0.0)),
+            "delta_pp": float(target.get("delta_pp", 0.0)),
+            "visible_delta_pct": float(target.get("visible_delta_pct", 0.0)),
+            "strategy": "KEEP_DIRECTION" if float(target.get("delta_pp", 0.0)) > 0 else "ROTATE_TECHNIQUE",
+            "reason": "El contorno distal se deriva directamente de la referencia; conservar sólo si mejora fingers sin regresión congelada.",
+        }],
+        "next_region": "fingers",
+        "ready_for_general_loop": False,
+    }
+    (root / "learning.json").write_text(json.dumps(learning, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    process = {
+        "mode": "finger_reference_fit_process",
+        "region": "fingers",
+        "morph": {
+            "region": "fingers",
+            "mesh_integrity": bool(morph["mesh_integrity"]),
+            "safe_scope": bool(morph["outside_scope_exact"]),
+            "detail": morph,
+            "params": params,
+        },
+        "target_metrics": target,
+        "learning": learning,
+        "regression": regression,
+        "technically_m4_ready": bool(morph["mesh_integrity"] and morph["outside_scope_exact"] and not failures),
+        "promotion_allowed": False,
+    }
+    (root / "process.json").write_text(json.dumps(process, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (root / "params.json").write_text(json.dumps({"region": "fingers", **params}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return process
 
 
 def run_trial(
@@ -69,10 +131,9 @@ def run_trial(
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
     params = _variant(module, slot, tournament)
-    process = run_process(baseline, reference, config, module, params, str(root))
+    process = _finger_process(baseline, reference, config, params, root) if module == "fingers" else run_process(baseline, reference, config, module, params, str(root))
     model = root / "model.glb"
 
-    # Sólo necesitamos el cambio global/per-view; usamos el modo ya validado para Alpha.
     full = audit_full(
         baseline, str(model), reference, "hair,profile", config,
         None, str(root / "full_metrics.json"), str(root / "full_evidence")
@@ -109,7 +170,6 @@ def run_trial(
         uv = uv_probe(str(model), str(root / "uv_probe.json"))
         extra["uv"] = uv
         labels.add("uv_probe")
-        # Reducción geométrica por sí sola no resuelve con certeza la oreja embebida/material.
         semantic_ready = not bool(uv.get("comparison", {}).get("body_ear_neighborhood_is_closer_to_hair"))
         if not semantic_ready:
             flags.append("phantom_ear")
