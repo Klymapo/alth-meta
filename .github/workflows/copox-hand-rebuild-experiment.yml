@@ -1,0 +1,59 @@
+name: COPOX · Web-informed hand rebuild
+
+on:
+  pull_request:
+    paths:
+      - "copox/adapters/hand_rebuild_experiment.py"
+      - ".github/workflows/copox-hand-rebuild-experiment.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hand-rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar Blender
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender >/dev/null
+      - name: Generar tres reconstrucciones experimentales
+        run: |
+          rm -rf .copox/hand-rebuild
+          mkdir -p .copox/hand-rebuild
+          for SLOT in 1 2 3; do
+            mkdir -p ".copox/hand-rebuild/c0$SLOT"
+            blender -b --python copox/adapters/hand_rebuild_experiment.py -- \
+              --input assets/joven_rubio/theo_alpha.glb \
+              --config copox/reference_configs/joven_rubio_alpha.json \
+              --slot "$SLOT" \
+              --output ".copox/hand-rebuild/c0$SLOT/candidate.glb" \
+              --report ".copox/hand-rebuild/c0$SLOT/report.json"
+          done
+      - name: Verificar aislamiento
+        run: |
+          python3 - <<'PY'
+          import json,hashlib
+          from pathlib import Path
+          rows=[]
+          for p in sorted(Path('.copox/hand-rebuild').glob('c*/report.json')):
+              r=json.loads(p.read_text())
+              assert r['promotion_allowed'] is False
+              assert r['created_count'] > 0
+              rows.append({'slot':r['slot'],'created_count':r['created_count'],'technique':r['technique']})
+          assert len(rows)==3
+          sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
+          assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b'
+          Path('.copox/hand-rebuild/summary.json').write_text(json.dumps({'baseline_sha256':sha,'promotion_executed':False,'rows':rows},indent=2))
+          print(json.dumps(rows,indent=2))
+          PY
+      - name: Evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-web-informed-hand-rebuild
+          path: .copox/hand-rebuild/
+          retention-days: 1
