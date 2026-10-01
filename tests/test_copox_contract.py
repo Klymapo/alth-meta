@@ -40,8 +40,11 @@ class CopoxContractTests(unittest.TestCase):
         self.assertEqual(c.data["maturity"]["min_level"], "M5")
         self.assertEqual(c.data["maturity"]["production_policy"], "copox/production/theo_m5_policy.json")
         self.assertEqual(c.data["variables"]["state_branch"], "copox/state/theo-character")
-        self.assertIn("copox.adapters.alth_model_m5", c.data["commands"]["prepare"])
-        self.assertIn("copox.adapters.alth_model_m5", c.data["commands"]["capture"])
+        prepare_module = c.data["commands"]["prepare"][2]
+        capture_module = c.data["commands"]["capture"][2]
+        self.assertTrue(prepare_module.startswith("copox.adapters.alth_model_m5"))
+        self.assertTrue(capture_module.startswith("copox.adapters.alth_model_m5"))
+        self.assertEqual(prepare_module, capture_module)
         self.assertTrue(all(a.get("applicable", True) for a in c.auditors))
         self.assertEqual(list(Path("copox/cassettes/enabled").glob("*.json")), [])
 
