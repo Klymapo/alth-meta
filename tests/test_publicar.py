@@ -54,3 +54,12 @@ def test_memoria_de_cuatro_vistas():
     # la lateral de la taza (asa de perfil) se reconoce por su propia vista
     f = rec.reconocer(RAIZ / "assets/taza/final.png", "algo", None, None, rec.VISTAS_HOJA["lateral"], huellas=memoria)
     assert f["parecidos"][0]["nombre"] == "taza" and f["parecidos"][0]["vista"] == "lateral"
+
+
+def test_aceptacion_mide_el_aprobado_igual_que_el_nuevo():
+    import aceptacion as ac
+    import construir_receta as C
+    receta = {"origen": RECETA["origen"]}
+    ref = C.mascara_referencia(receta)
+    iou = ac.iou_de_hoja(RAIZ / "assets" / "manzana" / "final.png", ref)
+    assert set(iou) == {"frente", "tres_cuartos"} and 0.5 < iou["frente"] < 1.0
