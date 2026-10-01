@@ -76,7 +76,10 @@ def umbral_optimo(pos: list[float], neg: list[float], sentido: str) -> dict:
             "j": round(sens + esp - 1, 3), "separa": bool(sens == 1.0 and esp == 1.0)}
 
 
-def calibrar(pares: list[dict], raiz: Path = RAIZ) -> dict:
+def calibrar(pares: list[dict], raiz: Path = RAIZ, vigentes: dict | None = None) -> dict:
+    """Umbral por medida + prueba de la regla completa. Una medida sin pares de las dos clases conserva
+    su umbral vigente, y la prueba del conjunto usa ese mismo umbral (el que de verdad aplicaría el gate)."""
+    vigentes = (vigentes or A.cargar_umbrales())["umbrales"]
     medidas = []
     for par in pares:
         if par.get("veredicto") not in ("aprobado", "rechazado"):
@@ -89,7 +92,9 @@ def calibrar(pares: list[dict], raiz: Path = RAIZ) -> dict:
         vp = [m[k] for m in pos if m.get(k) is not None]
         vn = [m[k] for m in neg if m.get(k) is not None]
         if not vp or not vn:
-            res[k] = {"umbral": None, "aviso": "sin pares de las dos clases para esta medida"}
+            v = vigentes.get(k) or {}
+            res[k] = {"umbral": v.get("min", v.get("max")), "vigente": True,
+                      "aviso": "sin pares de las dos clases: se conserva el umbral vigente"}
             continue
         res[k] = umbral_optimo(vp, vn, SENTIDO.get(k, "max"))
         if res[k]["j"] < J_MINIMO:
@@ -111,7 +116,7 @@ def calibrar(pares: list[dict], raiz: Path = RAIZ) -> dict:
 def escribir(cal: dict, ruta: Path = A.UMBRALES_RUTA) -> dict:
     spec = json.loads(ruta.read_text(encoding="utf-8"))
     for k, r in cal["por_medida"].items():
-        if r.get("umbral") is None:
+        if r.get("umbral") is None or r.get("vigente"):
             continue
         lado = "min" if SENTIDO.get(k, "max") == "min" else "max"
         spec["umbrales"][k] = {lado: r["umbral"],
@@ -131,6 +136,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--pares", default=str(PARES_RUTA))
     ap.add_argument("--escribir", action="store_true", help="actualiza spec/auditoria_visual.json")
+    ap.add_argument("--forzar", action="store_true",
+                    help="escribe aunque falten pares o la regla se equivoque (el gate usa los umbrales al instante)")
     a = ap.parse_args(argv)
     pares = json.loads(Path(a.pares).read_text(encoding="utf-8"))["pares"]
     cal = calibrar(pares)
@@ -138,6 +145,10 @@ def main(argv=None) -> int:
         print(f"  {k:18} umbral={r.get('umbral')}  J={r.get('j')}  {r.get('aviso', '')}")
     print(f"  pares: {cal['positivos']} aprobados, {cal['negativos']} rechazados · "
           f"errores del conjunto: {len(cal['errores_conjunto'])} · suficiente: {cal['suficiente']}")
+    if a.escribir and not (cal["suficiente"] and not cal["errores_conjunto"]) and not a.forzar:
+        print(f"  NO se escribe: hacen falta {MIN_POSITIVOS}+/{MIN_NEGATIVOS}- pares y cero errores del conjunto "
+              "(el gate aplica los umbrales en cuanto se escriben). Usa --forzar si de verdad lo quieres.")
+        return 1
     if a.escribir:
         spec = escribir(cal)
         print(f"  escrito spec/auditoria_visual.json · calibrado={spec['calibrado']}")

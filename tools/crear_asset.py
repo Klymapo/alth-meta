@@ -41,8 +41,8 @@ def auditar_corrida(imagen, recorte, hoja, nombre_asset: str, salida: Path) -> d
     aprobado = RAIZ / "assets" / nombre_asset / "final.png"
     try:
         r = AV.auditar_archivos(imagen, salida, recorte, hoja=hoja, aprobado=aprobado if aprobado.exists() else None)
-    except (ValueError, OSError) as e:
-        return {"decision": "FAIL", "fallas": ["entrada"], "error": str(e)}
+    except Exception as e:  # noqa: BLE001  error de entrada o interno: nunca PASS, siempre con motivo
+        return {"decision": "FAIL", "fallas": ["entrada"], "error": f"{type(e).__name__}: {e}"}
     out = {k: r.get(k) for k in ("decision", "fallas", "vista", "medidas", "por_medida", "calibrado",
                                  "no_peor_que_aprobado", "supera_aprobado", "evidencia")}
     out["medidas"] = {k: v for k, v in (out["medidas"] or {}).items() if not isinstance(v, list)}

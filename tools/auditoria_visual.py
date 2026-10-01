@@ -61,8 +61,10 @@ VETO = ("silueta_iou", "contorno_p95", "contorno_chamfer", "compacidad", "bandas
 
 # ================================================================ encuadre
 def normalizar(rgb: np.ndarray, m: np.ndarray, lado: int = LADO) -> tuple[np.ndarray, np.ndarray]:
-    """(rgb, máscara) en un lienzo de lado×(1.5·lado): figura escalada a ALTO_FIG·lado de alto, arriba en
-    el mismo renglón y con su centroide horizontal al centro. Mismo transform para color y máscara."""
+    """(rgb, máscara) en un lienzo de `lado` de alto: figura escalada a ALTO_FIG·lado de alto, en el mismo
+    renglón y con su centroide horizontal al centro. El ancho del lienzo crece lo necesario para que la
+    figura NUNCA se recorte (una figura 3:1 no debe parecer 2:1); `igualar` empareja dos lienzos.
+    Mismo transform para color y máscara."""
     filas, cols = np.where(m.any(1))[0], np.where(m.any(0))[0]
     if len(filas) == 0:
         raise ValueError("máscara vacía: no hay figura que auditar")
@@ -73,19 +75,30 @@ def normalizar(rgb: np.ndarray, m: np.ndarray, lado: int = LADO) -> tuple[np.nda
     mc = Image.fromarray((m[y0:y1, x0:x1] * 255).astype(np.uint8)).resize((ancho, alto), Image.BILINEAR)
     cc = Image.fromarray(np.clip(rgb[y0:y1, x0:x1], 0, 255).astype(np.uint8)).resize((ancho, alto), Image.BILINEAR)
     mn = np.asarray(mc) > 127
-    W = int(1.5 * lado)
-    cx = float(np.where(mn)[1].mean()) if mn.any() else ancho / 2
-    ox, oy = int(round(W / 2 - cx)), (lado - alto) // 2
+    if mn.sum() < 20:
+        raise ValueError("la figura es demasiado delgada para auditarla (se pierde al normalizar)")
+    cx = float(np.where(mn)[1].mean())
+    margen = (lado - alto) // 2
+    W = max(int(1.5 * lado), 2 * int(np.ceil(max(cx, ancho - cx))) + 2 * margen)
+    W += W % 2
+    ox, oy = int(round(W / 2 - cx)), margen
     lienzo_m = np.zeros((lado, W), bool)
     lienzo_c = np.zeros((lado, W, 3), np.float32)
-    # pega recortando lo que se salga del lienzo
-    sx0, sy0 = max(0, -ox), max(0, -oy)
-    dx0, dy0 = max(0, ox), max(0, oy)
-    w = min(ancho - sx0, W - dx0)
-    h = min(alto - sy0, lado - dy0)
-    lienzo_m[dy0:dy0 + h, dx0:dx0 + w] = mn[sy0:sy0 + h, sx0:sx0 + w]
-    lienzo_c[dy0:dy0 + h, dx0:dx0 + w] = np.asarray(cc, np.float32)[sy0:sy0 + h, sx0:sx0 + w]
+    lienzo_m[oy:oy + alto, ox:ox + ancho] = mn
+    lienzo_c[oy:oy + alto, ox:ox + ancho] = np.asarray(cc, np.float32)
     return lienzo_c, lienzo_m
+
+
+def igualar(a: tuple, b: tuple) -> tuple[tuple, tuple]:
+    """Rellena el lienzo más angosto por los dos lados (el centroide queda al centro en ambos)."""
+    W = max(a[1].shape[1], b[1].shape[1])
+
+    def pad(t):
+        c, m = t
+        extra = W - m.shape[1]
+        izq = extra // 2
+        return (np.pad(c, ((0, 0), (izq, extra - izq), (0, 0))), np.pad(m, ((0, 0), (izq, extra - izq))))
+    return pad(a), pad(b)
 
 
 # ================================================================ medidas
@@ -290,7 +303,11 @@ def auditar(ref_rgb, ref_m, vistas: dict, umbrales: dict, vista_declarada: str |
         if m.sum() < 200:
             por_vista[nombre] = {"error": "vista sin figura", "separacion": sep}
             continue
-        med = medir(R, normalizar(rgb, m))
+        try:
+            med = medir(*igualar(R, normalizar(rgb, m)))
+        except ValueError as e:
+            por_vista[nombre] = {"error": str(e), "separacion": sep}
+            continue
         por_vista[nombre] = {"medidas": med, "veredicto": veredicto(med, umbrales), "separacion": sep}
     validas = {k: v for k, v in por_vista.items() if "medidas" in v}
     if not validas:
@@ -326,8 +343,7 @@ def auditar(ref_rgb, ref_m, vistas: dict, umbrales: dict, vista_declarada: str |
 # ================================================================ evidencia
 def comparacion_png(ref_rgb, ref_m, cand_rgb, cand_m, ruta: Path) -> None:
     """Lado a lado: referencia | candidato | superposición (azul = sólo ref, naranja = sólo render)."""
-    ca, ma = normalizar(ref_rgb, ref_m)
-    cb, mb = normalizar(cand_rgb, cand_m)
+    (ca, ma), (cb, mb) = igualar(normalizar(ref_rgb, ref_m), normalizar(cand_rgb, cand_m))
     fondo = np.array([227, 226, 233], np.float32)
     a = np.where(ma[..., None], ca, fondo)
     b = np.where(mb[..., None], cb, fondo)
@@ -411,6 +427,9 @@ def main(argv=None) -> int:
         r = auditar_archivos(a.ref, a.salida, _recorte(a.recorte), a.hoja, a.render, a.aprobado, a.vista, a.umbrales)
     except (ValueError, OSError) as e:
         print(f"ERROR: {e}", file=sys.stderr)
+        return 2
+    except Exception as e:  # noqa: BLE001  un fallo interno nunca debe leerse como FAIL "de forma"
+        print(f"ERROR interno ({type(e).__name__}): {e}", file=sys.stderr)
         return 2
     print(resumen_texto(r))
     return 0 if r["decision"] == "PASS" else 1

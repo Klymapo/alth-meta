@@ -241,3 +241,36 @@ def test_auditar_corrida_error_de_entrada_es_fail():
     with tempfile.TemporaryDirectory() as t:
         r = CA.auditar_corrida(Path(t) / "no_hay.png", None, Path(t) / "tampoco.png", "nada", Path(t) / "a")
     assert r["decision"] == "FAIL" and r["fallas"] == ["entrada"]
+
+
+def test_figuras_anchas_no_se_recortan():
+    """Una referencia 3:1 contra un candidato 2:1 no puede pasar (antes el lienzo fijo los recortaba)."""
+    ref = figura("rect", w=700, h=300, caja=(50, 100, 650, 300 - 100 + 100))     # 600x200 = 3:1
+    cand = figura("rect", w=700, h=300, caja=(150, 100, 550, 300))               # 400x200 = 2:1
+    r = auditar(ref, cand)
+    assert r["decision"] == "FAIL" and "aspecto" in r["fallas"], (r["fallas"], r["medidas"])
+    assert auditar(ref, ref)["decision"] == "PASS"
+
+
+def test_figura_degenerada_no_tumba_las_demas_vistas():
+    ref = figura()
+    ref_m, _ = M.mascara_limpia(ref)
+    delgada = np.zeros((400, 400), bool)
+    delgada[np.arange(400), np.arange(400)] = True
+    vistas = {"frente": (ref, delgada, {}), "tres_cuartos": vistas_de(figura())["frente"]}
+    r = A.auditar(ref, ref_m, vistas, U)
+    assert r["vista"] == "tres_cuartos" and "error" in r["por_vista"]["frente"]
+
+
+def test_publicar_rechaza_rutas_dentro_de_theo_o_vacias():
+    import publicar as pub
+    for nombre in ("joven_rubio/x", "", "../tools", "joven_rubio"):
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+            (t / "receta.json").write_text(json.dumps({"nombre": nombre}), encoding="utf-8")
+            try:
+                pub.publicar(t, issue=0)
+            except pub.PublicacionRechazada as e:
+                assert "protegido" in str(e), (nombre, e)
+            else:
+                raise AssertionError(f"publicó en {nombre!r}")

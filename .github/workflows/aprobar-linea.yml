@@ -68,7 +68,7 @@ jobs:
           rama="linea/revision-issue-$N"
           git fetch -q origin "$rama" || { gh issue comment "$N" --body "No encontré la rama \`$rama\`: no hay revisión que aprobar."; exit 1; }
           git checkout -q "origin/$rama" -- revision
-          git checkout -q "origin/$rama" -- kb/investigacion.json kb/investigacion 2>/dev/null || true
+          for k in kb/investigacion.json kb/investigacion; do git checkout -q "origin/$rama" -- "$k" 2>/dev/null || true; done
           mkdir -p "$RUNNER_TEMP/rev" && cp -r revision/. "$RUNNER_TEMP/rev/"
           git rm -r -q --cached revision && rm -rf revision
           carpeta=$(ls -d "$RUNNER_TEMP"/rev/*/ | head -1)

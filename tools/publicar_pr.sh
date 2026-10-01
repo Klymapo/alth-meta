@@ -27,7 +27,11 @@ rama="publicar/${nom}-issue-${N}"
 
 git fetch -q origin "$base"
 git checkout -q -B "$rama" "origin/$base"
-[ -n "$img_ref" ] && git checkout -q "$img_ref" -- "$img" 2>/dev/null || true
+if [ -n "$img_ref" ]; then
+  # la imagen y la investigación viven en la rama de revisión; cada ruta por separado (una que falte
+  # no debe cancelar las demás)
+  for k in "$img" kb/investigacion.json kb/investigacion; do git checkout -q "$img_ref" -- "$k" 2>/dev/null || true; done
+fi
 echo "$theo" | sha256sum -c --quiet -
 
 set +e
@@ -40,6 +44,10 @@ if [ "$code" -ne 0 ]; then
   gh issue comment "$N" -R "$repo" --body "**No se publica.** ${motivo:-publicar.py salió con $code (ver la corrida).}
 
 La auditoría visual y la verificación técnica deciden: sin PASS no hay PR. La evidencia queda en el artifact de la corrida." || true
+  # un PR abierto antes con PASS ya no vale si el reintento dio FAIL
+  if gh pr view "$rama" -R "$repo" --json state -q .state 2>/dev/null | grep -q OPEN; then
+    gh pr close "$rama" -R "$repo" --comment "Cerrado: al reintentar, la versión final no pasó la auditoría visual o la verificación (issue #$N)." || true
+  fi
   git checkout -q -- . 2>/dev/null || true
   exit "$code"
 fi
@@ -47,6 +55,7 @@ echo "$theo" | sha256sum -c --quiet -
 
 git add "assets/$nom" data/medidas.csv kb
 git add "$img" 2>/dev/null || true
+git diff --cached --quiet && { echo "::error::publicar no dejó cambios que publicar"; exit 1; }
 git commit -q -m "publica $nom (auditoría visual PASS, issue #$N)"
 git push -q -f origin "$rama"
 

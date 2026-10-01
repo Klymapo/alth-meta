@@ -47,7 +47,7 @@ python3 tools/kaggle_proveedor.py armar  refs/personajes/joven-rubio.jpg --nombr
 
 ## Qué pasa por dentro
 
-1. **Fondo y sombra con código del repo**: `tools/reconocer.separar_figura` + `quitar_sombra_pegada`
+1. **Fondo y sombra con código del repo** (`tools/mascaras.py`, el mismo que usa la auditoría visual): `separar_figura` + `quitar_sombra_pegada`
    (sombra = gris neutro, en la parte baja, sin figura debajo y con borde que se desvanece; una pieza
    gris de borde nítido, como el aro de la lata, se conserva). Se escribe un PNG RGBA.
 2. **TripoSG nunca usa RMBG-1.4**: su script oficial quita el fondo con `briaai/RMBG-1.4`, cuyo uso

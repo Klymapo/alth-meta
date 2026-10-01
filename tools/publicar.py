@@ -92,9 +92,12 @@ def publicar(carpeta: Path, issue: int | None = None, fecha: str | None = None) 
     carpeta = Path(carpeta)
     fecha = fecha or date.today().isoformat()
     receta = json.loads((carpeta / "receta.json").read_text(encoding="utf-8"))
-    destino = (RAIZ / "assets" / receta["nombre"]).resolve()
-    if destino == PROTEGIDO.parent.resolve() or not destino.is_relative_to((RAIZ / "assets").resolve()):
-        raise PublicacionRechazada(f"destino protegido o fuera de assets/: {destino}")
+    raiz_assets = (RAIZ / "assets").resolve()
+    destino = (raiz_assets / str(receta.get("nombre") or "")).resolve()
+    protegida = PROTEGIDO.parent.resolve()
+    if (destino.parent != raiz_assets or destino == protegida or protegida in destino.parents
+            or destino in protegida.parents):
+        raise PublicacionRechazada(f"destino protegido o fuera de assets/<nombre>/: {destino}")
     sha_antes = _sha256(PROTEGIDO) if PROTEGIDO.exists() else None
     imagen, recorte = entrada_de(carpeta)
     previo = json.loads((destino / "spec.json").read_text(encoding="utf-8")) if (destino / "spec.json").exists() else {}

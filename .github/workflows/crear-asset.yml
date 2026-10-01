@@ -90,21 +90,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          read -r IMG NOM TAM REC < <(alth-python -c "import json; e=json.load(open('entrada.json')); print(e['imagen'], e['nombre'].replace(' ','_'), e['tamano'].replace(' ',''), e.get('recorte') or '-')")
-          args=(--imagen "$IMG" --nombre "$NOM" --tamano "$TAM" --salida ".linea/crear/$NOM")
+          # ID (sólo [a-z0-9_]) para rutas; el nombre tal cual sólo va como argumento entre comillas.
+          read -r IMG NOM ID TAM REC < <(alth-python -c "import json,sys; sys.path.insert(0,'tools'); import reconocer as r; e=json.load(open('entrada.json')); print(e['imagen'], e['nombre'].replace(' ','_'), r.nombre_id(e['nombre']), e['tamano'].replace(' ',''), e.get('recorte') or '-')")
+          args=(--imagen "$IMG" --nombre "$NOM" --tamano "$TAM" --salida ".linea/crear/$ID")
           [ "$REC" != "-" ] && args+=(--recorte "$REC")
           mkdir -p .linea
           set +e
           alth-python tools/crear_asset.py "${args[@]}" 2>&1 | grep -v -E "INFO|CUEW|^Fra|Saved" | tee .linea/crear_salida.txt
           code=${PIPESTATUS[0]}
           echo "salida=$code" >> "$GITHUB_OUTPUT"
-          echo "carpeta=.linea/crear/$NOM" >> "$GITHUB_OUTPUT"
+          echo "carpeta=.linea/crear/$ID" >> "$GITHUB_OUTPUT"
           # el código real se aplica en el último paso ("Resultado"), después de comentar el issue
           exit 0
       - name: Resumen
         if: always()
+        env:
+          CARPETA: ${{ steps.linea.outputs.carpeta }}
         run: |
-          r="${{ steps.linea.outputs.carpeta }}/resumen.json"
+          r="$CARPETA/resumen.json"
           [ -f "$r" ] && alth-python tools/resumen_linea.py "$r" >> "$GITHUB_STEP_SUMMARY" || echo "sin resumen" >> "$GITHUB_STEP_SUMMARY"
       - name: Hoja de revisión en el issue (rama linea/revision-issue-N, no main)
         id: revision
@@ -123,7 +126,7 @@ jobs:
           nom=$(basename "$CARPETA")
           alth-python tools/hoja_revision.py "$CARPETA" --salida "$CARPETA/revision.png"
           echo "rama=$rama" >> "$GITHUB_OUTPUT"
-          hoja=$(alth-python -c "import json; print(json.load(open('$CARPETA/resumen.json'))['final']['hoja'])")
+          hoja=$(alth-python -c "import json,sys; print(json.load(open(sys.argv[1]))['final']['hoja'])" "$CARPETA/resumen.json")
           dest="revision/$nom"
           mkdir -p "$dest"
           cp "$CARPETA"/{receta.json,resumen.json,ficha.json,capacidades.json,investigacion.json,revision.png} "$dest"/
@@ -134,7 +137,9 @@ jobs:
           git config user.name "alth-linea[bot]"
           git config user.email "alth-linea@users.noreply.github.com"
           git checkout -B "$rama"
-          git add -f "$dest" "$img" kb/investigacion.json kb/investigacion 2>/dev/null || git add -f "$dest" "$img"
+          git add -f "$dest" "$img"
+          for k in kb/investigacion.json kb/investigacion; do [ -e "$k" ] && git add -f "$k"; done
+          true
           git commit -q -m "revisión: $nom (issue #$N, sin publicar)"
           git push -q -f origin "$rama"
           url="https://github.com/${{ github.repository }}/blob/$rama/$dest/revision.png?raw=true"
@@ -150,7 +155,8 @@ jobs:
           N: ${{ github.event.issue.number }}
           CARPETA: ${{ steps.linea.outputs.carpeta }}
           BASE_BRANCH: ${{ github.event.repository.default_branch }}
-        run: bash tools/publicar_pr.sh "$CARPETA" "$N" "${{ steps.revision.outputs.rama }}"
+          RAMA_REVISION: ${{ steps.revision.outputs.rama }}
+        run: bash tools/publicar_pr.sh "$CARPETA" "$N" "$RAMA_REVISION"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -160,8 +166,9 @@ jobs:
           retention-days: 14
       - name: Resultado (rojo si el asset no quedó aprobado por la auditoría)
         if: always()
+        env:
+          code: ${{ steps.linea.outputs.salida }}
         run: |
-          code="${{ steps.linea.outputs.salida }}"
           case "$code" in
             0) echo "APROBADO_POR_AUDITORIA" ;;
             3) echo "::error::La auditoría visual rechazó el asset (ver auditoria/comparacion.png en el artifact)"; exit 3 ;;
