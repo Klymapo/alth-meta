@@ -1,0 +1,80 @@
+name: COPOX · Finger semantic finish
+
+on:
+  pull_request:
+    paths:
+      - "copox/production/finger_semantic_finish_trial.py"
+      - "copox/production/regional_trial.py"
+      - "copox/adapters/finger_reference_fit.py"
+      - "copox/adapters/topology_local_refine.py"
+      - "copox/adapters/hand_detail_probe.py"
+      - "copox/production/theo_m5_policy.json"
+      - "assets/joven_rubio/theo_alpha.glb"
+      - ".github/workflows/copox-finger-semantic-finish.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-finish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalar análisis
+        run: python3 -m pip install -q numpy scipy trimesh Pillow
+      - name: Ejecutar tres hipótesis estrechas
+        run: |
+          rm -rf .copox/finger-semantic-finish
+          for SLOT in 1 2 3; do
+            python3 -m copox.production.finger_semantic_finish_trial \
+              --baseline assets/joven_rubio/theo_alpha.glb \
+              --reference refs/personajes/joven-rubio-4-vistas.jpg \
+              --config copox/reference_configs/joven_rubio_alpha.json \
+              --policy copox/production/theo_m5_policy.json \
+              --slot "$SLOT" \
+              --output-dir ".copox/finger-semantic-finish/c0${SLOT}"
+          done
+      - name: Resumir gate semántico
+        run: |
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          root=Path('.copox/finger-semantic-finish')
+          rows=[]
+          for p in sorted(root.glob('c*/trial.json')):
+              t=json.loads(p.read_text())
+              d=t['extra']['hand_detail']['summary']
+              rows.append({
+                  'candidate':p.parent.name,
+                  'strength':t['params']['strength'],
+                  'semantic_ready':t['result']['semantic_ready'],
+                  'vertical_run_gap':d.get('mean_vertical_run_gap'),
+                  'valley_gap':d.get('mean_valley_count_gap'),
+                  'target_gain_pp':t['result']['target_gain_pp'],
+                  'global_gain_pp':t['result']['global_gain_pp'],
+                  'worst_view_delta_pp':t['result']['worst_view_delta_pp'],
+                  'promotion_allowed':t['gate']['promotion_allowed'],
+                  'reasons':t['gate']['reasons'],
+              })
+              assert t['promotion_executed'] is False
+          assert len(rows)==3
+          sha=hashlib.sha256(Path('assets/joven_rubio/theo_alpha.glb').read_bytes()).hexdigest()
+          assert sha=='ed2b04ecd9e22a19794591b873c19c2b30323a9ae836f7dd820134bd0113580b'
+          ranking=sorted(rows,key=lambda x:(x['semantic_ready'],x['promotion_allowed'],-(x['vertical_run_gap'] or 0),x['target_gain_pp']),reverse=True)
+          summary={'baseline_sha256':sha,'promotion_executed':False,'ranking':ranking}
+          (root/'summary.json').write_text(json.dumps(summary,indent=2))
+          print(json.dumps(summary,indent=2))
+          PY
+      - name: Guardar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: copox-finger-semantic-finish
+          path: .copox/finger-semantic-finish/
+          retention-days: 1
+          if-no-files-found: ignore
