@@ -9,7 +9,8 @@ import time
 from pathlib import Path
 from typing import Any
 
-from copox.contracts import Cassette, ContractError, load_cassette\nfrom copox.production import load_policy, module_gate
+from copox.contracts import Cassette, ContractError, load_cassette
+from copox.production import load_policy, module_gate
 
 
 def _expand(value: str, ctx: dict[str, str]) -> str:
