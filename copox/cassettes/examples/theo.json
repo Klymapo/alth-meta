@@ -27,155 +27,29 @@
     "max_candidates": 6
   },
   "commands": {
-    "prepare": [
-      "python3",
-      "-m",
-      "copox.adapters.alth_character_alpha",
-      "prepare",
-      "--repo-root",
-      "{repo_root}",
-      "--baseline-params",
-      "{baseline_params}",
-      "--baseline-model",
-      "{baseline_model}",
-      "--state-branch",
-      "{state_branch}",
-      "--run-dir",
-      "{run_dir}"
-    ],
-    "mutate": [
-      "python3",
-      "-m",
-      "copox.adapters.alth_character_alpha",
-      "mutate",
-      "--baseline-params",
-      "{run_dir}/baseline/params.json",
-      "--search-space",
-      "{search_space}",
-      "--run-dir",
-      "{run_dir}",
-      "--candidate-dir",
-      "{candidate_dir}",
-      "--candidate-id",
-      "{candidate_id}"
-    ],
-    "execute": [
-      "python3",
-      "-m",
-      "copox.adapters.alth_character_alpha",
-      "execute",
-      "--repo-root",
-      "{repo_root}",
-      "--baseline-model",
-      "{run_dir}/baseline/model.glb",
-      "--edit-config",
-      "{edit_config}",
-      "--candidate-dir",
-      "{candidate_dir}"
-    ],
-    "capture": [
-      "python3",
-      "-m",
-      "copox.adapters.alth_character_alpha",
-      "capture",
-      "--candidate-dir",
-      "{candidate_dir}",
-      "--evidence-dir",
-      "{evidence_dir}",
-      "--run-dir",
-      "{run_dir}",
-      "--reference",
-      "{reference}",
-      "--audit-config",
-      "{audit_config}",
-      "--focus",
-      "{focus}"
-    ],
-    "learn": [
-      "python3",
-      "-m",
-      "copox.adapters.alth_character_alpha",
-      "learn",
-      "--run-dir",
-      "{run_dir}",
-      "--tournament",
-      "{tournament}"
-    ],
-    "promote": [
-      "python3",
-      "-m",
-      "copox.adapters.alth_character_alpha",
-      "promote",
-      "--repo-root",
-      "{repo_root}",
-      "--candidate-dir",
-      "{candidate_dir}",
-      "--baseline-params",
-      "{baseline_params}",
-      "--baseline-model",
-      "{baseline_model}",
-      "--state-branch",
-      "{state_branch}",
-      "--cassette-id",
-      "{cassette_id}",
-      "--target",
-      "{target}"
-    ],
-    "report": [
-      "python3",
-      "-m",
-      "copox.report",
-      "--run-dir",
-      "{run_dir}",
-      "--candidate-dir",
-      "{candidate_dir}",
-      "--output",
-      "{run_dir}/report.md",
-      "--title",
-      "COPOX · Theo Alpha aprobado por unanimidad"
-    ]
+    "prepare": ["python3", "-m", "copox.adapters.alth_character_alpha", "prepare", "--repo-root", "{repo_root}", "--baseline-params", "{baseline_params}", "--baseline-model", "{baseline_model}", "--state-branch", "{state_branch}", "--run-dir", "{run_dir}"],
+    "mutate": ["python3", "-m", "copox.adapters.alth_character_alpha", "mutate", "--baseline-params", "{run_dir}/baseline/params.json", "--search-space", "{search_space}", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--candidate-id", "{candidate_id}"],
+    "execute": ["python3", "-m", "copox.adapters.alth_character_alpha", "execute", "--repo-root", "{repo_root}", "--baseline-model", "{run_dir}/baseline/model.glb", "--edit-config", "{edit_config}", "--candidate-dir", "{candidate_dir}"],
+    "capture": ["python3", "-m", "copox.adapters.alth_character_alpha", "capture", "--candidate-dir", "{candidate_dir}", "--evidence-dir", "{evidence_dir}", "--run-dir", "{run_dir}", "--reference", "{reference}", "--audit-config", "{audit_config}", "--focus", "{focus}"],
+    "learn": ["python3", "-m", "copox.adapters.alth_character_alpha", "learn", "--run-dir", "{run_dir}", "--tournament", "{tournament}"],
+    "promote": ["python3", "-m", "copox.adapters.alth_character_alpha", "promote", "--repo-root", "{repo_root}", "--candidate-dir", "{candidate_dir}", "--baseline-params", "{baseline_params}", "--baseline-model", "{baseline_model}", "--state-branch", "{state_branch}", "--cassette-id", "{cassette_id}", "--target", "{target}"],
+    "report": ["python3", "-m", "copox.report", "--run-dir", "{run_dir}", "--candidate-dir", "{candidate_dir}", "--output", "{run_dir}/report.md", "--title", "COPOX · Theo Alpha aprobado por unanimidad"]
   },
   "auditor_overrides": {
-    "HeadAgent": {
-      "applicable": false
-    },
-    "FaceAgent": {
-      "applicable": false
-    },
-    "HairAgent": {
-      "applicable": true
-    },
-    "HairStructureGate": {
-      "applicable": true
-    },
-    "HairRandomnessGate": {
-      "applicable": true
-    },
-    "ArmsAgent": {
-      "applicable": false
-    },
-    "LegsAgent": {
-      "applicable": false
-    },
-    "FootwearAgent": {
-      "applicable": false
-    }
+    "HeadAgent": {"applicable": false},
+    "FaceAgent": {"applicable": false},
+    "HairAgent": {"applicable": true},
+    "HairStructureGate": {"applicable": true},
+    "HairRandomnessGate": {"applicable": true},
+    "ArmsAgent": {"applicable": false},
+    "LegsAgent": {"applicable": false},
+    "FootwearAgent": {"applicable": false}
   },
   "promotion": {
     "unanimous": true
   },
   "reporting": {
-    "required_evidence": [
-      "hoja.png",
-      "overlay_front.png",
-      "overlay_side.png",
-      "overlay_back.png",
-      "overlay_threeq.png"
-    ],
+    "required_evidence": ["hoja.png", "overlay_front.png", "overlay_side.png", "overlay_back.png", "overlay_threeq.png"],
     "publish_only_unanimous": true
-  },
-  "production": {
-    "policy": "copox/production/theo_m5_policy.json",
-    "primary_module": "hair"
   }
 }
