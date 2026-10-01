@@ -219,6 +219,19 @@ def parsear_enum(pagina: str, prefijo: str = "modificador") -> list[dict]:
         if re.fullmatch(r"[A-Z][A-Z0-9_]+", clave):
             out.append({"nombre": f"{prefijo}:{clave}", "texto": f"{clave} {_texto_html(m.group(2))}"[:1500],
                         "params": [], "tipos": {}})
+    if out:
+        return out
+    # otro marcado (listas): cada <code>NOMBRE</code> en mayúsculas abre un valor hasta el siguiente
+    marcas = list(re.finditer(r"<code[^>]*>(?:<span[^>]*>)?\s*([A-Z][A-Z0-9_]{2,})\s*(?:</span>)?</code>", pagina))
+    vistos = set()
+    for i, m in enumerate(marcas):
+        clave = m.group(1)
+        if clave in vistos:
+            continue
+        vistos.add(clave)
+        fin = marcas[i + 1].start() if i + 1 < len(marcas) else min(len(pagina), m.end() + 2000)
+        out.append({"nombre": f"{prefijo}:{clave}", "texto": f"{clave} {_texto_html(pagina[m.end():fin])}"[:1500],
+                    "params": [], "tipos": {}})
     return out
 
 
@@ -432,7 +445,7 @@ def buscar_codigo(red: Red, consultas: list[str], max_archivos: int, plazo: floa
         url = "https://api.github.com/search/code?per_page=10&q=" + urllib.parse.quote(q)
         codigo, cuerpo = red.get(url, aceptar="application/vnd.github.text-match+json")
         if codigo != 200:
-            continue
+            break                    # 403/422/429: este token no puede buscar código; no insistir
         for item in json.loads(cuerpo or "{}").get("items", []):
             if len(ejemplos) >= max_archivos or time.time() > plazo:
                 break
@@ -440,10 +453,18 @@ def buscar_codigo(red: Red, consultas: list[str], max_archivos: int, plazo: floa
                              item.get("repository", {}).get("full_name", ""), item.get("path", ""))
     if len(ejemplos) >= max_archivos or not consulta_repos or time.time() > plazo:
         return ejemplos
-    url = ("https://api.github.com/search/repositories?sort=stars&order=desc&per_page=10&q="
-           + urllib.parse.quote(consulta_repos))
-    codigo, cuerpo = red.get(url)
-    repos = json.loads(cuerpo or "{}").get("items", []) if codigo == 200 else []
+    # de lo específico a lo general: con los términos, con el primero, y solo "bmesh"
+    palabras_q = consulta_repos.split()
+    repos = []
+    for q in dict.fromkeys([" ".join(palabras_q), " ".join(palabras_q[:2]), palabras_q[0]]):
+        if time.time() > plazo:
+            break
+        url = ("https://api.github.com/search/repositories?sort=stars&order=desc&per_page=10&q="
+               + urllib.parse.quote(q + " language:Python"))
+        codigo, cuerpo = red.get(url)
+        repos = json.loads(cuerpo or "{}").get("items", []) if codigo == 200 else []
+        if repos:
+            break
     palabras = {raiz_en(w) for w in tokens(consulta_repos)} | {"bmesh", "mesh", "op"}
     for r in repos[:max_repos]:
         if len(ejemplos) >= max_archivos or time.time() > plazo:

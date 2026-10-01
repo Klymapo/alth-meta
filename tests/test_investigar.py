@@ -216,3 +216,12 @@ def test_respaldo_por_repositorios_si_la_busqueda_de_codigo_no_sirve(kb):
     assert any(s["source_type"] == "community" and "ejemplo/manos" in s["url"] for s in b["sources"])
     assert any(c.startswith("403 https://api.github.com/search/code") for c in
                [f"{x['codigo']} {x['url']}" for x in b["consultas_http"]])
+
+
+def test_parsear_enum_en_lista():
+    html = ('<ul><li><p><code class="docutils literal notranslate"><span class="pre">WELD</span></code> '
+            'Weld – Find groups of vertices closer than dist.</p></li><li><p><code><span class="pre">DECIMATE</span>'
+            '</code> Decimate – Reduce the geometry density.</p></li></ul>')
+    sec = iv.parsear_enum(html)
+    assert [s["nombre"] for s in sec] == ["modificador:WELD", "modificador:DECIMATE"]
+    assert "closer than dist" in sec[0]["texto"]
