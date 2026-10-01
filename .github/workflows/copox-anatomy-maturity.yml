@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "copox/adapters/regional_*.py"
+      - "copox/adapters/finger_reference_fit.py"
       - "copox/adapters/hand_detail_probe.py"
       - "copox/adapters/glb_structure_probe.py"
       - "copox/adapters/uv_region_probe.py"
@@ -97,10 +98,15 @@ jobs:
               assert result['technically_m4_ready'] is True, (region, result)
               assert result['morph']['mesh_integrity'] is True, region
               assert result['morph']['safe_scope'] is True, region
+              detail=result['morph']['detail']
+              if detail['mode']=='vertex_region':
+                  assert detail['selection_coordinates']=='canonical_z_up', (region, detail)
+                  assert detail['untouched_vertices_unchanged'] is True, (region, detail)
               assert result['learning']['priority'], region
               results[region]={
                   'technically_m4_ready': result['technically_m4_ready'],
                   'safe_scope': result['morph']['safe_scope'],
+                  'selection_coordinates': detail.get('selection_coordinates'),
                   'regression': result['regression'],
                   'target_metrics': result['target_metrics'],
                   'next_learning': result['learning']['priority'][0],
@@ -169,7 +175,7 @@ jobs:
 
           closeups = list((root/'baseline'/'evidence').glob('region_*.png'))
           assert len(closeups) >= 20, len(closeups)
-          print('PASS: M4 regional + manos + UV orejas + topología + rig/material diagnostics')
+          print('PASS: M4 regional + marco Z-up + scope exacto + manos + UV orejas + topología')
           PY
 
       - name: Guardar evidencia anatómica
