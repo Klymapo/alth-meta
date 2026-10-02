@@ -275,9 +275,10 @@
     "tris_max": {
       "personaje": 6000,
       "objeto_mano": 500,
-      "mueble": 1500
+      "mueble": 1500,
+      "avatar_riggeado": 40000
     },
-    "tris_max_nota": "objetos con calcomanía pueden subir hasta 530 en su spec",
+    "tris_max_nota": "objetos con calcomanía pueden subir hasta 530 en su spec; avatar_riggeado (decisión del dueño, 1 oct 2026): avatares jugables con esqueleto, dedos y caras con expresiones (Theo chibi 27 622, detective 35 414); el tope de 6 000 sigue para personajes generados por la línea",
     "chaflan_por_tamano": [
       {
         "desde_mm": 30,
@@ -454,5 +455,20 @@
       }
     }
   },
-  "cuerpo_base_95mm_nota": "Historial v1 (escala de 95 mm descartada). Para medidas nuevas usa escala_alpha."
+  "cuerpo_base_95mm_nota": "Historial v1 (escala de 95 mm descartada). Para medidas nuevas usa escala_alpha.",
+  "avatares": {
+    "nota": "Avatares riggeados entregados por el dueño el 1 oct 2026 (generador claude-lowpoly-builder). Entran a la escala ALTH con tools/importar_avatar.py: alto sin pelo = arquetipo (estandar 95.69 mm de maqueta = 1.80 m), escala horneada en los datos. Theo Alpha NO se reemplaza: sigue siendo la regla de medir.",
+    "theo_chibi": {
+      "personaje": "Theo (joven rubio)",
+      "glb": "assets/joven_rubio/theo_chibi.glb",
+      "arquetipo": "estandar",
+      "medidas": "assets/joven_rubio/theo_chibi.medidas.json"
+    },
+    "detective_chibi": {
+      "personaje": "Detective (Alastor)",
+      "glb": "assets/detective/detective_chibi.glb",
+      "arquetipo": "estandar",
+      "medidas": "assets/detective/detective_chibi.medidas.json"
+    }
+  }
 }
