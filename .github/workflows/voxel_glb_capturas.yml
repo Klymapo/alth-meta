@@ -1,4 +1,4 @@
-name: Voxel GLB - Modelo y capturas
+name: Voxel GLB - Modelos, capturas y pruebas
 on:
   push:
     branches: [experimentos/voxel-glb-codespaces]
@@ -8,32 +8,38 @@ on:
   workflow_dispatch:
     inputs:
       lado:
-        description: Lado del cubo
+        description: Lado del cubo (entrega 001)
         default: '1'
         required: true
       color:
-        description: Color hexadecimal RGB
+        description: Color RGB del cubo (entrega 001)
         default: '#5089C6'
         required: true
 permissions:
   contents: read
 jobs:
-  entrega:
+  entregas:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Instalar renderizador de capturas
+      - name: Instalar dependencias de capturas
         run: python -m pip install -r experimentos/voxel-glb/requirements.txt
-      - name: Generar GLB, cuatro vistas y manifiesto
+      - name: Pruebas geométricas y de culling
+        run: python -m unittest discover -s experimentos/voxel-glb -p 'test_voxeles.py' -v
+      - name: Entrega 001 - Cubo
         env:
           LADO: ${{ inputs.lado || '1' }}
           COLOR: ${{ inputs.color || '#5089C6' }}
         run: python experimentos/voxel-glb/entrega.py --lado "$LADO" --color "$COLOR" --salida salidas/entrega_001
-      - name: Guardar evidencia descargable
+      - name: Entrega 002 - Estructura multicolor
+        run: python experimentos/voxel-glb/entrega_voxeles.py --salida salidas/entrega_002
+      - name: Guardar GLB, 4 vistas y manifiestos de ambas entregas
         uses: actions/upload-artifact@v4
         with:
-          name: voxel-glb-entrega-001
-          path: salidas/entrega_001/
+          name: voxel-glb-entregas-001-002
+          path: |
+            salidas/entrega_001/
+            salidas/entrega_002/
