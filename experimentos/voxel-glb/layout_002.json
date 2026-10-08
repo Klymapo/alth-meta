@@ -1,0 +1,89 @@
+{
+  "descripcion": "Entrega 002 - base azul 3x3, centro verde 2x2, cima amarilla",
+  "voxeles": [
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "color": "azul"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 1,
+      "color": "azul"
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 2,
+      "color": "azul"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 0,
+      "color": "azul"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 1,
+      "color": "azul"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 2,
+      "color": "azul"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "z": 0,
+      "color": "azul"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "z": 1,
+      "color": "azul"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "z": 2,
+      "color": "azul"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 1,
+      "color": "verde"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 2,
+      "color": "verde"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "z": 1,
+      "color": "verde"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "z": 2,
+      "color": "verde"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "z": 1,
+      "color": "amarillo"
+    }
+  ]
+}
