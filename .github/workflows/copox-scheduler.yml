@@ -1,8 +1,8 @@
 name: COPOX · Scheduler
 
+# Ejecución automática deshabilitada el 2026-10-09 por solicitud del propietario.
+# Se conserva la ejecución manual desde GitHub Actions.
 on:
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 permissions:
